@@ -1,0 +1,186 @@
+import type { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+import { AppError } from './errorHandler';
+import type { UserRole } from '../../types';
+import { logger } from '../utils/logger';
+
+// JWTペイロードの型定義
+export interface JWTPayload {
+  userId: string;
+  email: string;
+  roles: UserRole[];
+  currentRole: UserRole;
+  organizationId: string;
+  sessionId: string;
+  platform: 'mobile' | 'web';
+}
+
+// 認証済みリクエストの型拡張
+declare global {
+  namespace Express {
+    interface Request {
+      user?: JWTPayload;
+    }
+  }
+}
+
+// JWT検証ミドルウェア
+export const authenticate = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    // Authorizationヘッダーからトークンを取得
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') 
+      ? authHeader.substring(7) 
+      : req.cookies?.accessToken;
+
+    if (!token) {
+      throw new AppError(401, 'No token provided', 'AUTH001');
+    }
+
+    // トークンの検証
+    const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT secret is not configured');
+    }
+
+    const payload = jwt.verify(token, secret) as JWTPayload;
+    
+    // ペイロードの検証
+    if (!payload.userId || !payload.roles || !payload.currentRole) {
+      throw new AppError(401, 'Invalid token payload', 'AUTH002');
+    }
+
+    // リクエストにユーザー情報を追加
+    req.user = payload;
+
+    logger.debug('User authenticated', {
+      userId: payload.userId,
+      currentRole: payload.currentRole,
+      platform: payload.platform,
+    });
+
+    next();
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      next(new AppError(401, 'Token expired', 'AUTH003'));
+    } else if (error instanceof jwt.JsonWebTokenError) {
+      next(new AppError(401, 'Invalid token', 'AUTH002'));
+    } else if (error instanceof AppError) {
+      next(error);
+    } else {
+      next(new AppError(500, 'Authentication error', 'AUTH_ERROR'));
+    }
+  }
+};
+
+// ロールベースアクセス制御ミドルウェア
+export const authorize = (...allowedRoles: UserRole[]) => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      next(new AppError(401, 'Not authenticated', 'AUTH001'));
+      return;
+    }
+
+    // SuperAdminは全てのリソースにアクセス可能
+    if (req.user.roles.includes('superadmin' as UserRole)) {
+      next();
+      return;
+    }
+
+    // 現在のロールが許可されたロールに含まれているかチェック
+    const hasPermission = allowedRoles.includes(req.user.currentRole);
+    
+    // または、ユーザーが持つ全てのロールをチェック
+    const hasAnyRole = req.user.roles.some(role => allowedRoles.includes(role));
+
+    if (!hasPermission && !hasAnyRole) {
+      logger.warn('Access denied', {
+        userId: req.user.userId,
+        currentRole: req.user.currentRole,
+        requiredRoles: allowedRoles,
+        path: req.path,
+      });
+      
+      next(new AppError(403, 'Insufficient permissions', 'AUTH004', {
+        requiredRoles: allowedRoles,
+        userRoles: req.user.roles,
+      }));
+      return;
+    }
+
+    next();
+  };
+};
+
+// 組織境界チェックミドルウェア
+export const checkOrganizationAccess = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void => {
+  if (!req.user) {
+    next(new AppError(401, 'Not authenticated', 'AUTH001'));
+    return;
+  }
+
+  // SuperAdminは全組織にアクセス可能
+  if (req.user.roles.includes('superadmin' as UserRole)) {
+    next();
+    return;
+  }
+
+  // リクエストされた組織IDを取得
+  const requestedOrgId = req.params.organizationId || 
+                        req.params.id || // 組織詳細取得用
+                        req.body?.organizationId || 
+                        req.query.organizationId;
+
+  if (requestedOrgId && requestedOrgId !== req.user.organizationId) {
+    logger.warn('Cross-organization access attempt', {
+      userId: req.user.userId,
+      userOrgId: req.user.organizationId,
+      requestedOrgId,
+    });
+    
+    next(new AppError(403, 'Access denied to this organization', 'AUTH005'));
+    return;
+  }
+
+  next();
+};
+
+// オプショナル認証（認証があれば追加、なくても続行）
+export const optionalAuth = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') 
+      ? authHeader.substring(7) 
+      : req.cookies?.accessToken;
+
+    if (!token) {
+      next();
+      return;
+    }
+
+    const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
+    if (!secret) {
+      next();
+      return;
+    }
+
+    const payload = jwt.verify(token, secret) as JWTPayload;
+    req.user = payload;
+    next();
+  } catch {
+    // エラーが発生しても続行（オプショナルなので）
+    next();
+  }
+};

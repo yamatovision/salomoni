@@ -127,9 +127,13 @@ export interface TokenRefreshResponse {
 // 組織登録リクエスト
 export interface OrganizationRegisterRequest {
   organizationName: string;
+  organizationDisplayName?: string;
+  organizationPhone?: string;
+  organizationAddress?: string;
   ownerName: string;
   ownerEmail: string;
   ownerPassword: string;
+  ownerPhone?: string;
   plan: OrganizationPlan;
   billingEmail?: string;
 }
@@ -138,14 +142,14 @@ export interface OrganizationRegisterRequest {
 export interface StaffInviteRequest {
   email: string;
   role: UserRole.ADMIN | UserRole.USER;
-  nickname?: string;
+  name?: string;
 }
 
 // 招待完了リクエスト
 export interface InviteCompleteRequest {
   token: string;
   password: string;
-  nickname?: string;
+  name?: string;
 }
 
 // ==========================================
@@ -156,7 +160,7 @@ export interface InviteCompleteRequest {
 export interface UserBase {
   id: ID;
   email: string;
-  nickname: string;
+  name: string;
   role: UserRole;
   organizationId?: ID;
   status: UserStatus;
@@ -166,29 +170,41 @@ export interface UserBase {
 export interface UserProfile extends UserBase, Timestamps {
   birthDate?: Date;
   gender?: 'male' | 'female' | 'other';
-  phoneNumber?: string;
-  profileImageUrl?: string;
+  phone?: string;
+  profileImage?: string;
   lastLoginAt?: Date;
+  authMethods?: AuthMethod[];
+  lineUserId?: string;
+  employeeNumber?: string;
+  department?: string;
+  hireDate?: Date;
+  refreshTokens?: string[];
+  preferences?: Record<string, any>;
+  aiCharacterId?: ID;
+  tokenUsage?: number;
 }
 
 // ユーザー作成リクエスト
 export interface UserCreateRequest {
   email: string;
-  nickname: string;
+  name: string;
   role: UserRole;
   organizationId?: ID;
   birthDate?: string;
   gender?: 'male' | 'female' | 'other';
+  phone?: string;
   password?: string; // メール認証時のみ
+  authMethods?: AuthMethod[];
 }
 
 // ユーザー更新リクエスト
 export interface UserUpdateRequest {
-  nickname?: string;
+  name?: string;
   birthDate?: string;
   gender?: 'male' | 'female' | 'other';
-  phoneNumber?: string;
-  profileImageUrl?: string;
+  phone?: string;
+  profileImage?: string;
+  organizationId?: ID;
 }
 
 // ==========================================
@@ -214,13 +230,16 @@ export enum OrganizationPlan {
 export interface Organization extends Timestamps {
   id: ID;
   name: string;
-  ownerUserId: ID;
+  displayName?: string;
+  ownerId: ID;
   status: OrganizationStatus;
   plan: OrganizationPlan;
-  billingEmail: string;
-  phoneNumber?: string;
+  email: string;
+  phone?: string;
   address?: string;
   logoUrl?: string;
+  settings?: Record<string, any>;
+  metadata?: Record<string, any>;
 }
 
 // 組織作成リクエスト
@@ -235,12 +254,14 @@ export interface OrganizationCreateRequest {
 // 組織更新リクエスト
 export interface OrganizationUpdateRequest {
   name?: string;
-  billingEmail?: string;
-  phoneNumber?: string;
+  displayName?: string;
+  email?: string;
+  phone?: string;
   address?: string;
   logoUrl?: string;
   plan?: OrganizationPlan;
   status?: OrganizationStatus;
+  settings?: Record<string, any>;
 }
 
 // 組織統計情報
@@ -714,6 +735,7 @@ export const API_PATHS = {
   AUTH: {
     LOGIN: '/api/auth/login',
     LOGIN_LINE: '/api/auth/login-line',
+    LINE_CALLBACK: '/api/auth/line-callback',
     LOGOUT: '/api/auth/logout',
     REFRESH: '/api/auth/refresh',
     REGISTER: '/api/auth/register',
@@ -909,8 +931,14 @@ export enum AuthErrorCode {
 export interface DashboardSummary {
   todayAppointments: number;
   totalClients: number;
-  activeStylistsCount: number;
+  totalStylists: number;
   weeklyCompletedAppointments: number;
+  monthlyTokenUsage: {
+    used: number;
+    limit: number;
+    percentage: number;
+  };
+  unassignedAppointmentsCount: number;
 }
 
 // トークン使用状況の詳細データ
@@ -933,10 +961,10 @@ export interface TokenUsageSummary {
 export interface UnassignedAppointment {
   id: ID;
   clientName: string;
-  service: string;
-  scheduledTime: string;
-  duration: number;
-  element?: FiveElements;
+  serviceType: string;
+  startTime: string;
+  endTime: string;
+  element: string;
 }
 
 // グラフデータポイント
@@ -1603,3 +1631,4 @@ export interface DailyClientDisplay {
     summary: string;
   };
 }
+

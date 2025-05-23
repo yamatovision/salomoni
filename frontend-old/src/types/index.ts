@@ -735,7 +735,6 @@ export const API_PATHS = {
   AUTH: {
     LOGIN: '/api/auth/login',
     LOGIN_LINE: '/api/auth/login-line',
-    LINE_CALLBACK: '/api/auth/line-callback',
     LOGOUT: '/api/auth/logout',
     REFRESH: '/api/auth/refresh',
     REGISTER: '/api/auth/register',
@@ -931,14 +930,8 @@ export enum AuthErrorCode {
 export interface DashboardSummary {
   todayAppointments: number;
   totalClients: number;
-  totalStylists: number;
+  activeStylistsCount: number;
   weeklyCompletedAppointments: number;
-  monthlyTokenUsage: {
-    used: number;
-    limit: number;
-    percentage: number;
-  };
-  unassignedAppointmentsCount: number;
 }
 
 // トークン使用状況の詳細データ
@@ -961,10 +954,10 @@ export interface TokenUsageSummary {
 export interface UnassignedAppointment {
   id: ID;
   clientName: string;
-  serviceType: string;
-  startTime: string;
-  endTime: string;
-  element: string;
+  service: string;
+  scheduledTime: string;
+  duration: number;
+  element?: FiveElements;
 }
 
 // グラフデータポイント

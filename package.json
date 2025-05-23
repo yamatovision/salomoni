@@ -1,0 +1,12 @@
+{
+  "name": "salomoni",
+  "version": "1.0.0",
+  "description": "Beauty salon management system",
+  "scripts": {
+    "ts:check": "node scripts/ts-error/analyzer.js",
+    "ts:report": "node scripts/ts-error/report-generator.js",
+    "ts:suggest": "node scripts/ts-error/fix-suggestions.js"
+  },
+  "author": "",
+  "license": "ISC"
+}

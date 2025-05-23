@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スタイリスト管理 - Salomoni</title>
+    
+    <!-- Material UI CDN -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <style>
+        :root {
+            --main-pink: #F26A8D;
+            --light-pink: #fce4ec;
+            --dark-pink: #c2185b;
+            --black: #222222;
+            --white: #ffffff;
+            --light-gray: #f5f5f5;
+            --gray: #9e9e9e;
+            --danger: #f44336;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--light-gray);
+            color: var(--black);
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--main-pink), #ff7ba3);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 500;
+        }
+
+        .nav-breadcrumb {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 0.5rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .top-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex: 1;
+            max-width: 500px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--main-pink);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--main-pink);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--dark-pink);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--light-pink);
+            color: var(--dark-pink);
+        }
+
+        .btn-secondary:hover {
+            background: #f8bbd9;
+        }
+
+        .alert-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .alert-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid var(--main-pink);
+        }
+
+        .alert-card.danger {
+            border-left-color: var(--danger);
+        }
+
+        .alert-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .alert-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--main-pink);
+        }
+
+        .stylist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stylist-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+        }
+
+        .stylist-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .risk-indicator {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4caf50;
+        }
+
+        .risk-indicator.warning {
+            background: var(--main-pink);
+        }
+
+        .risk-indicator.danger {
+            background: var(--danger);
+        }
+
+        .stylist-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--main-pink), #ff9ec5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 700;
+            overflow: hidden;
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .stylist-info h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .stylist-role {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .stylist-details {
+            margin: 1rem 0;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .detail-item .material-icons {
+            font-size: 1.1rem;
+            color: var(--main-pink);
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--main-pink);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            flex: 1;
+        }
+
+        .btn-delete {
+            background: #ffebee;
+            color: var(--danger);
+            border: 2px solid #ffcdd2;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .btn-delete:hover {
+            background: #ffcdd2;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 1rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--dark-pink);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: background 0.3s;
+        }
+
+        .modal-close:hover {
+            background: #f5f5f5;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--main-pink);
+        }
+
+        .form-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 2rem;
+            border-top: 1px solid #eee;
+            padding-top: 1rem;
+        }
+
+        .btn-cancel {
+            background: #f5f5f5;
+            color: #666;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .btn-save {
+            background: var(--main-pink);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        /* 四柱推命モーダル専用スタイル */
+        .saju-modal {
+            width: 90%;
+            max-width: 700px;
+        }
+
+        .birth-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            background: var(--light-pink);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .birth-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .birth-label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 0.25rem;
+        }
+
+        .birth-value {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .saju-elements {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin: 1.5rem 0;
+        }
+
+        .element-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 8px;
+            min-width: 80px;
+        }
+
+        .element-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .element-name {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .element-percent {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .water-element { background: #e3f2fd; color: #1976d2; }
+        .wood-element { background: #e8f5e9; color: #2e7d32; }
+        .fire-element { background: #ffebee; color: #c62828; }
+        .earth-element { background: #fff3e0; color: #ef6c00; }
+        .metal-element { background: #f5f5f5; color: #757575; }
+
+        .pillar-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .pillar-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .pillar-title {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .pillar-content {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--dark-pink);
+        }
+
+        .pillar-note {
+            font-size: 0.8rem;
+            color: #999;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .top-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-container {
+                max-width: none;
+            }
+            
+            .alert-summary {
+                grid-template-columns: 1fr;
+            }
+            
+            .stylist-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>スタイリスト管理</h1>
+        <div class="nav-breadcrumb">
+            <span class="material-icons" style="font-size: 1rem; vertical-align: middle;">home</span>
+            ダッシュボード > スタイリスト管理
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- アクションバー -->
+        <div class="top-actions">
+            <div class="search-container">
+                <input type="text" class="search-input" placeholder="スタイリスト名で検索..." id="searchInput">
+                <button class="btn btn-secondary">
+                    <span class="material-icons">filter_list</span>
+                    フィルター
+                </button>
+            </div>
+            <button class="btn btn-primary" onclick="openAddModal()">
+                <span class="material-icons">person_add</span>
+                新規追加
+            </button>
+        </div>
+
+        <!-- アラートサマリー -->
+        <div class="alert-summary">
+            <div class="alert-card">
+                <h3>
+                    <span class="material-icons">warning</span>
+                    要注意スタッフ
+                </h3>
+                <div class="alert-number">2</div>
+                <p>離職予兆アラート発生中</p>
+            </div>
+            <div class="alert-card danger">
+                <h3>
+                    <span class="material-icons">crisis_alert</span>
+                    緊急対応
+                </h3>
+                <div class="alert-number">1</div>
+                <p>即座の面談推奨</p>
+            </div>
+            <div class="alert-card" style="border-left-color: var(--main-pink);">
+                <h3>
+                    <span class="material-icons">people</span>
+                    総スタッフ数
+                </h3>
+                <div class="alert-number">8</div>
+                <p>アクティブスタイリスト</p>
+            </div>
+        </div>
+
+        <!-- スタイリストカード一覧 -->
+        <div class="stylist-grid" id="stylistGrid">
+            <!-- スタイリストカード1 -->
+            <div class="stylist-card" data-id="sato">
+                <div class="risk-indicator danger" title="離職リスク: 高"></div>
+                <div class="stylist-header">
+                    <div class="avatar">佐</div>
+                    <div class="stylist-info">
+                        <h3>佐藤 美香</h3>
+                        <div class="stylist-role">シニアスタイリスト (3年目)</div>
+                    </div>
+                </div>
+                
+                <div class="stylist-details">
+                    <div class="detail-item">
+                        <span class="material-icons">email</span>
+                        <span>sato.m@example.com</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="material-icons">admin_panel_settings</span>
+                        <span>管理者権限</span>
+                    </div>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="stat-value">12</div>
+                        <div class="stat-label">今月担当数</div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-secondary btn-small" onclick="viewSajuProfile('佐藤 美香')">
+                        <span class="material-icons" style="font-size: 1rem;">psychology</span>
+                        四柱推命
+                    </button>
+                    <button class="btn btn-primary btn-small" onclick="editStylist('sato')">
+                        <span class="material-icons" style="font-size: 1rem;">edit</span>
+                        編集
+                    </button>
+                    <button class="btn btn-secondary btn-small" onclick="downloadReport('sato')">
+                        <span class="material-icons" style="font-size: 1rem;">download</span>
+                        レポート
+                    </button>
+                </div>
+            </div>
+
+            <!-- スタイリストカード2 -->
+            <div class="stylist-card" data-id="tanaka">
+                <div class="risk-indicator warning" title="離職リスク: 中"></div>
+                <div class="stylist-header">
+                    <div class="avatar">田</div>
+                    <div class="stylist-info">
+                        <h3>田中 愛子</h3>
+                        <div class="stylist-role">スタイリスト (2年目)</div>
+                    </div>
+                </div>
+                
+                <div class="stylist-details">
+                    <div class="detail-item">
+                        <span class="material-icons">email</span>
+                        <span>tanaka.a@example.com</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="material-icons">person</span>
+                        <span>基本権限</span>
+                    </div>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="stat-value">18</div>
+                        <div class="stat-label">今月担当数</div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-secondary btn-small" onclick="viewSajuProfile('田中 愛子')">
+                        <span class="material-icons" style="font-size: 1rem;">psychology</span>
+                        四柱推命
+                    </button>
+                    <button class="btn btn-primary btn-small" onclick="editStylist('tanaka')">
+                        <span class="material-icons" style="font-size: 1rem;">edit</span>
+                        編集
+                    </button>
+                    <button class="btn btn-secondary btn-small" onclick="downloadReport('tanaka')">
+                        <span class="material-icons" style="font-size: 1rem;">download</span>
+                        レポート
+                    </button>
+                </div>
+            </div>
+
+            <!-- スタイリストカード3 -->
+            <div class="stylist-card" data-id="suzuki">
+                <div class="risk-indicator" title="離職リスク: 低"></div>
+                <div class="stylist-header">
+                    <div class="avatar">鈴</div>
+                    <div class="stylist-info">
+                        <h3>鈴木 恵美</h3>
+                        <div class="stylist-role">マネージャー (5年目)</div>
+                    </div>
+                </div>
+                
+                <div class="stylist-details">
+                    <div class="detail-item">
+                        <span class="material-icons">email</span>
+                        <span>suzuki.e@example.com</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="material-icons">admin_panel_settings</span>
+                        <span>管理者権限</span>
+                    </div>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="stat-value">15</div>
+                        <div class="stat-label">今月担当数</div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-secondary btn-small" onclick="viewSajuProfile('鈴木 恵美')">
+                        <span class="material-icons" style="font-size: 1rem;">psychology</span>
+                        四柱推命
+                    </button>
+                    <button class="btn btn-primary btn-small" onclick="editStylist('suzuki')">
+                        <span class="material-icons" style="font-size: 1rem;">edit</span>
+                        編集
+                    </button>
+                    <button class="btn btn-secondary btn-small" onclick="downloadReport('suzuki')">
+                        <span class="material-icons" style="font-size: 1rem;">download</span>
+                        レポート
+                    </button>
+                </div>
+            </div>
+
+            <!-- スタイリストカード4 -->
+            <div class="stylist-card" data-id="takahashi">
+                <div class="risk-indicator" title="離職リスク: 低"></div>
+                <div class="stylist-header">
+                    <div class="avatar">高</div>
+                    <div class="stylist-info">
+                        <h3>高橋 由美</h3>
+                        <div class="stylist-role">スタイリスト (1年目)</div>
+                    </div>
+                </div>
+                
+                <div class="stylist-details">
+                    <div class="detail-item">
+                        <span class="material-icons">email</span>
+                        <span>takahashi.y@example.com</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="material-icons">person</span>
+                        <span>基本権限</span>
+                    </div>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="stat-value">8</div>
+                        <div class="stat-label">今月担当数</div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-secondary btn-small" onclick="viewSajuProfile('高橋 由美')">
+                        <span class="material-icons" style="font-size: 1rem;">psychology</span>
+                        四柱推命
+                    </button>
+                    <button class="btn btn-primary btn-small" onclick="editStylist('takahashi')">
+                        <span class="material-icons" style="font-size: 1rem;">edit</span>
+                        編集
+                    </button>
+                    <button class="btn btn-secondary btn-small" onclick="downloadReport('takahashi')">
+                        <span class="material-icons" style="font-size: 1rem;">download</span>
+                        レポート
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新規追加/編集モーダル -->
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">新規スタイリスト追加</div>
+                <button class="modal-close" onclick="closeAddModal()">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            
+            <form id="addStylistForm">
+                <div class="form-group">
+                    <label>氏名 *</label>
+                    <input type="text" class="form-control" id="stylistName" required placeholder="例: 山田 花子">
+                </div>
+                
+                <div class="form-group">
+                    <label>生年月日 *</label>
+                    <input type="date" class="form-control" id="stylistBirthdate" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>役職 *</label>
+                    <select class="form-control" id="stylistRole" required>
+                        <option value="">選択してください</option>
+                        <option value="trainee">研修生</option>
+                        <option value="junior">ジュニアスタイリスト</option>
+                        <option value="stylist">スタイリスト</option>
+                        <option value="senior">シニアスタイリスト</option>
+                        <option value="manager">マネージャー</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>メールアドレス *</label>
+                    <input type="email" class="form-control" id="stylistEmail" required placeholder="例: hanako@example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label>権限レベル</label>
+                    <select class="form-control" id="stylistPermission">
+                        <option value="user">基本権限（顧客管理・チャット）</option>
+                        <option value="advanced">管理権限（レポート閲覧）</option>
+                        <option value="admin">管理者権限（全機能）</option>
+                    </select>
+                </div>
+                
+                <!-- 編集時のみ表示される削除ボタン -->
+                <button type="button" class="btn-delete" id="deleteButton" style="display: none;" onclick="confirmDelete()">
+                    <span class="material-icons" style="font-size: 1rem; margin-right: 0.5rem;">delete</span>
+                    このスタイリストを削除
+                </button>
+                
+                <div class="form-footer">
+                    <button type="button" class="btn-cancel" onclick="closeAddModal()">キャンセル</button>
+                    <button type="submit" class="btn-save">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 四柱推命プロフィールモーダル -->
+    <div class="modal" id="sajuModal">
+        <div class="modal-content saju-modal">
+            <div class="modal-header">
+                <div class="modal-title" id="sajuName">田中 美咲の四柱推命プロフィール</div>
+                <button class="modal-close" onclick="closeSajuModal()">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            
+            <div class="birth-info">
+                <div class="birth-item">
+                    <div class="birth-label">生年月日</div>
+                    <div class="birth-value">1988年4月15日</div>
+                </div>
+                <div class="birth-item">
+                    <div class="birth-label">生まれた時間</div>
+                    <div class="birth-value">12:30</div>
+                </div>
+                <div class="birth-item">
+                    <div class="birth-label">生まれた場所</div>
+                    <div class="birth-value">東京都</div>
+                </div>
+                <div class="birth-item">
+                    <div class="birth-label">最終更新日</div>
+                    <div class="birth-value">2025年4月10日</div>
+                </div>
+            </div>
+
+            <div class="saju-elements">
+                <div class="element-box fire-element">
+                    <span class="element-icon material-icons">local_fire_department</span>
+                    <div class="element-name">火</div>
+                    <div class="element-percent">40%</div>
+                </div>
+                <div class="element-box earth-element">
+                    <span class="element-icon material-icons">landscape</span>
+                    <div class="element-name">土</div>
+                    <div class="element-percent">30%</div>
+                </div>
+                <div class="element-box metal-element">
+                    <span class="element-icon material-icons">toll</span>
+                    <div class="element-name">金</div>
+                    <div class="element-percent">15%</div>
+                </div>
+                <div class="element-box water-element">
+                    <span class="element-icon material-icons">water_drop</span>
+                    <div class="element-name">水</div>
+                    <div class="element-percent">10%</div>
+                </div>
+                <div class="element-box wood-element">
+                    <span class="element-icon material-icons">park</span>
+                    <div class="element-name">木</div>
+                    <div class="element-percent">5%</div>
+                </div>
+            </div>
+
+            <div class="pillar-grid">
+                <div class="pillar-card">
+                    <div class="pillar-title">年柱</div>
+                    <div class="pillar-content">戊辰</div>
+                    <div class="pillar-note">陽土陽木</div>
+                </div>
+                <div class="pillar-card">
+                    <div class="pillar-title">月柱</div>
+                    <div class="pillar-content">丁卯</div>
+                    <div class="pillar-note">陰火陰木</div>
+                </div>
+                <div class="pillar-card">
+                    <div class="pillar-title">日柱</div>
+                    <div class="pillar-content">甲子</div>
+                    <div class="pillar-note">陽木陽水</div>
+                </div>
+                <div class="pillar-card">
+                    <div class="pillar-title">時柱</div>
+                    <div class="pillar-content">庚午</div>
+                    <div class="pillar-note">陽金陽火</div>
+                </div>
+            </div>
+
+            <div>
+                <h3 style="color: var(--dark-pink); margin-bottom: 1rem;">命式の特徴</h3>
+                <p style="margin-bottom: 1rem;">この方の命式は「火土」が強く、「木水」が弱い傾向があります。リーダーシップと行動力に優れ、明るく情熱的な性格です。計画的で堅実な一面もありますが、柔軟性を持つことが課題となることがあります。</p>
+                <p>お客様との相性は「水」「木」のエネルギーを持つ方と特に良い関係が築けます。また、髪型のアドバイスとして、あまり直線的で硬い印象のスタイルは避け、柔らかさや流れのあるデザインを取り入れると良いでしょう。</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // モックデータ
+        let stylistData = [
+            {
+                id: 'sato',
+                name: '佐藤 美香',
+                role: 'シニアスタイリスト (3年目)',
+                riskLevel: 'danger',
+                appointments: 12,
+                email: 'sato.m@example.com',
+                permission: 'admin'
+            },
+            {
+                id: 'tanaka',
+                name: '田中 愛子',
+                role: 'スタイリスト (2年目)',
+                riskLevel: 'warning',
+                appointments: 18,
+                email: 'tanaka.a@example.com',
+                permission: 'user'
+            },
+            {
+                id: 'suzuki',
+                name: '鈴木 恵美',
+                role: 'マネージャー (5年目)',
+                riskLevel: 'safe',
+                appointments: 15,
+                email: 'suzuki.e@example.com',
+                permission: 'admin'
+            },
+            {
+                id: 'takahashi',
+                name: '高橋 由美',
+                role: 'スタイリスト (1年目)',
+                riskLevel: 'safe',
+                appointments: 8,
+                email: 'takahashi.y@example.com',
+                permission: 'user'
+            }
+        ];
+
+        let currentEditingStylist = null;
+
+        // 検索機能
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const cards = document.querySelectorAll('.stylist-card');
+            
+            cards.forEach(card => {
+                const name = card.querySelector('h3').textContent.toLowerCase();
+                if (name.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+
+        // モーダル操作
+        function openAddModal() {
+            document.querySelector('.modal-title').textContent = '新規スタイリスト追加';
+            document.getElementById('deleteButton').style.display = 'none';
+            document.getElementById('addModal').style.display = 'flex';
+            currentEditingStylist = null;
+            clearForm();
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').style.display = 'none';
+            currentEditingStylist = null;
+            clearForm();
+        }
+
+        function clearForm() {
+            document.getElementById('addStylistForm').reset();
+        }
+
+        // 編集機能
+        function editStylist(stylistId) {
+            const stylist = stylistData.find(s => s.id === stylistId);
+            if (stylist) {
+                currentEditingStylist = stylistId;
+                document.querySelector('.modal-title').textContent = `${stylist.name}の情報編集`;
+                document.getElementById('stylistName').value = stylist.name;
+                document.getElementById('stylistEmail').value = stylist.email;
+                document.getElementById('deleteButton').style.display = 'block';
+                document.getElementById('addModal').style.display = 'flex';
+            }
+        }
+
+        // 削除確認
+        function confirmDelete() {
+            if (currentEditingStylist) {
+                const stylist = stylistData.find(s => s.id === currentEditingStylist);
+                if (stylist && confirm(`${stylist.name}を削除してもよろしいですか？\n\nこの操作は取り消せません。`)) {
+                    deleteStylist(currentEditingStylist, stylist.name);
+                    closeAddModal();
+                }
+            }
+        }
+
+        // 削除機能
+        function deleteStylist(stylistId, stylistName) {
+            const card = document.querySelector(`[data-id="${stylistId}"]`);
+            if (card) {
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    card.remove();
+                    // データからも削除
+                    stylistData = stylistData.filter(s => s.id !== stylistId);
+                    alert(`${stylistName}を削除しました。`);
+                }, 300);
+            }
+        }
+
+        // レポートダウンロード機能
+        function downloadReport(stylistId) {
+            const stylist = stylistData.find(s => s.id === stylistId);
+            if (stylist) {
+                // 実際の実装では、ここでレポートAPIを呼び出してPDFをダウンロード
+                alert(`${stylist.name}のレポートをダウンロードしています...\n\n含まれる内容:\n• 基本情報\n• 四柱推命分析\n• 今月の実績\n• 離職リスク分析`);
+                
+                // ダミーでダウンロード処理をシミュレート
+                setTimeout(() => {
+                    alert('レポートのダウンロードが完了しました。');
+                }, 1500);
+            }
+        }
+
+        // 四柱推命プロフィール表示
+        function viewSajuProfile(stylistName) {
+            document.getElementById('sajuName').textContent = `${stylistName}の四柱推命プロフィール`;
+            document.getElementById('sajuModal').style.display = 'flex';
+        }
+
+        function closeSajuModal() {
+            document.getElementById('sajuModal').style.display = 'none';
+        }
+
+        // フォーム送信処理
+        document.getElementById('addStylistForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('stylistName').value;
+            const email = document.getElementById('stylistEmail').value;
+            
+            if (currentEditingStylist) {
+                alert(`${name}の情報を更新しました！`);
+            } else {
+                alert(`新規スタイリスト「${name}」が正常に登録されました！\n\n四柱推命の分析結果は数分後に反映されます。`);
+            }
+            closeAddModal();
+        });
+
+        // モーダル外クリックで閉じる
+        document.getElementById('addModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAddModal();
+            }
+        });
+
+        document.getElementById('sajuModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeSajuModal();
+            }
+        });
+
+        // ページ読み込み時のアニメーション
+        window.addEventListener('load', function() {
+            const cards = document.querySelectorAll('.stylist-card');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateY(20px)';
+                    card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    
+                    setTimeout(() => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }, 100);
+                }, index * 100);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>組織管理画面 - Salomoni SuperAdmin</title>
+    
+    <!-- Material UI CDN -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mui/material@5.14.0/dist/mui.min.css" rel="stylesheet">
+    
+    <!-- React and Material UI Scripts -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@mui/material@5.14.0/umd/material-ui.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+            color: #222222;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #F26A8D 0%, #ff8a9b 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+        
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #F26A8D;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #F26A8D;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .organizations-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .section-header {
+            background: #D1EAE2;
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #222222;
+        }
+        
+        .add-btn {
+            background: #F26A8D;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background-color 0.2s;
+        }
+        
+        .add-btn:hover {
+            background: #e0587a;
+        }
+        
+        .filters {
+            padding: 1.5rem 2rem;
+            background: #fafafa;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .filter-select {
+            padding: 0.5rem 1rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            min-width: 120px;
+        }
+        
+        .search-input {
+            padding: 0.5rem 1rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            width: 250px;
+        }
+        
+        .organizations-table {
+            overflow-x: auto;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .table th {
+            background: #f8f9fa;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 500;
+            color: #555;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .table td {
+            padding: 1rem;
+            border-bottom: 1px solid #f0f0f0;
+            vertical-align: middle;
+        }
+        
+        .table tr:hover {
+            background: #f9f9f9;
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-trial {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-suspended {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .plan-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 16px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            background: #C4C3D5;
+            color: #222222;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .action-btn {
+            padding: 0.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            transition: background-color 0.2s;
+        }
+        
+        .edit-btn {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .edit-btn:hover {
+            background: #bbdefb;
+        }
+        
+        .delete-btn {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+        
+        .delete-btn:hover {
+            background: #ffcdd2;
+        }
+        
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        
+        .modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: 500;
+            color: #222222;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #F26A8D;
+            box-shadow: 0 0 0 2px rgba(242, 106, 141, 0.1);
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+        }
+        
+        .cancel-btn {
+            padding: 0.75rem 1.5rem;
+            border: 1px solid #ddd;
+            background: white;
+            color: #666;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .cancel-btn:hover {
+            background: #f5f5f5;
+        }
+        
+        .submit-btn {
+            padding: 0.75rem 1.5rem;
+            background: #F26A8D;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .submit-btn:hover {
+            background: #e0587a;
+        }
+
+        .material-icons {
+            font-size: 1.2rem;
+        }
+
+        /* 編集モーダル用追加スタイル */
+        .section-group {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .section-group:last-of-type {
+            border-bottom: none;
+            margin-bottom: 1rem;
+        }
+
+        .section-subtitle {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #F26A8D;
+            margin-bottom: 1rem;
+        }
+
+        .form-hint {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.3rem;
+        }
+
+        .token-input-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .token-input {
+            flex: 1;
+        }
+
+        .token-unit {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .status-warning {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #fff3cd;
+            color: #856404;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .status-warning .material-icons {
+            font-size: 1.2rem;
+        }
+
+        .advanced-settings {
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .advanced-toggle {
+            cursor: pointer;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-weight: 500;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .advanced-toggle:hover {
+            background: #e9ecef;
+        }
+
+        .advanced-settings[open] .advanced-toggle {
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+
+        .advanced-settings .section-group {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-bottom-left-radius: 6px;
+            border-bottom-right-radius: 6px;
+            margin-bottom: 0;
+            border-bottom: none;
+        }
+
+        .form-input[readonly] {
+            background: #e9ecef;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1><span class="material-icons" style="vertical-align: middle; margin-right: 0.5rem;">business</span>組織管理画面</h1>
+    </header>
+
+    <div class="main-container">
+        <!-- 統計情報 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">127</div>
+                <div class="stat-label">総組織数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">89</div>
+                <div class="stat-label">アクティブ組織</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">23</div>
+                <div class="stat-label">トライアル中</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">¥2,847,300</div>
+                <div class="stat-label">今月の売上</div>
+            </div>
+        </div>
+
+        <!-- 組織一覧 -->
+        <div class="organizations-section">
+            <div class="section-header">
+                <h2 class="section-title">組織一覧</h2>
+                <button class="add-btn" onclick="openAddModal()">
+                    <span class="material-icons">add</span>
+                    新規組織追加
+                </button>
+            </div>
+
+            <div class="filters">
+                <div class="filter-group">
+                    <label>ステータス:</label>
+                    <select class="filter-select">
+                        <option value="">すべて</option>
+                        <option value="active">アクティブ</option>
+                        <option value="trial">トライアル</option>
+                        <option value="suspended">停止中</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>プラン:</label>
+                    <select class="filter-select">
+                        <option value="">すべて</option>
+                        <option value="basic">ベーシック</option>
+                        <option value="standard">スタンダード</option>
+                        <option value="premium">プレミアム</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <input type="text" class="search-input" placeholder="組織名で検索...">
+                </div>
+            </div>
+
+            <div class="organizations-table">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>組織名</th>
+                            <th>オーナー</th>
+                            <th>プラン</th>
+                            <th>ステータス</th>
+                            <th>スタイリスト数</th>
+                            <th>月間トークン使用量</th>
+                            <th>登録日</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Hair Salon LUXE</strong></td>
+                            <td>田中 美咲</td>
+                            <td><span class="plan-badge">プレミアム</span></td>
+                            <td><span class="status-badge status-active">アクティブ</span></td>
+                            <td>12名</td>
+                            <td>850K / 3M</td>
+                            <td>2024-03-15</td>
+                            <td>
+                                <div class="actions">
+                                    <button class="action-btn edit-btn" title="編集" onclick="openEditModal('Hair Salon LUXE', '田中 美咲', 'tanaka@hairsalonluxe.com', 'premium', '3000000', 'active', 'ORG-001', '2024-03-15', '2024-05-23 14:32')">
+                                        <span class="material-icons">edit</span>
+                                    </button>
+                                    <button class="action-btn delete-btn" title="削除">
+                                        <span class="material-icons">delete</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>美容室 Bloom</strong></td>
+                            <td>佐藤 和子</td>
+                            <td><span class="plan-badge">スタンダード</span></td>
+                            <td><span class="status-badge status-active">アクティブ</span></td>
+                            <td>8名</td>
+                            <td>450K / 1M</td>
+                            <td>2024-04-02</td>
+                            <td>
+                                <div class="actions">
+                                    <button class="action-btn edit-btn" title="編集" onclick="openEditModal('Hair Salon LUXE', '田中 美咲', 'tanaka@hairsalonluxe.com', 'premium', '3000000', 'active', 'ORG-001', '2024-03-15', '2024-05-23 14:32')">
+                                        <span class="material-icons">edit</span>
+                                    </button>
+                                    <button class="action-btn delete-btn" title="削除">
+                                        <span class="material-icons">delete</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Salon de Marie</strong></td>
+                            <td>鈴木 雅代</td>
+                            <td><span class="plan-badge">ベーシック</span></td>
+                            <td><span class="status-badge status-trial">トライアル</span></td>
+                            <td>3名</td>
+                            <td>120K / 50K</td>
+                            <td>2024-05-10</td>
+                            <td>
+                                <div class="actions">
+                                    <button class="action-btn edit-btn" title="編集" onclick="openEditModal('Hair Salon LUXE', '田中 美咲', 'tanaka@hairsalonluxe.com', 'premium', '3000000', 'active', 'ORG-001', '2024-03-15', '2024-05-23 14:32')">
+                                        <span class="material-icons">edit</span>
+                                    </button>
+                                    <button class="action-btn delete-btn" title="削除">
+                                        <span class="material-icons">delete</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>ヘアスタジオ Aura</strong></td>
+                            <td>高橋 麻衣</td>
+                            <td><span class="plan-badge">スタンダード</span></td>
+                            <td><span class="status-badge status-suspended">停止中</span></td>
+                            <td>6名</td>
+                            <td>0K / 1M</td>
+                            <td>2024-02-20</td>
+                            <td>
+                                <div class="actions">
+                                    <button class="action-btn edit-btn" title="編集" onclick="openEditModal('Hair Salon LUXE', '田中 美咲', 'tanaka@hairsalonluxe.com', 'premium', '3000000', 'active', 'ORG-001', '2024-03-15', '2024-05-23 14:32')">
+                                        <span class="material-icons">edit</span>
+                                    </button>
+                                    <button class="action-btn delete-btn" title="削除">
+                                        <span class="material-icons">delete</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Glamorous Beauty</strong></td>
+                            <td>松本 直美</td>
+                            <td><span class="plan-badge">プレミアム</span></td>
+                            <td><span class="status-badge status-active">アクティブ</span></td>
+                            <td>15名</td>
+                            <td>1.2M / 3M</td>
+                            <td>2024-01-08</td>
+                            <td>
+                                <div class="actions">
+                                    <button class="action-btn edit-btn" title="編集" onclick="openEditModal('Hair Salon LUXE', '田中 美咲', 'tanaka@hairsalonluxe.com', 'premium', '3000000', 'active', 'ORG-001', '2024-03-15', '2024-05-23 14:32')">
+                                        <span class="material-icons">edit</span>
+                                    </button>
+                                    <button class="action-btn delete-btn" title="削除">
+                                        <span class="material-icons">delete</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新規組織追加モーダル -->
+    <div class="modal-overlay" id="addModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">新規組織追加</h3>
+                <button class="close-btn" onclick="closeAddModal()">&times;</button>
+            </div>
+            <form id="addForm">
+                <div class="form-group">
+                    <label class="form-label">組織名 *</label>
+                    <input type="text" class="form-input" placeholder="例：Hair Salon LUXE" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">オーナー名 *</label>
+                    <input type="text" class="form-input" placeholder="例：田中 美咲" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">メールアドレス *</label>
+                    <input type="email" class="form-input" placeholder="example@salon.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">プラン</label>
+                    <select class="form-input">
+                        <option value="trial">トライアル（14日間無料）</option>
+                        <option value="basic">ベーシック（¥9,700/月）</option>
+                        <option value="standard">スタンダード（¥29,700/月）</option>
+                        <option value="premium">プレミアム（¥49,700/月）</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="cancel-btn" onclick="closeAddModal()">キャンセル</button>
+                    <button type="submit" class="submit-btn">作成</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 組織編集モーダル -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">組織情報編集</h3>
+                <button class="close-btn" onclick="closeEditModal()">&times;</button>
+            </div>
+            <form id="editForm">
+                <!-- 基本情報セクション -->
+                <div class="section-group">
+                    <h4 class="section-subtitle">基本情報</h4>
+                    <div class="form-group">
+                        <label class="form-label">組織名 *</label>
+                        <input type="text" class="form-input" id="editOrgName" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">オーナー名 *</label>
+                        <input type="text" class="form-input" id="editOwnerName" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">メールアドレス *</label>
+                        <input type="email" class="form-input" id="editEmail" required>
+                    </div>
+                </div>
+
+                <!-- プラン・課金設定セクション -->
+                <div class="section-group">
+                    <h4 class="section-subtitle">プラン・課金設定</h4>
+                    <div class="form-group">
+                        <label class="form-label">プラン</label>
+                        <select class="form-input" id="editPlan">
+                            <option value="basic">ベーシック（¥9,700/月）</option>
+                            <option value="standard">スタンダード（¥29,700/月）</option>
+                            <option value="premium">プレミアム（¥49,700/月）</option>
+                        </select>
+                        <p class="form-hint">プラン変更は次回請求時から適用されます</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">月間トークン上限</label>
+                        <div class="token-input-group">
+                            <input type="number" class="form-input token-input" id="editTokenLimit" min="0" step="1000">
+                            <span class="token-unit">トークン</span>
+                        </div>
+                        <p class="form-hint">0を設定すると無制限になります</p>
+                    </div>
+                </div>
+
+                <!-- ステータス設定セクション -->
+                <div class="section-group">
+                    <h4 class="section-subtitle">ステータス設定</h4>
+                    <div class="form-group">
+                        <label class="form-label">ステータス</label>
+                        <select class="form-input status-select" id="editStatus">
+                            <option value="active">アクティブ</option>
+                            <option value="trial">トライアル</option>
+                            <option value="suspended">停止中</option>
+                        </select>
+                        <div class="status-warning" id="statusWarning" style="display: none;">
+                            <span class="material-icons">warning</span>
+                            <span>ステータスを「停止中」に変更すると、組織内のすべてのユーザーがアクセスできなくなります</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 追加情報（折りたたみ可能） -->
+                <details class="advanced-settings">
+                    <summary class="advanced-toggle">詳細設定</summary>
+                    <div class="section-group">
+                        <div class="form-group">
+                            <label class="form-label">組織ID</label>
+                            <input type="text" class="form-input" id="editOrgId" readonly disabled>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">登録日</label>
+                            <input type="text" class="form-input" id="editRegistrationDate" readonly disabled>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">最終ログイン</label>
+                            <input type="text" class="form-input" id="editLastLogin" readonly disabled>
+                        </div>
+                    </div>
+                </details>
+
+                <div class="form-actions">
+                    <button type="button" class="cancel-btn" onclick="closeEditModal()">キャンセル</button>
+                    <button type="submit" class="submit-btn">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openAddModal() {
+            document.getElementById('addModal').style.display = 'block';
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').style.display = 'none';
+        }
+
+        // モーダルの外側クリックで閉じる
+        document.getElementById('addModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAddModal();
+            }
+        });
+
+        // フィルター機能のデモ
+        document.querySelector('.search-input').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('.table tbody tr');
+            
+            rows.forEach(row => {
+                const orgName = row.querySelector('td:first-child').textContent.toLowerCase();
+                if (orgName.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        // ステータスフィルター
+        document.querySelector('.filter-select').addEventListener('change', function(e) {
+            const selectedStatus = e.target.value;
+            const rows = document.querySelectorAll('.table tbody tr');
+            
+            rows.forEach(row => {
+                const statusBadge = row.querySelector('.status-badge');
+                const statusClass = statusBadge.className;
+                
+                if (!selectedStatus || 
+                    (selectedStatus === 'active' && statusClass.includes('status-active')) ||
+                    (selectedStatus === 'trial' && statusClass.includes('status-trial')) ||
+                    (selectedStatus === 'suspended' && statusClass.includes('status-suspended'))) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        // フォーム送信の処理
+        document.getElementById('addForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('新規組織が作成されました！');
+            closeAddModal();
+        });
+
+        // 編集モーダル関連の関数
+        function openEditModal(orgName, ownerName, email, plan, tokenLimit, status, orgId, registrationDate, lastLogin) {
+            // フォームに値を設定
+            document.getElementById('editOrgName').value = orgName;
+            document.getElementById('editOwnerName').value = ownerName;
+            document.getElementById('editEmail').value = email;
+            document.getElementById('editPlan').value = plan;
+            document.getElementById('editTokenLimit').value = tokenLimit;
+            document.getElementById('editStatus').value = status;
+            document.getElementById('editOrgId').value = orgId;
+            document.getElementById('editRegistrationDate').value = registrationDate;
+            document.getElementById('editLastLogin').value = lastLogin;
+            
+            // モーダルを表示
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            // 警告メッセージをリセット
+            document.getElementById('statusWarning').style.display = 'none';
+        }
+
+        // 編集モーダルの外側クリックで閉じる
+        document.getElementById('editModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeEditModal();
+            }
+        });
+
+        // ステータス変更時の警告表示
+        document.getElementById('editStatus').addEventListener('change', function(e) {
+            const statusWarning = document.getElementById('statusWarning');
+            if (e.target.value === 'suspended') {
+                statusWarning.style.display = 'flex';
+            } else {
+                statusWarning.style.display = 'none';
+            }
+        });
+
+        // 編集フォームの送信処理
+        document.getElementById('editForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const status = document.getElementById('editStatus').value;
+            if (status === 'suspended') {
+                if (confirm('本当にこの組織を停止中にしますか？\n組織内のすべてのユーザーがアクセスできなくなります。')) {
+                    alert('組織情報が更新されました！');
+                    closeEditModal();
+                }
+            } else {
+                alert('組織情報が更新されました！');
+                closeEditModal();
+            }
+        });
+
+        // デモ用：他の編集ボタンにも機能を追加
+        document.querySelectorAll('.edit-btn').forEach((btn, index) => {
+            if (index === 1) {
+                btn.onclick = function() {
+                    openEditModal('美容室 Bloom', '佐藤 和子', 'sato@bloom.com', 'standard', '1000000', 'active', 'ORG-002', '2024-04-02', '2024-05-23 09:15');
+                };
+            } else if (index === 2) {
+                btn.onclick = function() {
+                    openEditModal('Salon de Marie', '鈴木 雅代', 'suzuki@marie.com', 'basic', '50000', 'trial', 'ORG-003', '2024-05-10', '2024-05-22 18:45');
+                };
+            } else if (index === 3) {
+                btn.onclick = function() {
+                    openEditModal('ヘアスタジオ Aura', '高橋 麻衣', 'takahashi@aura.com', 'standard', '1000000', 'suspended', 'ORG-004', '2024-02-20', '2024-04-30 16:20');
+                };
+            } else if (index === 4) {
+                btn.onclick = function() {
+                    openEditModal('Glamorous Beauty', '松本 直美', 'matsumoto@glamorous.com', 'premium', '3000000', 'active', 'ORG-005', '2024-01-08', '2024-05-23 11:00');
+                };
+            }
+        });
+    </script>
+</body>
+</html>

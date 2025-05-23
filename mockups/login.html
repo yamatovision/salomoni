@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>サロモニ - ログイン</title>
+    
+    <!-- Material UI CSS -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/material-components-web/14.0.0/material-components-web.min.css" rel="stylesheet">
+    
+    <!-- Material UI JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/material-components-web/14.0.0/material-components-web.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans JP', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #fce7f3 0%, #fdf2f8 50%, #f3e8ff 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 40px 20px;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(242, 106, 141, 0.15);
+            text-align: center;
+            position: relative;
+        }
+        
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(135deg, #F26A8D, #fce7f3, #f3e8ff);
+            border-radius: 24px;
+            z-index: -1;
+            opacity: 0.3;
+        }
+        
+        /* ロゴエリア */
+        .logo-section {
+            margin-bottom: 48px;
+        }
+        
+        .app-logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #F26A8D 0%, #E298A4 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 32px rgba(242, 106, 141, 0.3);
+            position: relative;
+        }
+        
+        .logo-text {
+            font-size: 32px;
+            font-weight: 300;
+            color: white;
+            font-style: italic;
+            position: relative;
+        }
+        
+        .logo-text::before {
+            content: 'S';
+            position: absolute;
+            left: -3px;
+            top: -3px;
+            font-size: 36px;
+            font-weight: 400;
+            transform: rotate(-8deg);
+        }
+        
+        .app-name {
+            font-size: 28px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+        
+        .app-subtitle {
+            font-size: 16px;
+            color: #6b7280;
+            font-weight: 400;
+            line-height: 1.5;
+        }
+        
+        /* ログインボタンエリア */
+        .login-methods {
+            margin-bottom: 32px;
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .login-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .login-btn:hover::before {
+            left: 100%;
+        }
+        
+        .apple-btn {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            color: #475569;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 4px 16px rgba(148, 163, 184, 0.2);
+        }
+        
+        .apple-btn:hover {
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+            color: #334155;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(148, 163, 184, 0.3);
+            border: 1px solid #94a3b8;
+        }
+        
+        .line-btn {
+            background: #00C300;
+            color: white;
+            box-shadow: 0 4px 16px rgba(0,195,0,0.2);
+        }
+        
+        .line-btn:hover {
+            background: #00b300;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,195,0,0.3);
+        }
+        
+        .btn-icon {
+            font-size: 20px;
+        }
+        
+        /* 区切り線 */
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 32px 0;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+        
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #e5e7eb, transparent);
+        }
+        
+        .divider span {
+            padding: 0 16px;
+            background: white;
+            font-weight: 500;
+        }
+        
+        /* メール認証フォーム */
+        .email-form {
+            text-align: left;
+            margin-bottom: 24px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            background: #fafafa;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #F26A8D;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(242, 106, 141, 0.1);
+        }
+        
+        .form-input::placeholder {
+            color: #9ca3af;
+        }
+        
+        .email-btn {
+            background: linear-gradient(135deg, #F26A8D 0%, #E298A4 100%);
+            color: white;
+            box-shadow: 0 4px 16px rgba(242, 106, 141, 0.3);
+        }
+        
+        .email-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(242, 106, 141, 0.4);
+        }
+        
+        .email-btn:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        /* フッター */
+        .login-footer {
+            text-align: center;
+            color: #6b7280;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        
+        .privacy-link {
+            color: #F26A8D;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .privacy-link:hover {
+            text-decoration: underline;
+        }
+        
+        /* ローディング状態 */
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        
+        .loading .btn-text {
+            opacity: 0;
+        }
+        
+        .loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        /* エラーメッセージ */
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .error-message.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 480px) {
+            .login-container {
+                max-width: 100%;
+                margin: 20px;
+                padding: 32px 20px;
+                border-radius: 20px;
+            }
+            
+            .app-logo {
+                width: 70px;
+                height: 70px;
+            }
+            
+            .logo-text {
+                font-size: 28px;
+            }
+            
+            .app-name {
+                font-size: 24px;
+            }
+            
+            .login-btn {
+                padding: 14px 16px;
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <!-- ロゴセクション -->
+        <div class="logo-section">
+            <div class="app-logo">
+                <div class="logo-text">S</div>
+            </div>
+            <h1 class="app-name">Salomoni</h1>
+            <p class="app-subtitle">あなたの毎日に寄り添う<br>パートナーがここに</p>
+        </div>
+        
+        <!-- エラーメッセージ -->
+        <div class="error-message" id="errorMessage">
+            ログインに失敗しました。もう一度お試しください。
+        </div>
+        
+        <!-- ログイン方法 -->
+        <div class="login-methods">
+            <!-- Apple ID認証 -->
+            <button class="login-btn apple-btn" onclick="loginWithApple()">
+                <span class="btn-text">Apple IDでログイン</span>
+            </button>
+            
+            <!-- LINE認証 -->
+            <button class="login-btn line-btn" onclick="loginWithLine()">
+                <span class="btn-icon">💬</span>
+                <span class="btn-text">LINEでログイン</span>
+            </button>
+        </div>
+        
+        <!-- 区切り線 -->
+        <div class="divider">
+            <span>または</span>
+        </div>
+        
+        <!-- メール認証フォーム -->
+        <form class="email-form" onsubmit="loginWithEmail(event)">
+            <div class="form-group">
+                <label class="form-label" for="email">メールアドレス</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    class="form-input" 
+                    placeholder="example@email.com"
+                    required
+                >
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="password">パスワード</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    class="form-input" 
+                    placeholder="パスワードを入力"
+                    required
+                    minlength="6"
+                >
+            </div>
+            
+            <button type="submit" class="login-btn email-btn">
+                <span class="btn-icon material-icons">email</span>
+                <span class="btn-text">メールでログイン</span>
+            </button>
+        </form>
+        
+        <!-- フッター -->
+        <div class="login-footer">
+            ログインすることで<br>
+            <a href="#" class="privacy-link">利用規約</a>と<a href="#" class="privacy-link">プライバシーポリシー</a>に同意したものとみなされます
+        </div>
+    </div>
+    
+    <script>
+        // Apple ID認証
+        function loginWithApple() {
+            const btn = event.target.closest('.login-btn');
+            showLoading(btn);
+            
+            // Apple Sign In APIの実装をここに追加
+            console.log('Apple ID認証を開始...');
+            
+            setTimeout(() => {
+                hideLoading(btn);
+                // 成功時は次のページに遷移
+                // window.location.href = '/dashboard';
+                showSuccess('Apple IDでのログインが完了しました！');
+            }, 2000);
+        }
+        
+        // LINE認証
+        function loginWithLine() {
+            const btn = event.target.closest('.login-btn');
+            showLoading(btn);
+            
+            // LINE Login APIの実装をここに追加
+            console.log('LINE認証を開始...');
+            
+            setTimeout(() => {
+                hideLoading(btn);
+                // 成功時は次のページに遷移
+                // window.location.href = '/dashboard';
+                showSuccess('LINEでのログインが完了しました！');
+            }, 2000);
+        }
+        
+        // メール認証
+        function loginWithEmail(event) {
+            event.preventDefault();
+            
+            const btn = event.target.querySelector('.email-btn');
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            // バリデーション
+            if (!email || !password) {
+                showError('メールアドレスとパスワードを入力してください。');
+                return;
+            }
+            
+            showLoading(btn);
+            hideError();
+            
+            // 認証API呼び出しをここに実装
+            console.log('メール認証:', { email, password });
+            
+            // モック認証処理
+            setTimeout(() => {
+                hideLoading(btn);
+                
+                // デモ用の簡単な認証チェック
+                if (email === 'demo@salomoni.com' && password === 'demo123') {
+                    showSuccess('ログインが完了しました！');
+                    // window.location.href = '/dashboard';
+                } else {
+                    showError('メールアドレスまたはパスワードが正しくありません。');
+                }
+            }, 1500);
+        }
+        
+        // ローディング表示
+        function showLoading(btn) {
+            btn.classList.add('loading');
+            btn.disabled = true;
+        }
+        
+        // ローディング非表示
+        function hideLoading(btn) {
+            btn.classList.remove('loading');
+            btn.disabled = false;
+        }
+        
+        // エラーメッセージ表示
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.classList.add('show');
+        }
+        
+        // エラーメッセージ非表示
+        function hideError() {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.classList.remove('show');
+        }
+        
+        // 成功メッセージ表示
+        function showSuccess(message) {
+            // 実際の実装では成功ページに遷移するか、
+            // Toast通知などで表示する
+            alert(message);
+        }
+        
+        // フォームのリアルタイムバリデーション
+        document.getElementById('email').addEventListener('input', function() {
+            const email = this.value;
+            const btn = document.querySelector('.email-btn');
+            
+            if (this.validity.valid && document.getElementById('password').value.length >= 6) {
+                btn.disabled = false;
+            } else {
+                btn.disabled = true;
+            }
+        });
+        
+        document.getElementById('password').addEventListener('input', function() {
+            const password = this.value;
+            const btn = document.querySelector('.email-btn');
+            const email = document.getElementById('email');
+            
+            if (password.length >= 6 && email.validity.valid) {
+                btn.disabled = false;
+            } else {
+                btn.disabled = true;
+            }
+        });
+        
+        // 初期状態でメールログインボタンを無効化
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('.email-btn').disabled = true;
+        });
+    </script>
+</body>
+</html>

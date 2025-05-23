@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>サロモニ - チャットインターフェース</title>
+    
+    <!-- Material UI CSS -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/material-components-web/14.0.0/material-components-web.min.css" rel="stylesheet">
+    
+    <!-- Material UI JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/material-components-web/14.0.0/material-components-web.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans JP', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #fce7f3 0%, #fdf2f8 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .chat-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 30px rgba(226, 152, 164, 0.2);
+        }
+        
+        /* ヘッダー */
+        .chat-header {
+            background: linear-gradient(135deg, #fce7f3 0%, #fdf2f8 100%);
+            color: #374151;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: none;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            position: relative;
+        }
+        
+        .chat-header::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        }
+        
+        .ai-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .ai-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #F26A8D;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 2px 8px rgba(242, 106, 141, 0.3);
+            position: relative;
+        }
+        
+        .ai-name {
+            font-size: 20px;
+            font-weight: 500;
+            color: white;
+        }
+        
+        .ai-details h3 {
+            font-size: 18px;
+            font-weight: 500;
+            margin: 0;
+            letter-spacing: 0.5px;
+            color: #374151;
+        }
+        
+        .ai-status {
+            font-size: 12px;
+            opacity: 0.9;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background: #4ade80;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .header-btn {
+            background: none;
+            border: none;
+            color: #374151;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .header-btn:hover {
+            background: rgba(0,0,0,0.05);
+            transform: translateY(-1px);
+        }
+        
+        /* メッセージエリア */
+        .messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background: linear-gradient(180deg, #fafafa 0%, #f8fafc 100%);
+        }
+        
+        .message {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            max-width: 85%;
+            animation: fadeInUp 0.3s ease;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+        
+        .message.ai {
+            align-self: flex-start;
+        }
+        
+        .message-bubble {
+            padding: 14px 18px;
+            border-radius: 20px;
+            word-wrap: break-word;
+            line-height: 1.5;
+            position: relative;
+        }
+        
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, #E298A4 0%, #D186A4 100%);
+            color: white;
+            border-bottom-right-radius: 6px;
+            box-shadow: 0 3px 12px rgba(226, 152, 164, 0.3);
+        }
+        
+        .message.ai .message-bubble {
+            background: white;
+            color: #374151;
+            border-bottom-left-radius: 6px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            border: 1px solid rgba(226, 152, 164, 0.1);
+        }
+        
+        .message-time {
+            font-size: 11px;
+            color: #9ca3af;
+            margin: 4px 8px 0 8px;
+            font-weight: 400;
+        }
+        
+        /* リッチカード */
+        .fortune-card {
+            background: linear-gradient(135deg, #fce7f3 0%, #f3e8ff 50%, #e0e7ff 100%);
+            border-radius: 20px;
+            padding: 24px;
+            margin: 12px 0;
+            box-shadow: 0 6px 20px rgba(226, 152, 164, 0.15);
+            color: #374151;
+            border: 1px solid rgba(226, 152, 164, 0.2);
+        }
+        
+        .fortune-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .fortune-icon {
+            font-size: 28px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+        
+        .fortune-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: #E298A4;
+            letter-spacing: 0.5px;
+        }
+        
+        .fortune-items {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        
+        .fortune-item {
+            background: rgba(255,255,255,0.8);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid rgba(226, 152, 164, 0.1);
+        }
+        
+        .fortune-item-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        
+        .fortune-item-value {
+            font-size: 16px;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        /* クイックアクション */
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin: 16px 0;
+            flex-wrap: wrap;
+        }
+        
+        .quick-btn {
+            background: linear-gradient(135deg, rgba(226, 152, 164, 0.1) 0%, rgba(226, 152, 164, 0.05) 100%);
+            border: 1px solid rgba(226, 152, 164, 0.3);
+            color: #E298A4;
+            padding: 10px 18px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .quick-btn:hover {
+            background: linear-gradient(135deg, rgba(226, 152, 164, 0.2) 0%, rgba(226, 152, 164, 0.1) 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(226, 152, 164, 0.2);
+        }
+        
+        /* 入力エリア */
+        .input-area {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid rgba(226, 152, 164, 0.1);
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+        
+        .message-input {
+            width: 100%;
+            border: 2px solid rgba(226, 152, 164, 0.2);
+            border-radius: 25px;
+            padding: 14px 55px 14px 20px;
+            font-size: 16px;
+            resize: none;
+            min-height: 52px;
+            max-height: 120px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            background: rgba(253, 242, 248, 0.3);
+        }
+        
+        .message-input:focus {
+            outline: none;
+            border-color: #E298A4;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(226, 152, 164, 0.1);
+        }
+        
+        .message-input::placeholder {
+            color: #9ca3af;
+        }
+        
+        .input-actions {
+            position: absolute;
+            right: 10px;
+            bottom: 10px;
+            display: flex;
+            gap: 4px;
+        }
+        
+        .input-btn {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            padding: 8px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .input-btn:hover {
+            background: rgba(226, 152, 164, 0.1);
+            color: #E298A4;
+        }
+        
+        .send-btn {
+            background: linear-gradient(135deg, #E298A4 0%, #D186A4 100%);
+            border: none;
+            color: white;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(226, 152, 164, 0.3);
+        }
+        
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(226, 152, 164, 0.4);
+        }
+        
+        .send-btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* タイピングインジケーター */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 18px;
+            background: white;
+            border-radius: 20px;
+            border-bottom-left-radius: 6px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            margin: 8px 0;
+            border: 1px solid rgba(226, 152, 164, 0.1);
+            max-width: 200px;
+        }
+        
+        .typing-text {
+            font-size: 14px;
+            color: #6b7280;
+        }
+        
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #E298A4;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        /* カスタムスクロールバー */
+        .messages-area::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .messages-area::-webkit-scrollbar-track {
+            background: rgba(226, 152, 164, 0.1);
+            border-radius: 3px;
+        }
+        
+        .messages-area::-webkit-scrollbar-thumb {
+            background: rgba(226, 152, 164, 0.3);
+            border-radius: 3px;
+        }
+        
+        .messages-area::-webkit-scrollbar-thumb:hover {
+            background: rgba(226, 152, 164, 0.5);
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 600px) {
+            .chat-container {
+                height: 100vh;
+            }
+            
+            .fortune-items {
+                grid-template-columns: 1fr;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+            
+            .chat-header {
+                padding: 12px 16px;
+            }
+            
+            .messages-area {
+                padding: 16px;
+            }
+            
+            .input-area {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <!-- ヘッダー -->
+        <header class="chat-header">
+            <div class="ai-info">
+                <div class="ai-avatar">
+                    <div class="ai-name">R</div>
+                </div>
+                <div class="ai-details">
+                    <h3>Ruka</h3>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="header-btn" title="名前変更">
+                    <span class="material-icons">edit</span>
+                </button>
+            </div>
+        </header>
+        
+        <!-- メッセージエリア -->
+        <main class="messages-area" id="messagesArea">
+            <!-- AIの初回メッセージ -->
+            <div class="message ai">
+                <div class="message-bubble">
+                    やっと会えたね。今日から<br>
+                    あなたのパートナーになる<br>
+                    よ。
+                </div>
+            </div>
+            
+            <div class="message ai">
+                <div class="message-bubble">
+                    まず、あなたのことを<br>
+                    少し教えてくれないかな？
+                </div>
+            </div>
+            
+            <div class="message ai">
+                <div class="message-bubble">
+                    生年月日は？
+                </div>
+            </div>
+            
+            <!-- ユーザーメッセージ例 -->
+            <div class="message user">
+                <div class="message-bubble">
+                    1990年5月15日
+                </div>
+            </div>
+            
+            <div class="message ai">
+                <div class="message-bubble">
+                    うんうん、なるほど〜。😌<br>
+                    君はしっかり者の宝石み<br>
+                    たいな人だね✨
+                </div>
+            </div>
+            
+            
+            <!-- タイピングインジケーター（非表示状態） -->
+            <div class="typing-indicator" id="typingIndicator" style="display: none;">
+                <span class="typing-text">サロモニが入力中</span>
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- 入力エリア -->
+        <div class="input-area">
+            <div class="input-wrapper">
+                <textarea 
+                    class="message-input" 
+                    id="messageInput"
+                    placeholder="悩みを書いてね"
+                    rows="1"
+                ></textarea>
+                <div class="input-actions">
+                    <button class="input-btn" title="絵文字">
+                        <span class="material-icons">sentiment_satisfied</span>
+                    </button>
+                    <button class="input-btn" title="音声入力">
+                        <span class="material-icons">mic</span>
+                    </button>
+                </div>
+            </div>
+            <button class="send-btn" onclick="sendMessage()">
+                <span class="material-icons">send</span>
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        // テキストエリアの自動リサイズ
+        const messageInput = document.getElementById('messageInput');
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+        
+        // Enterキーでメッセージ送信（Shift+Enterで改行）
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // メッセージ送信機能
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                addUserMessage(message);
+                input.value = '';
+                input.style.height = 'auto';
+                
+                // AIの応答をシミュレート
+                setTimeout(() => {
+                    showTypingIndicator();
+                    setTimeout(() => {
+                        hideTypingIndicator();
+                        addAIResponse(message);
+                    }, 2000);
+                }, 500);
+            }
+        }
+        
+        // クイックメッセージ送信
+        function sendQuickMessage(message) {
+            addUserMessage(message);
+            setTimeout(() => {
+                showTypingIndicator();
+                setTimeout(() => {
+                    hideTypingIndicator();
+                    addAIResponse(message);
+                }, 1500);
+            }, 300);
+        }
+        
+        // ユーザーメッセージを追加
+        function addUserMessage(message) {
+            const messagesArea = document.getElementById('messagesArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message user';
+            messageDiv.innerHTML = `
+                <div class="message-bubble">${message}</div>
+                <div class="message-time">${getCurrentTime()}</div>
+            `;
+            messagesArea.appendChild(messageDiv);
+            scrollToBottom();
+        }
+        
+        // AI応答を追加
+        function addAIResponse(userMessage) {
+            const messagesArea = document.getElementById('messagesArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ai';
+            
+            let response = getAIResponse(userMessage);
+            
+            messageDiv.innerHTML = `
+                <div class="message-bubble">${response}</div>
+                <div class="message-time">${getCurrentTime()}</div>
+            `;
+            messagesArea.appendChild(messageDiv);
+            scrollToBottom();
+        }
+        
+        // AI応答の生成（簡単なルールベース）
+        function getAIResponse(userMessage) {
+            const responses = {
+                '詳しい運勢を見る': '詳細な運勢分析ページに移動しますね！🔮 今日は特に創造性が高まる日です。新しいヘアスタイルのアイデアが浮かびそうですよ✨',
+                '同僚との相性を調べて': '同僚の方との相性をお調べしますね！👥 どちらの方との相性が気になりますか？お名前を教えてください。',
+                '今日のアドバイス': '今日のアドバイスです💡<br><br>・午前中は集中力が高いので、技術的な作業に最適<br>・お客様とのコミュニケーションでは明るい笑顔を心がけて<br>・休憩時間に軽いストレッチを取り入れると運気アップ！',
+                'default': 'ありがとうございます😊 どのようなことでお手伝いできますか？お気軽にお聞かせください。'
+            };
+            
+            return responses[userMessage] || responses['default'];
+        }
+        
+        // タイピングインジケーター表示
+        function showTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            indicator.style.display = 'flex';
+            scrollToBottom();
+        }
+        
+        // タイピングインジケーター非表示
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            indicator.style.display = 'none';
+        }
+        
+        // 現在時刻を取得
+        function getCurrentTime() {
+            const now = new Date();
+            return now.getHours().toString().padStart(2, '0') + ':' + 
+                   now.getMinutes().toString().padStart(2, '0');
+        }
+        
+        // 最下部にスクロール
+        function scrollToBottom() {
+            const messagesArea = document.getElementById('messagesArea');
+            setTimeout(() => {
+                messagesArea.scrollTop = messagesArea.scrollHeight;
+            }, 100);
+        }
+        
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            scrollToBottom();
+        });
+    </script>
+</body>
+</html>

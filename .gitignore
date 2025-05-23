@@ -1,0 +1,55 @@
+# 環境変数ファイル
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env*.local
+
+# 機密情報を含むディレクトリ
+/reference/
+
+# 依存関係ディレクトリ
+node_modules/
+dist/
+build/
+coverage/
+
+# ログファイル
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OSが生成する一時ファイル
+.DS_Store
+Thumbs.db
+
+# エディタ固有のファイル
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# テストとスクリプトフォルダ
+/test/
+/tests/
+/script/
+/scripts/
+/__tests__/
+
+# AppGeniusの一時ファイル
+.appgenius_temp/
+
+# TypeScript
+*.tsbuildinfo
+
+# Firebase
+.firebase/
+firebase-debug.log
+.firebaserc
+
+# その他
+*.tmp
+*.temp

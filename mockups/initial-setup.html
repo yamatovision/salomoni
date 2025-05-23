@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>初回設定 - Salomoni</title>
+    
+    <!-- Material UI CDN -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://unpkg.com/@mui/material@latest/umd/material-ui.development.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #fdf2f8 0%, #f8fafc 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        .mobile-container {
+            max-width: 375px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            position: relative;
+            box-shadow: 0 0 30px rgba(0,0,0,0.1);
+        }
+
+        /* Status Bar */
+        .status-bar {
+            background: white;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #000;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .status-right {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #F26A8D 0%, #f472b6 100%);
+            padding: 20px;
+            text-align: center;
+            color: white;
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 20px;
+            background: white;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .ai-avatar {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            border: 3px solid rgba(255,255,255,0.3);
+        }
+
+        .ai-name {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .ai-subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* Chat Container */
+        .chat-container {
+            flex: 1;
+            padding: 30px 20px 120px;
+            background: white;
+        }
+
+        .chat-bubble {
+            background: #f8fafc;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            max-width: 85%;
+            position: relative;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .chat-bubble::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: -10px;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 10px 10px 10px 0;
+            border-color: transparent #f8fafc transparent transparent;
+        }
+
+        .chat-text {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #334155;
+            margin-bottom: 15px;
+        }
+
+        .chat-text:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Birthday Input Section */
+        .birthday-section {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 10px;
+            border: 2px solid #F26A8D;
+            box-shadow: 0 4px 15px rgba(242, 106, 141, 0.1);
+        }
+
+        .birthday-label {
+            font-size: 16px;
+            font-weight: 600;
+            color: #F26A8D;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .birthday-inputs {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .birthday-input {
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 16px;
+            text-align: center;
+            background: #f8fafc;
+            color: #334155;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .birthday-input:focus {
+            outline: none;
+            border-color: #F26A8D;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(242, 106, 141, 0.1);
+        }
+
+        .year-input {
+            width: 80px;
+        }
+
+        .month-input, .day-input {
+            width: 60px;
+        }
+
+        .birthday-separator {
+            font-size: 18px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        /* User Response */
+        .user-response {
+            background: #F26A8D;
+            color: white;
+            border-radius: 20px;
+            padding: 15px 20px;
+            margin: 20px 0;
+            margin-left: auto;
+            max-width: 80%;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 500;
+            box-shadow: 0 4px 15px rgba(242, 106, 141, 0.3);
+        }
+
+        /* AI Response */
+        .ai-response {
+            background: #f0fdf4;
+            border-radius: 20px;
+            padding: 20px;
+            margin: 20px 0;
+            max-width: 85%;
+            border-left: 4px solid #22c55e;
+            position: relative;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .ai-response-text {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #15803d;
+        }
+
+        .personality-badge {
+            display: inline-flex;
+            align-items: center;
+            background: #fef3c7;
+            color: #92400e;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+
+        .personality-badge .material-icons {
+            font-size: 16px;
+            margin-right: 5px;
+        }
+
+        /* Bottom Input Area */
+        .bottom-input {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 375px;
+            background: white;
+            padding: 20px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-field {
+            flex: 1;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            padding: 12px 20px;
+            font-size: 16px;
+            background: #f8fafc;
+            color: #334155;
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #F26A8D;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(242, 106, 141, 0.1);
+        }
+
+        .input-field::placeholder {
+            color: #94a3b8;
+        }
+
+        .mic-button {
+            width: 48px;
+            height: 48px;
+            background: #F26A8D;
+            border: none;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(242, 106, 141, 0.3);
+        }
+
+        .mic-button:hover {
+            background: #e11d48;
+            transform: scale(1.05);
+        }
+
+        .continue-button {
+            background: #F26A8D;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 20px auto;
+            display: block;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(242, 106, 141, 0.3);
+        }
+
+        .continue-button:hover {
+            background: #e11d48;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(242, 106, 141, 0.4);
+        }
+
+        .continue-button:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Loading Animation */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin: 10px 0;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: #F26A8D;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typing {
+            0%, 80%, 100% { 
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            40% { 
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 375px) {
+            .mobile-container {
+                max-width: 100%;
+            }
+            
+            .chat-container {
+                padding: 20px 15px 120px;
+            }
+            
+            .birthday-inputs {
+                gap: 8px;
+            }
+            
+            .year-input {
+                width: 70px;
+            }
+            
+            .month-input, .day-input {
+                width: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-container">
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-left">9:41</div>
+            <div class="status-right">
+                <span style="font-size: 12px;">●●●●</span>
+                <span style="font-size: 12px;">📶</span>
+                <span style="font-size: 12px;">📶</span>
+                <span style="font-size: 12px;">🔋</span>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <div class="header">
+            <div class="ai-avatar">
+                ✨
+            </div>
+            <div class="ai-name">???</div>
+            <div class="ai-subtitle">まだ名前がないパートナー</div>
+        </div>
+
+        <!-- Chat Container -->
+        <div class="chat-container" id="chatContainer">
+            <!-- Initial AI Message -->
+            <div class="chat-bubble">
+                <div class="chat-text">
+                    はじめまして！✨<br>
+                    私、まだ名前がないの。
+                </div>
+                <div class="chat-text">
+                    あなたと一緒に決めたいな。<br>
+                    その前に、あなたのことを<br>
+                    教えてくれる？
+                </div>
+            </div>
+
+            <!-- Birthday Input Section -->
+            <div class="birthday-section">
+                <div class="birthday-label">生年月日は？</div>
+                <div class="birthday-inputs">
+                    <input type="number" class="birthday-input year-input" id="yearInput" placeholder="1990" min="1900" max="2010">
+                    <span class="birthday-separator">年</span>
+                    <input type="number" class="birthday-input month-input" id="monthInput" placeholder="5" min="1" max="12">
+                    <span class="birthday-separator">月</span>
+                    <input type="number" class="birthday-input day-input" id="dayInput" placeholder="15" min="1" max="31">
+                    <span class="birthday-separator">日</span>
+                </div>
+                <button class="continue-button" id="continueBtn" disabled>教える</button>
+            </div>
+
+            <!-- AI Response (Initially Hidden) -->
+            <div class="ai-response" id="aiResponse" style="display: none;">
+                <div class="ai-response-text">
+                    うんうん、なるほど〜。😊<br>
+                    君はしっかり者の宝石み<br>
+                    たいな人だね<div class="personality-badge">
+                        <span class="material-icons">auto_awesome</span>
+                        安定感のある魅力
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Input (Initially Hidden) -->
+        <div class="bottom-input" id="bottomInput" style="display: none;">
+            <input type="text" class="input-field" placeholder="悩みを書いてね" id="messageInput">
+            <button class="mic-button">
+                <span class="material-icons">mic</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Birthday input validation and interaction
+        const yearInput = document.getElementById('yearInput');
+        const monthInput = document.getElementById('monthInput');
+        const dayInput = document.getElementById('dayInput');
+        const continueBtn = document.getElementById('continueBtn');
+        const aiResponse = document.getElementById('aiResponse');
+        const bottomInput = document.getElementById('bottomInput');
+        const chatContainer = document.getElementById('chatContainer');
+
+        // Sample data for demonstration
+        const sampleDate = {
+            year: 1990,
+            month: 5,
+            day: 15
+        };
+
+        // Auto-fill sample data after a short delay
+        setTimeout(() => {
+            yearInput.value = sampleDate.year;
+            monthInput.value = sampleDate.month;
+            dayInput.value = sampleDate.day;
+            validateInputs();
+        }, 1000);
+
+        function validateInputs() {
+            const year = parseInt(yearInput.value);
+            const month = parseInt(monthInput.value);
+            const day = parseInt(dayInput.value);
+
+            const isValid = year >= 1900 && year <= 2010 && 
+                           month >= 1 && month <= 12 && 
+                           day >= 1 && day <= 31;
+
+            continueBtn.disabled = !isValid;
+        }
+
+        // Event listeners for input validation
+        [yearInput, monthInput, dayInput].forEach(input => {
+            input.addEventListener('input', validateInputs);
+            input.addEventListener('keyup', function(e) {
+                if (e.key === 'Enter' && !continueBtn.disabled) {
+                    submitBirthday();
+                }
+            });
+        });
+
+        // Continue button click
+        continueBtn.addEventListener('click', submitBirthday);
+
+        function submitBirthday() {
+            if (continueBtn.disabled) return;
+
+            // Show user response
+            const userResponse = document.createElement('div');
+            userResponse.className = 'user-response';
+            userResponse.textContent = `${yearInput.value}年${monthInput.value}月${dayInput.value}日`;
+            
+            chatContainer.appendChild(userResponse);
+
+            // Hide birthday section
+            document.querySelector('.birthday-section').style.display = 'none';
+
+            // Show typing indicator
+            showTypingIndicator();
+
+            // Show AI response after delay
+            setTimeout(() => {
+                hideTypingIndicator();
+                aiResponse.style.display = 'block';
+                
+                // Show bottom input after another delay
+                setTimeout(() => {
+                    bottomInput.style.display = 'flex';
+                    chatContainer.style.paddingBottom = '120px';
+                }, 1500);
+            }, 2000);
+
+            // Scroll to bottom
+            setTimeout(() => {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }, 100);
+        }
+
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'chat-bubble typing-indicator';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            `;
+            chatContainer.appendChild(typingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        // Message input functionality
+        const messageInput = document.getElementById('messageInput');
+        const micButton = document.querySelector('.mic-button');
+
+        messageInput.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter' && this.value.trim()) {
+                sendMessage(this.value.trim());
+                this.value = '';
+            }
+        });
+
+        micButton.addEventListener('click', function() {
+            // Simulate voice input
+            messageInput.focus();
+            messageInput.placeholder = '音声入力中...';
+            setTimeout(() => {
+                messageInput.placeholder = '悩みを書いてね';
+            }, 2000);
+        });
+
+        function sendMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'user-response';
+            messageDiv.textContent = message;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Auto-scroll to new content
+        const observer = new MutationObserver(() => {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        });
+
+        observer.observe(chatContainer, {
+            childList: true,
+            subtree: true
+        });
+    </script>
+</body>
+</html>

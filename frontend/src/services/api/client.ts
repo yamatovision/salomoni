@@ -1,72 +1,35 @@
-import axios from 'axios';
-import type { AxiosInstance } from 'axios';
+import { apiClient } from './apiClient';
 import { API_PATHS } from '../../types';
+import type { Client, ClientCreateRequest, ClientUpdateRequest, ApiResponse, PaginationParams } from '../../types';
 
-// APIクライアントの基盤設定
-class ApiClient {
-  private client: AxiosInstance;
-
-  constructor() {
-    this.client = axios.create({
-      baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      withCredentials: true,
-    });
-
-    // リクエストインターセプター
-    this.client.interceptors.request.use(
-      (config) => {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => {
-        return Promise.reject(error);
-      }
-    );
-
-    // レスポンスインターセプター
-    this.client.interceptors.response.use(
-      (response) => response,
-      async (error) => {
-        const originalRequest = error.config;
-
-        if (error.response?.status === 401 && !originalRequest._retry) {
-          originalRequest._retry = true;
-
-          try {
-            const refreshToken = localStorage.getItem('refreshToken');
-            if (refreshToken) {
-              const response = await this.client.post(API_PATHS.AUTH.REFRESH, {
-                refreshToken,
-              });
-              
-              const { accessToken } = response.data;
-              localStorage.setItem('accessToken', accessToken);
-              
-              originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-              return this.client(originalRequest);
-            }
-          } catch (refreshError) {
-            // リフレッシュ失敗時はログインページへ
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
-            window.location.href = '/login';
-          }
-        }
-
-        return Promise.reject(error);
-      }
-    );
+export class ClientService {
+  async createClient(data: ClientCreateRequest): Promise<ApiResponse<Client>> {
+    const response = await apiClient.post<ApiResponse<Client>>(API_PATHS.CLIENTS.BASE, data);
+    return response.data;
   }
 
-  get instance() {
-    return this.client;
+  async getClients(params?: PaginationParams): Promise<ApiResponse<Client[]>> {
+    const response = await apiClient.get<ApiResponse<Client[]>>(API_PATHS.CLIENTS.BASE, { params });
+    return response.data;
+  }
+
+  async getClient(clientId: string): Promise<ApiResponse<Client>> {
+    const response = await apiClient.get<ApiResponse<Client>>(API_PATHS.CLIENTS.DETAIL(clientId));
+    return response.data;
+  }
+
+  async updateClient(clientId: string, data: ClientUpdateRequest): Promise<ApiResponse<Client>> {
+    const response = await apiClient.put<ApiResponse<Client>>(API_PATHS.CLIENTS.DETAIL(clientId), data);
+    return response.data;
+  }
+
+  async deleteClient(clientId: string): Promise<ApiResponse<void>> {
+    const response = await apiClient.delete<ApiResponse<void>>(API_PATHS.CLIENTS.DETAIL(clientId));
+    return response.data;
+  }
+
+  async getDailyClients(): Promise<ApiResponse<Client[]>> {
+    const response = await apiClient.get<ApiResponse<Client[]>>(API_PATHS.CLIENTS.DAILY);
+    return response.data;
   }
 }
-
-export const apiClient = new ApiClient().instance;

@@ -46,6 +46,17 @@ export const mockUsers: UserProfile[] = [
     updatedAt: new Date('2024-03-01T00:00:00Z'),
     _isMockData: true,
   },
+  {
+    id: 'mock-user-002',
+    email: 'newuser@salon.com',
+    name: '新規スタイリスト',
+    role: UserRole.USER,
+    status: UserStatus.PENDING,  // 初回設定前のステータス
+    organizationId: 'mock-org-001',
+    createdAt: new Date('2024-05-01T00:00:00Z'),
+    updatedAt: new Date('2024-05-01T00:00:00Z'),
+    _isMockData: true,
+  },
 ];
 
 // パスワードマップ（開発用）
@@ -54,4 +65,5 @@ export const mockPasswords: Record<string, string> = {
   'owner@salon.com': 'owner123',
   'admin@salon.com': 'admin123',
   'stylist1@salon.com': 'stylist123',
+  'newuser@salon.com': 'newuser123',
 };

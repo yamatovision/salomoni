@@ -3,11 +3,11 @@
 ## 1. 基本情報
 
 - **プロジェクト名**: Salomoni × Iroha 統合プラットフォーム
-- **ステータス**: 統合要件定義完了段階
+- **ステータス**: フロントエンドプロトタイプ実装中
 - **完了タスク数**: 20/20（全モックアップ完成）
-- **進捗率**: 100%
-- **次のマイルストーン**: データモデル設計
-- **最終更新日**: 2025-05-24（フロントエンドプロトタイプPhase 1完了）
+- **進捗率**: 100%（モックアップ）、Phase 4完了（7/7ページ完了）
+- **次のマイルストーン**: Phase 5（SuperAdmin機能）継続
+- **最終更新日**: 2025-05-24（Phase 4 - A-007請求・支払い管理画面実装完了）
 - **要件定義書バージョン**: 3.1.0
 
 ## 2. 実装計画
@@ -40,24 +40,24 @@
 | 2.3 | Phase 2 | - | LINE認証コールバック | - | 2.1 | LINE認証データ | [x] |
 | 2.4 | Phase 2 | - | 認証コンテキスト | - | 2.1 | - | [x] |
 | 2.5 | Phase 2 | P-004 | 初回設定ページ | initial-setup.html | 2.4 | ユーザーデータ | [x] |
-| 3.1 | Phase 3 | P-001 | スプラッシュページ | splash-page.html | 1.2 | - | [ ] |
-| 3.2 | Phase 3 | P-002 | オンボーディングページ | onboarding.html | 1.2 | - | [ ] |
-| 3.3 | Phase 3 | M-001 | AIチャット相談ページ | chat-interface.html | 2.4 | チャットデータ | [ ] |
-| 3.4 | Phase 3 | M-002 | 今日のアドバイスページ | fortune-display.html | 2.4 | 占いデータ | [ ] |
-| 3.5 | Phase 3 | M-003 | 管理画面ページ | admin-dashboard.html | 2.4 | 設定データ | [ ] |
-| 3.6 | Phase 3 | M-004 | 本日の施術クライアント一覧 | beauty-daily-clients.html | 2.4 | クライアントデータ | [ ] |
-| 3.7 | Phase 3 | M-005 | クライアント直接入力・結果表示 | beauty-client-input.html | 2.4 | 四柱推命データ | [ ] |
-| 4.1 | Phase 4 | A-001 | 管理者ダッシュボード | beauty-admin-dashboard.html | 2.4 | 統計データ | [ ] |
-| 4.2 | Phase 4 | A-002 | クライアント管理 | beauty-client-management.html | 2.4 | クライアントデータ | [ ] |
-| 4.3 | Phase 4 | A-003 | スタイリスト管理 | beauty-stylist-management.html | 2.4 | スタイリストデータ | [ ] |
-| 4.4 | Phase 4 | A-004 | 予約・担当管理 | beauty-appointment-management.html | 2.4 | 予約データ | [ ] |
-| 4.5 | Phase 4 | A-005 | データインポート | beauty-data-import.html | 2.4 | インポート設定 | [ ] |
-| 4.6 | Phase 4 | A-006 | サポート管理 | beauty-admin-support.html | 2.4 | チケットデータ | [ ] |
-| 4.7 | Phase 4 | A-007 | 請求・支払い管理 | beauty-admin-billing.html | 2.4 | 請求データ | [ ] |
-| 5.1 | Phase 5 | S-004 | SuperAdminダッシュボード | - | 2.4 | システム統計 | [ ] |
-| 5.2 | Phase 5 | S-001 | 組織管理画面 | beauty-superadmin-organizations.html | 2.4 | 組織データ | [ ] |
-| 5.3 | Phase 5 | S-002 | 課金・プラン管理画面 | beauty-superadmin-plans.html | 2.4 | プランデータ | [ ] |
-| 5.4 | Phase 5 | S-003 | サポートチケット管理画面 | beauty-superadmin-support-simple.html | 2.4 | 全チケットデータ | [ ] |
+| 3.1 | Phase 3 | P-001 | スプラッシュページ | splash-page.html | 1.2 | - | [x] |
+| 3.2 | Phase 3 | P-002 | オンボーディングページ | onboarding.html | 1.2 | - | [x] |
+| 3.3 | Phase 3 | M-001 | AIチャット相談ページ | chat-interface.html | 2.4 | チャットデータ | [x] |
+| 3.4 | Phase 3 | M-002 | 今日のアドバイスページ | fortune-display.html | 2.4 | 占いデータ | [x] |
+| 3.5 | Phase 3 | M-003 | 管理画面ページ | admin-dashboard.html | 2.4 | 設定データ | [x] |
+| 3.6 | Phase 3 | M-004 | 本日の施術クライアント一覧 | beauty-daily-clients.html | 2.4 | クライアントデータ | [x] |
+| 3.7 | Phase 3 | M-005 | クライアント直接入力・結果表示 | beauty-client-input.html | 2.4 | 四柱推命データ | [x] |
+| 4.1 | Phase 4 | A-001 | 管理者ダッシュボード | beauty-admin-dashboard.html | 2.4 | 統計データ | [x] |
+| 4.2 | Phase 4 | A-002 | クライアント管理 | beauty-client-management.html | 2.4 | クライアントデータ | [x] |
+| 4.3 | Phase 4 | A-003 | スタイリスト管理 | beauty-stylist-management.html | 2.4 | スタイリストデータ | [x] |
+| 4.4 | Phase 4 | A-004 | 予約・担当管理 | beauty-appointment-management.html | 2.4 | 予約データ | [x] |
+| 4.5 | Phase 4 | A-005 | データインポート | beauty-data-import.html | 2.4 | インポート設定 | [x] |
+| 4.6 | Phase 4 | A-006 | サポート管理 | beauty-admin-support.html | 2.4 | チケットデータ | [x] |
+| 4.7 | Phase 4 | A-007 | 請求・支払い管理 | beauty-admin-billing.html | 2.4 | 請求データ | [x] |
+| 5.1 | Phase 5 | S-004 | SuperAdminダッシュボード | - | 2.4 | システム統計 | [ ] 不要（S-001組織管理画面で代替） |
+| 5.2 | Phase 5 | S-001 | 組織管理画面 | beauty-superadmin-organizations.html | 2.4 | 組織データ | [x] |
+| 5.3 | Phase 5 | S-002 | 課金・プラン管理画面 | beauty-superadmin-plans.html | 2.4 | プランデータ | [x] |
+| 5.4 | Phase 5 | S-003 | サポートチケット管理画面 | beauty-superadmin-support-simple.html | 2.4 | 全チケットデータ | [x] |
 
 #### 2.0.3 実装上の重要ポイント
 
@@ -172,10 +172,29 @@
 - [x] LINE認証コールバック - 認証処理とエラーハンドリング
 - [x] 初回設定ページ - 生年月日入力とAIパートナー名設定
 
-#### Phase 3以降の実装予定
-- Phase 3: スタイリスト向け機能（AIチャット、今日のアドバイス等）
-- Phase 4: 管理者向け機能（ダッシュボード、各種管理画面）
-- Phase 5: SuperAdmin向け機能（組織管理、プラン管理等）
+#### Phase 3: スタイリスト向け機能（完了）
+- [x] P-001 スプラッシュページ - 1.5秒後にオンボーディングへ自動遷移
+- [x] P-002 オンボーディングページ - 3スライドのチュートリアル画面
+- [x] M-001 AIチャット相談ページ - ChatPageとして実装済み（モックデータ付き）
+- [x] M-002 今日のアドバイスページ - DailyAdvicePageとして実装済み
+- [x] M-003 管理画面ページ（設定） - SettingsPageとして実装済み（プロフィール・通知・AIパートナー設定）
+- [x] M-004 本日の施術クライアント一覧 - TodayClientsPageとして実装済み
+- [x] M-005 クライアント直接入力・結果表示 - NewClientPageとして実装済み（四柱推命計算・相性診断・美容アドバイス・クライアント保存・チャット連携）
+
+#### Phase 4: 管理者向け機能（完了）
+- [x] A-001 管理者ダッシュボード - AdminDashboardPageとして実装済み（統計カード・トークン使用量チャート・未担当予約リスト）
+- [x] A-002 クライアント管理 - ClientManagementPageとして実装済み（検索・フィルター・ページネーション・詳細モーダル）
+- [x] A-003 スタイリスト管理 - StylistManagementPageとして実装済み（離職リスクアラート・カード表示・四柱推命プロフィール・レポートダウンロード）
+- [x] A-004 予約・担当管理 - AppointmentManagementPageとして実装済み（日別タイムライン・スタイリスト割り当て・カレンダー同期）
+- [x] A-005 データインポート - DataImportPageとして実装済み（4段階ウィザード・CSVアップロード・カレンダー連携・フィールドマッピング・インポート履歴）
+- [x] A-006 サポート管理 - AdminSupportPageとして実装済み（チケット一覧・タブ切り替え・詳細表示・返信機能・新規作成）
+- [x] A-007 請求・支払い管理 - AdminBillingPageとして実装済み（プラン詳細・支払い方法・請求書履歴・トークンチャージ購入・プラン変更）
+
+#### Phase 5: SuperAdmin向け機能（完了）
+- [x] S-001 組織管理画面 - SuperAdminOrganizationsPageとして実装済み（統計情報・組織一覧・フィルター・新規追加・編集モーダル）※ダッシュボードの役割も兼ねる
+- [x] S-002 課金・プラン管理画面 - SuperAdminPlansPageとして実装済み（収益シミュレーション・プラン設定・請求管理・3つのタブ構成）
+- [x] S-003 サポートチケット管理画面 - SuperAdminSupportPageとして実装済み（2ペインレイアウト・チケット検索・ステータスタブ・返信機能・ステータス更新）
+- [ ] ~~S-004 SuperAdminダッシュボード~~ - 不要（S-001組織管理画面で代替）
 
 
 ## 2.5 フロントエンド開発ガイド
@@ -203,12 +222,44 @@ npm run dev
 ```
 
 ### モックユーザー情報
-| メールアドレス | パスワード | ロール | 説明 |
-|--------------|-----------|--------|------|
-| superadmin@salomoni.jp | superadmin123 | SUPER_ADMIN | システム管理者 |
-| owner@salon.com | owner123 | OWNER | サロンオーナー |
-| admin@salon.com | admin123 | ADMIN | 管理者 |
-| stylist1@salon.com | stylist123 | USER | スタイリスト |
+| メールアドレス | パスワード | ロール | 説明 | ログイン後の遷移先 |
+|--------------|-----------|--------|------|-------------------|
+| superadmin@salomoni.jp | superadmin123 | SUPER_ADMIN | システム管理者 | /superadmin/organizations |
+| owner@salon.com | owner123 | OWNER | サロンオーナー | /admin/dashboard |
+| admin@salon.com | admin123 | ADMIN | 管理者 | /admin/dashboard |
+| stylist1@salon.com | stylist123 | USER | スタイリスト | /stylist/dashboard |
+
+### 認証フロー
+1. ログイン成功後、`/`へ遷移
+2. routes/index.tsxの設定で`/auth/login`へリダイレクト  
+3. ProtectedRouteがユーザーのロールを確認
+4. 各ロールに応じたダッシュボードへ最終リダイレクト
+
+**注意**: 現在これらのページは「このページは現在開発中です」と表示される`ComingSoonPage`コンポーネントになっています。
+
+### 実装済みページのルート情報
+
+| ページID | ページ名 | ルート | アクセス条件 | 実装状態 |
+|---------|---------|--------|------------|----------|
+| P-001 | スプラッシュページ | `/splash` | 公開 | ✅実装済み |
+| P-002 | オンボーディングページ | `/onboarding` | 公開 | ✅実装済み |
+| P-003 | ログインページ | `/auth/login` | 公開 | ✅実装済み |
+| P-004 | 組織登録ページ | `/auth/register-organization` | 公開 | ✅実装済み |
+| - | LINE認証コールバック | `/auth/line-callback` | 公開 | ✅実装済み |
+| P-004 | 初回設定ページ | `/auth/initial-setup` | 要認証（PENDING） | ✅実装済み |
+| M-001 | AIチャット相談ページ | `/chat` | 要認証 | ✅実装済み |
+| M-002 | 今日のアドバイスページ | `/dashboard` | 要認証 | ✅実装済み |
+| M-003 | 設定ページ | `/settings` | 要認証 | ✅実装済み |
+| M-004 | 本日の施術クライアント一覧 | `/clients/today` | 要認証 | ✅実装済み |
+| M-005 | クライアント直接入力・結果表示 | `/clients/new` | 要認証 | ✅実装済み |
+| A-001 | 管理者ダッシュボード | `/admin` | 要管理者権限 | ✅実装済み |
+| A-002 | クライアント管理 | `/admin/clients` | 要管理者権限 | ✅実装済み |
+| A-003 | スタイリスト管理 | `/admin/stylists` | 要管理者権限 | ✅実装済み |
+| A-004 | 予約・担当管理 | `/admin/appointments` | 要管理者権限 | ✅実装済み |
+| A-005 | データインポート | `/admin/import` | 要管理者権限 | ✅実装済み |
+| A-006 | サポート管理 | `/admin/support` | 要管理者権限 | ✅実装済み |
+| A-007 | 請求・支払い管理 | `/admin/billing` | 要管理者権限 | ✅実装済み |
+| S-001 | 組織管理画面 | `/superadmin/organizations` | 要SuperAdmin権限 | ✅実装済み |
 
 ## 3. プロジェクト特徴と注意点
 
@@ -354,6 +405,34 @@ npm run dev
 4. **モデル定義の修正**:
    - User: `roles`配列から`role`単一値へ
    - Organization: プランの値を修正（BASIC→STANDARD、PREMIUM→PROFESSIONAL）
+
+**Material-UI Grid対応（2025-05-24）**
+**Material-UI v7での破壊的変更が判明：**
+
+**❌ 削除されたプロパティ:**
+- `item`プロパティは存在しない
+- `xs`, `md`, `lg`などのブレークポイントプロパティは存在しない
+
+**✅ 新しい使用方法:**
+- `size`プロパティを使用: `<Grid size={{ xs: 12, md: 6 }}>`
+- `container`プロパティは継続使用可能
+
+**正しいv7の記法：**
+```tsx
+// ❌ 古い方法（v6まで）
+<Grid container spacing={3}>
+  <Grid item xs={12} md={6}>
+
+// ✅ 新しい方法（v7）
+<Grid container spacing={3}>
+  <Grid size={{ xs: 12, md: 6 }}>
+```
+
+**TypeScriptエラーゼロ化プロジェクト進捗**
+- **77件 → 71件**（6件減少、AdminBillingPage.tsx修正完了）
+- **TS2769エラー**: 63件 → 57件（Grid関連）
+- **修正方針**: 全ファイルで`item xs={12}`を`size={{ xs: 12 }}`に変更
+- **今後の実装ルール**: 必ずsizeプロパティを使用し、itemプロパティは使用しない
 
 **★8による修正内容（最終版）**
 1. **トークンリフレッシュ機能の根本修正**:

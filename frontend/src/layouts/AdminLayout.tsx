@@ -36,7 +36,11 @@ import { UserRole } from '../types';
 const drawerWidth = 240;
 
 // 管理サイト用レイアウト（ヘッダー + サイドバー）
-export const AdminLayout = () => {
+interface AdminLayoutProps {
+  children?: React.ReactNode;
+}
+
+export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const location = useLocation();
@@ -195,8 +199,10 @@ export const AdminLayout = () => {
           mt: 8,
         }}
       >
-        <Outlet />
+        {children || <Outlet />}
       </Box>
     </Box>
   );
 };
+
+export default AdminLayout;

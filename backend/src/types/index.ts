@@ -78,6 +78,7 @@ export enum UserRole {
   SUPER_ADMIN = 'superadmin',
   OWNER = 'owner',
   ADMIN = 'admin',
+  STYLIST = 'stylist',
   USER = 'user',
   CLIENT = 'client',
 }
@@ -193,7 +194,12 @@ export interface UserProfile extends UserBase, Timestamps {
   aiCharacterId?: ID;
   tokenUsage?: number;
   _isMockData?: boolean; // モックデータ識別用
+  // 互換性のためのプロパティ
+  isActive?: boolean; // statusから派生
 }
+
+// User型のエイリアス（互換性のため）
+export type User = UserProfile;
 
 // ユーザー作成リクエスト
 export interface UserCreateRequest {
@@ -251,6 +257,11 @@ export interface Organization extends Timestamps {
   logoUrl?: string;
   settings?: Record<string, any>;
   metadata?: Record<string, any>;
+  // 互換性のためのプロパティ
+  adminUserId?: ID; // ownerIdのエイリアス
+  planType?: string; // planのエイリアス
+  isActive?: boolean; // statusから派生
+  _isMockData?: boolean;
 }
 
 // 組織作成リクエスト
@@ -566,6 +577,8 @@ export interface DailyAdviceData {
 
 // スタイリスト向け運勢詳細（四柱推命ベース）
 export interface StylistFortuneDetail extends DailyFortune {
+  stylistId: ID;
+  
   // 美容業特化の運勢項目
   creativityLuck: number;      // 1-5: クリエイティビティ運
   precisionLuck: number;       // 1-5: 技術精度運
@@ -588,6 +601,17 @@ export interface StylistFortuneDetail extends DailyFortune {
   luckyTechnique?: string;     // ラッキーな技術・スタイル
   luckyProduct?: string;       // ラッキーな商品・サービス
   luckyTimeSlot?: string;      // ラッキーな時間帯
+  
+  // 追加項目
+  fortuneCards: FortuneCard[];
+  compatibleColleagues: {
+    userId: ID;
+    name: string;
+    compatibilityScore: number;
+    advice: string;
+  }[];
+  todaysKeyPoints: string[];
+  warningPoints?: string[];
 }
 
 // 週間運勢データ
@@ -648,6 +672,7 @@ export interface Appointment extends Timestamps {
   scheduledAt: Date;
   duration: number; // 分単位
   services: string[];
+  servicemenu?: string; // 互換性のために追加
   status: AppointmentStatus;
   note?: string;
   completedAt?: Date;
@@ -690,8 +715,13 @@ export interface PaymentMethod {
   organizationId: ID;
   type: PaymentMethodType;
   last4?: string;
+  lastFourDigits?: string; // last4のエイリアス
   expiryMonth?: number;
   expiryYear?: number;
+  expirationMonth?: number; // expiryMonthのエイリアス
+  expirationYear?: number; // expiryYearのエイリアス
+  brand?: string; // カードブランド（VISA, MasterCard等）
+  cardBrand?: string; // brandのエイリアス
   isDefault: boolean;
   univapayTokenId?: string;
   createdAt: Date;
@@ -880,6 +910,28 @@ export const API_PATHS = {
     FORTUNE_CARDS: '/api/fortune/cards',
     REGENERATE_ADVICE: (userId: string) => `/api/fortune/users/${userId}/regenerate`,
   },
+
+  // サポート関連
+  SUPPORT: {
+    TICKETS: '/api/support/tickets',
+    TICKET_DETAIL: (ticketId: string) => `/api/support/tickets/${ticketId}`,
+    CREATE: '/api/support/tickets',
+    REPLY: (ticketId: string) => `/api/support/tickets/${ticketId}/messages`,
+    UPDATE: (ticketId: string) => `/api/support/tickets/${ticketId}`,
+    DELETE: (ticketId: string) => `/api/support/tickets/${ticketId}`,
+    STATS: '/api/support/stats',
+    MESSAGES: (ticketId: string) => `/api/support/tickets/${ticketId}/messages`,
+  },
+  // 後方互換性のため
+  support: {
+    list: '/api/support/tickets',
+    detail: (ticketId: string) => `/api/support/tickets/${ticketId}`,
+    create: '/api/support/tickets',
+    reply: (ticketId: string) => `/api/support/tickets/${ticketId}/messages`,
+    update: (ticketId: string) => `/api/support/tickets/${ticketId}`,
+    delete: (ticketId: string) => `/api/support/tickets/${ticketId}`,
+    stats: '/api/support/stats',
+  },
 };
 
 // ==========================================
@@ -951,6 +1003,9 @@ export interface DashboardSummary {
     percentage: number;
   };
   unassignedAppointmentsCount: number;
+  unassignedAppointments?: UnassignedAppointment[];
+  attendedClients?: number;
+  cancelledAppointments?: number;
 }
 
 // トークン使用状況の詳細データ
@@ -1060,6 +1115,7 @@ export interface StylistReport {
 
 // 予約時間枠
 export interface TimeSlot {
+  id?: ID;
   startTime: string;
   endTime: string;
   appointments: Appointment[];
@@ -1098,6 +1154,141 @@ export interface AppointmentAssignmentRecommendation {
 }
 
 // ==========================================
+// SuperAdmin向け課金・プラン管理
+// ==========================================
+
+// プラン詳細情報
+export interface PlanDetail {
+  id: ID;
+  name: string;
+  displayName: string;
+  plan: OrganizationPlan;
+  price: number;
+  billingCycle: 'monthly' | 'yearly';
+  features: {
+    maxStylists: number;
+    maxClients: number;
+    monthlyTokens: number;
+    supportLevel: 'basic' | 'standard' | 'premium' | 'enterprise';
+    customBranding: boolean;
+    apiAccess: boolean;
+    dataExport: boolean;
+    multiLocation: boolean;
+    dedicatedSupport: boolean;
+    customIntegration: boolean;
+  };
+  description?: string;
+  isPopular?: boolean;
+  isHidden?: boolean;
+  trialDays?: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// プラン更新リクエスト
+export interface PlanUpdateRequest {
+  displayName?: string;
+  price?: number;
+  features?: Partial<PlanDetail['features']>;
+  description?: string;
+  isPopular?: boolean;
+  isHidden?: boolean;
+  trialDays?: number;
+}
+
+// トークンプラン（追加購入用）
+export interface TokenPlan {
+  id: ID;
+  name: string;
+  displayName: string;
+  tokenAmount: number;
+  price: number;
+  pricePerToken: number;
+  savingsPercentage?: number;
+  description?: string;
+  isPopular?: boolean;
+  validityDays?: number; // トークンの有効期限（日数）
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// トークンプラン更新リクエスト
+export interface TokenPlanUpdateRequest {
+  displayName?: string;
+  tokenAmount?: number;
+  price?: number;
+  description?: string;
+  isPopular?: boolean;
+  validityDays?: number;
+}
+
+// 収益シミュレーションリクエスト
+export interface RevenueSimulationRequest {
+  period: 'monthly' | 'quarterly' | 'yearly';
+  assumptions: {
+    newOrganizationsPerMonth: number;
+    churnRate: number; // 解約率（%）
+    averageTokenPurchase: number; // 組織あたりの平均トークン購入額
+    planDistribution: {
+      [key in OrganizationPlan]: number; // 各プランの割合（%）
+    };
+  };
+}
+
+// 収益シミュレーション結果
+export interface RevenueSimulationResult {
+  period: string;
+  projectedRevenue: {
+    subscription: number;
+    tokenSales: number;
+    total: number;
+  };
+  projectedGrowth: {
+    organizations: number;
+    revenue: number;
+    growthRate: number;
+  };
+  breakdown: {
+    month: string;
+    subscriptionRevenue: number;
+    tokenRevenue: number;
+    totalRevenue: number;
+    activeOrganizations: number;
+    newOrganizations: number;
+    churnedOrganizations: number;
+  }[];
+  assumptions: RevenueSimulationRequest['assumptions'];
+}
+
+// 請求管理フィルター
+export interface BillingFilter {
+  organizationId?: ID;
+  status?: InvoiceStatus;
+  dateFrom?: Date;
+  dateTo?: Date;
+  invoiceType?: 'subscription' | 'one-time' | 'token';
+  minAmount?: number;
+  maxAmount?: number;
+}
+
+// 請求サマリー
+export interface BillingSummary {
+  totalRevenue: number;
+  subscriptionRevenue: number;
+  tokenRevenue: number;
+  outstandingAmount: number;
+  overdueAmount: number;
+  averageInvoiceValue: number;
+  paymentSuccessRate: number;
+  topOrganizations: {
+    organizationId: ID;
+    organizationName: string;
+    totalSpent: number;
+    lastPaymentDate: Date;
+  }[];
+}
+
+// ==========================================
 // サポート管理
 // ==========================================
 
@@ -1108,6 +1299,7 @@ export enum TicketStatus {
   IN_PROGRESS = 'in_progress',
   RESOLVED = 'resolved',
   CLOSED = 'closed',
+  OPEN = 'open', // 未回答状態を追加
 }
 
 // サポートチケット
@@ -1121,8 +1313,13 @@ export interface SupportTicket extends Timestamps {
   status: TicketStatus;
   priority?: 'low' | 'medium' | 'high' | 'urgent';
   category?: string;
+  assignedTo?: ID;
   lastResponseAt?: Date;
   resolvedAt?: Date;
+  messages?: SupportMessage[];
+  user?: User;
+  organization?: Organization;
+  _isMockData?: boolean;
 }
 
 // サポートメッセージ
@@ -1133,6 +1330,46 @@ export interface SupportMessage extends Timestamps {
   senderType: 'user' | 'admin' | 'system';
   content: string;
   attachments?: string[];
+  isStaff?: boolean; // 互換性のため
+}
+
+// サポートチケット関連の型定義（互換性のため）
+export interface SupportTicketMessage extends SupportMessage {
+  message?: string; // contentのエイリアス
+}
+
+export interface SupportTicketReplyInput {
+  senderId: ID;
+  message: string;
+  isStaff: boolean;
+  content?: string; // 互換性のため
+  attachments?: string[];
+}
+
+export interface SupportTicketUpdateInput {
+  status?: TicketStatus | 'open' | 'in_progress' | 'resolved'; // 文字列リテラルも受け入れる
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  assignedTo?: ID;
+  category?: string;
+}
+
+export interface SupportTicketCreateInput {
+  title: string;
+  description: string;
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  category?: string;
+  userId: ID;
+  organizationId: ID;
+}
+
+export interface SupportTicketStats {
+  total: number;
+  open: number;
+  inProgress: number;
+  resolved: number;
+  avgResponseTime: number;
+  avgResolutionTime: number;
+  _isMockData?: boolean;
 }
 
 // ==========================================
@@ -1143,7 +1380,9 @@ export interface SupportMessage extends Timestamps {
 export interface TokenPackageDetail {
   packageType: TokenPackage;
   price: number;
+  amount?: number; // priceのエイリアス
   tokenAmount: number;
+  bonusTokens?: number; // ボーナストークン数
   description: string;
   savingsPercentage?: number;
   validUntil?: Date;
@@ -1171,6 +1410,10 @@ export interface Invoice extends Timestamps {
   subtotal: number;
   tax: number;
   total: number;
+  amount?: number; // totalのエイリアス
+  totalAmount?: number; // totalのエイリアス
+  billingPeriod?: { start: Date; end: Date }; // 請求期間
+  type?: 'subscription' | 'one-time' | 'token'; // 請求書の種類
   paymentMethodId?: ID;
 }
 
@@ -1321,20 +1564,6 @@ export interface DailyFortuneExtended extends DailyFortune {
   aiSpecialMessage?: string;
 }
 
-// スタイリスト向け運勢詳細
-export interface StylistFortuneDetail {
-  stylistId: ID;
-  date: Date;
-  fortuneCards: FortuneCard[];
-  compatibleColleagues: {
-    userId: ID;
-    name: string;
-    compatibilityScore: number;
-    advice: string;
-  }[];
-  todaysKeyPoints: string[];
-  warningPoints?: string[];
-}
 
 // 天干マスター
 export interface HeavenlyStemMaster {

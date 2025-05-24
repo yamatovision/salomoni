@@ -4,7 +4,9 @@
   "description": "Beauty salon management system",
   "scripts": {
     "ts:check": "node scripts/ts-error/analyzer.js",
+    "ts:fix": "node scripts/ts-error/auto-fixer.js",
     "ts:report": "node scripts/ts-error/report-generator.js",
+    "ts:investigate": "node scripts/ts-error/stagnation-detector.js",
     "ts:suggest": "node scripts/ts-error/fix-suggestions.js"
   },
   "author": "",

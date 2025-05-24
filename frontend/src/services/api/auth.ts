@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient } from './apiClient';
 import { API_PATHS } from '../../types';
 import type { LoginRequest, LoginResponse, UserProfile, AuthResponse, OrganizationRegisterRequest } from '../../types';
 

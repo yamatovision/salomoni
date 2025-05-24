@@ -19,6 +19,8 @@ import {
   Email as EmailIcon 
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
+import { UserRole } from '../../types';
+import { ROUTES } from '../../routes/routes';
 
 // P-003: ログインページ
 export const LoginPage: React.FC = () => {
@@ -58,8 +60,29 @@ export const LoginPage: React.FC = () => {
 
     setLoading(true);
     try {
-      await login(formData.email, formData.password);
-      navigate('/');
+      const response = await login(formData.email, formData.password);
+      console.log('[LoginPage] ログイン成功:', response.user.email, response.user.role);
+      
+      // ロールに応じたダッシュボードへ遷移
+      switch (response.user.role) {
+        case UserRole.SUPER_ADMIN:
+          console.log('[LoginPage] SUPER_ADMIN: /superadmin/organizations へ遷移');
+          navigate(ROUTES.superadmin.organizations);
+          break;
+        case UserRole.OWNER:
+        case UserRole.ADMIN:
+          console.log('[LoginPage] OWNER/ADMIN: /admin へ遷移');
+          navigate(ROUTES.admin.dashboard);
+          break;
+        case UserRole.USER:
+        case UserRole.STYLIST:
+          console.log('[LoginPage] USER/STYLIST: /dashboard へ遷移');
+          navigate(ROUTES.stylist.dashboard);
+          break;
+        default:
+          console.log('[LoginPage] 不明なロール:', response.user.role, '/ へ遷移');
+          navigate('/');
+      }
     } catch (error: any) {
       setApiError(error.message || 'ログインに失敗しました');
       setLoading(false);

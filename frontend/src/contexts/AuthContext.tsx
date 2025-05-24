@@ -1,12 +1,12 @@
 import React, { createContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import type { UserProfile } from '../types';
+import type { UserProfile, AuthResponse } from '../types';
 import { authService } from '../services';
 
 interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthResponse>;
   lineLogin: () => Promise<void>;
   handleLineCallback: (code: string, state?: string) => Promise<void>;
   registerOrganization: (data: any) => Promise<void>;
@@ -52,6 +52,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.setItem('accessToken', response.accessToken);
     localStorage.setItem('refreshToken', response.refreshToken);
     setUser(response.user);
+    return response;
   };
 
   const logout = async () => {

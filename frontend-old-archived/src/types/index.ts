@@ -107,16 +107,6 @@ export interface AuthResponse {
   expiresIn: number;
 }
 
-// ログインリクエスト（メール認証用）
-export interface LoginRequest {
-  email: string;
-  password: string;
-  rememberMe?: boolean;
-}
-
-// ログインレスポンス（AuthResponseと同じ）
-export type LoginResponse = AuthResponse;
-
 // パスワードリセットリクエスト
 export interface PasswordResetRequest {
   email: string;
@@ -192,7 +182,6 @@ export interface UserProfile extends UserBase, Timestamps {
   preferences?: Record<string, any>;
   aiCharacterId?: ID;
   tokenUsage?: number;
-  _isMockData?: boolean; // モックデータ識別用
 }
 
 // ユーザー作成リクエスト
@@ -761,7 +750,6 @@ export const API_PATHS = {
   // ユーザー関連
   USERS: {
     BASE: '/api/users',
-    LIST: '/api/users',
     ME: '/api/users/me',
     DETAIL: (userId: string) => `/api/users/${userId}`,
     UPDATE: (userId: string) => `/api/users/${userId}`,
@@ -1643,3 +1631,4 @@ export interface DailyClientDisplay {
     summary: string;
   };
 }
+

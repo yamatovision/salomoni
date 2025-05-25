@@ -61,9 +61,16 @@ export class UserService {
     users: UserProfile[];
     pagination: PaginationInfo;
   }> {
-    const { users, total } = await this.userRepository.findAll(params);
+    // ページネーションパラメータのデフォルト値を設定
+    const page = params.pagination.page ?? 1;
+    const limit = params.pagination.limit ?? 20;
+    const normalizedParams = {
+      ...params,
+      pagination: { page, limit }
+    };
     
-    const { page, limit } = params.pagination;
+    const { users, total } = await this.userRepository.findAll(normalizedParams);
+    
     const totalPages = Math.ceil(total / limit);
     
     return {

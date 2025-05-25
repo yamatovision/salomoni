@@ -128,7 +128,7 @@ export class OrganizationRepository {
     total: number;
   }> {
     try {
-      const { page, limit } = params.pagination;
+      const { page = 1, limit = 20 } = params.pagination;
       const skip = (page - 1) * limit;
       
       // フィルタ条件の構築

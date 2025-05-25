@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Container,
@@ -25,6 +25,8 @@ import {
   Stack,
   Alert,
   Divider,
+  CircularProgress,
+  Snackbar,
 } from '@mui/material';
 import {
   Search,
@@ -39,10 +41,14 @@ import {
   Warning,
   Favorite,
 } from '@mui/icons-material';
-import { mockClients, searchClients } from '../../services/mock/data/mockClients';
-import type { Client } from '../../types';
+import { clientService } from '../../services';
+import type { Client, ClientCreateRequest, ClientSearchFilter } from '../../types';
 
 export const ClientManagementPage: React.FC = () => {
+  const [clients, setClients] = useState<Client[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [page, setPage] = useState(1);
@@ -50,6 +56,7 @@ export const ClientManagementPage: React.FC = () => {
   const [openClientDetailDialog, setOpenClientDetailDialog] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [openImportDialog, setOpenImportDialog] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   
   // 新規クライアントフォームの状態
   const [newClientForm, setNewClientForm] = useState({
@@ -67,24 +74,37 @@ export const ClientManagementPage: React.FC = () => {
 
   const itemsPerPage = 6;
 
-  // フィルター設定
-  const filters = {
-    birthDateMissing: activeFilter === 'noBirthDate',
-    visitedThisMonth: activeFilter === 'thisMonth',
-    isFavorite: activeFilter === 'favorite',
-  };
+  // クライアント一覧を取得
+  const fetchClients = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const filters: ClientSearchFilter = {
+        searchTerm,
+        birthDateMissing: activeFilter === 'noBirthDate',
+        visitedThisMonth: activeFilter === 'thisMonth',
+        isFavorite: activeFilter === 'favorite',
+      };
 
-  // クライアントをフィルタリング
-  const filteredClients = useMemo(() => {
-    return searchClients(mockClients, searchTerm, filters);
-  }, [searchTerm, activeFilter]);
+      const response = await clientService.getClients(
+        filters,
+        { page, limit: itemsPerPage }
+      );
 
-  // ページネーション
-  const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
-  const paginatedClients = filteredClients.slice(
-    (page - 1) * itemsPerPage,
-    page * itemsPerPage
-  );
+      setClients(response.clients);
+      setTotalPages(response.pagination.totalPages);
+    } catch (err) {
+      setError('クライアント一覧の取得に失敗しました');
+      console.error('Failed to fetch clients:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchTerm, activeFilter, page]);
+
+  // 初期ロードとフィルター変更時の再取得
+  useEffect(() => {
+    fetchClients();
+  }, [fetchClients]);
 
   const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
     setPage(value);
@@ -95,28 +115,83 @@ export const ClientManagementPage: React.FC = () => {
     setPage(1);
   };
 
-  const handleClientClick = (client: Client) => {
-    setSelectedClient(client);
-    setOpenClientDetailDialog(true);
+  // 検索処理（デバウンス付き）
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setPage(1);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]);
+
+  const handleClientClick = async (client: Client) => {
+    try {
+      // 詳細情報を取得
+      const detailedClient = await clientService.getClient(client.id);
+      setSelectedClient(detailedClient);
+      setOpenClientDetailDialog(true);
+    } catch (err) {
+      setSnackbar({ open: true, message: 'クライアント情報の取得に失敗しました', severity: 'error' });
+    }
   };
 
-  const handleNewClientSubmit = () => {
-    // 新規クライアント登録処理（モック）
-    console.log('新規クライアント登録:', newClientForm);
-    setOpenNewClientDialog(false);
-    // フォームをリセット
-    setNewClientForm({
-      name: '',
-      phoneNumber: '',
-      email: '',
-      gender: '',
-      birthYear: '',
-      birthMonth: '',
-      birthDay: '',
-      birthHour: '',
-      birthMinute: '',
-      memo: '',
-    });
+  // クライアント削除処理
+  const handleDeleteClient = async (clientId: string) => {
+    if (!window.confirm('本当にこのクライアントを削除しますか？')) {
+      return;
+    }
+
+    try {
+      await clientService.deleteClient(clientId);
+      setSnackbar({ open: true, message: 'クライアントを削除しました', severity: 'success' });
+      setOpenClientDetailDialog(false);
+      fetchClients();
+    } catch (err) {
+      setSnackbar({ open: true, message: 'クライアントの削除に失敗しました', severity: 'error' });
+    }
+  };
+
+  const handleNewClientSubmit = async () => {
+    try {
+      // 生年月日を組み立て
+      let birthDate: string | undefined;
+      if (newClientForm.birthYear && newClientForm.birthMonth && newClientForm.birthDay) {
+        birthDate = `${newClientForm.birthYear}-${newClientForm.birthMonth.padStart(2, '0')}-${newClientForm.birthDay.padStart(2, '0')}`;
+      }
+
+      const createRequest: ClientCreateRequest = {
+        name: newClientForm.name,
+        phoneNumber: newClientForm.phoneNumber || undefined,
+        email: newClientForm.email || undefined,
+        gender: newClientForm.gender as 'male' | 'female' | 'other' | undefined,
+        birthDate,
+        notes: newClientForm.memo || undefined,
+      };
+
+      await clientService.createClient(createRequest);
+      
+      setSnackbar({ open: true, message: 'クライアントを登録しました', severity: 'success' });
+      setOpenNewClientDialog(false);
+      
+      // フォームをリセット
+      setNewClientForm({
+        name: '',
+        phoneNumber: '',
+        email: '',
+        gender: '',
+        birthYear: '',
+        birthMonth: '',
+        birthDay: '',
+        birthHour: '',
+        birthMinute: '',
+        memo: '',
+      });
+      
+      // リストを再取得
+      fetchClients();
+    } catch (err: any) {
+      setSnackbar({ open: true, message: err.message || 'クライアントの登録に失敗しました', severity: 'error' });
+    }
   };
 
   const getClientInitials = (name: string) => {
@@ -267,11 +342,12 @@ export const ClientManagementPage: React.FC = () => {
                   </Box>
                 </CardContent>
               </Card>
-          ))}
-        </Box>
+            ))}
+          </Box>
+        )}
 
         {/* ページネーション */}
-        {totalPages > 1 && (
+        {!loading && totalPages > 1 && (
           <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
             <Pagination
               count={totalPages}
@@ -486,6 +562,12 @@ export const ClientManagementPage: React.FC = () => {
             )}
           </DialogContent>
           <DialogActions>
+            <Button 
+              color="error" 
+              onClick={() => selectedClient && handleDeleteClient(selectedClient.id)}
+            >
+              削除
+            </Button>
             <Button startIcon={<Edit />} onClick={() => setOpenClientDetailDialog(false)}>
               編集
             </Button>
@@ -547,6 +629,17 @@ export const ClientManagementPage: React.FC = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Snackbar */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+        >
+          <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity}>
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
     </Container>
   );
 };

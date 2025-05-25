@@ -176,3 +176,8 @@ export const disconnectTestDatabase = DatabaseTestHelper.disconnect.bind(Databas
 export const clearTestDatabase = DatabaseTestHelper.clearDatabase.bind(DatabaseTestHelper);
 export const clearTestCollection = DatabaseTestHelper.clearCollection.bind(DatabaseTestHelper);
 export const seedTestData = DatabaseTestHelper.seedTestData.bind(DatabaseTestHelper);
+
+// 互換性のためのエイリアス
+export const connectDB = connectTestDatabase;
+export const clearDB = clearTestDatabase;
+export const closeDB = disconnectTestDatabase;

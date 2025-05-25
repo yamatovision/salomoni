@@ -50,7 +50,11 @@ export class ClientRepository {
     sortOrder: 'asc' | 'desc' = 'desc'
   ): Promise<{ clients: IClientDocument[]; total: number }> {
     try {
-      logger.debug('Finding all clients', { organizationId, filters, pagination });
+      // ページネーションパラメータのデフォルト値を設定
+      const page = pagination.page ?? 1;
+      const limit = pagination.limit ?? 20;
+      
+      logger.debug('Finding all clients', { organizationId, filters, pagination: { page, limit } });
 
       // クエリ構築
       const query: FilterQuery<IClientDocument> = { organizationId };
@@ -83,7 +87,7 @@ export class ClientRepository {
       }
 
       // ページネーションの計算
-      const skip = (pagination.page - 1) * pagination.limit;
+      const skip = (page - 1) * limit;
       const sortOptions: any = {};
       sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
@@ -92,7 +96,7 @@ export class ClientRepository {
         ClientModel.find(query)
           .sort(sortOptions)
           .skip(skip)
-          .limit(pagination.limit),
+          .limit(limit),
         ClientModel.countDocuments(query),
       ]);
 

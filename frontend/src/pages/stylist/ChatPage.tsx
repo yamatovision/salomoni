@@ -33,11 +33,9 @@ import {
 import { styled } from '@mui/material/styles';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import type { ChatMessage, Client } from '../../types';
+import type { ChatMessage, Client, Conversation, AICharacter, ConversationContextType } from '../../types';
 import { MessageType } from '../../types';
-import { mockChatMessages } from '../../services/mock/data/mockConversations';
-import { mockAICharacters } from '../../services/mock/data/mockAICharacters';
-import { clientService } from '../../services';
+import { clientService, chatService, aiCharacterService } from '../../services';
 import { ROUTES } from '../../routes/routes';
 
 // ページID: M-001
@@ -119,7 +117,7 @@ const QuickActionButton = styled(Button)(({ theme }: { theme: any }) => ({
 }));
 
 const ChatPage: React.FC = () => {
-  const { user } = useAuth();
+  const { } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -130,14 +128,24 @@ const ChatPage: React.FC = () => {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clientMenuAnchor, setClientMenuAnchor] = useState<null | HTMLElement>(null);
   const [availableClients, setAvailableClients] = useState<Client[]>([]);
-
-  // AIキャラクターを取得
-  const aiCharacter = mockAICharacters.find(char => char.userId === user?.id);
+  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
+  const [aiCharacter, setAiCharacter] = useState<AICharacter | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // クライアントリストとメッセージを読み込み
+    // クライアントリストとチャットデータを読み込み
     const loadData = async () => {
       try {
+        // AIキャラクターを取得
+        const characterResponse = await aiCharacterService.getMyAICharacter();
+        if (characterResponse.success && characterResponse.data) {
+          setAiCharacter(characterResponse.data);
+        } else if (!characterResponse.success) {
+          // AIキャラクターが未作成の場合、初回設定ページへ
+          navigate(ROUTES.public.initialSetup);
+          return;
+        }
+        
         // クライアントリストを取得
         const clientsResponse = await clientService.getClients();
         if (clientsResponse.success && clientsResponse.data) {
@@ -152,21 +160,75 @@ const ChatPage: React.FC = () => {
           }
         }
         
-        await new Promise(resolve => setTimeout(resolve, 500));
-        // 最新の会話のメッセージを取得
-        const conversationMessages = mockChatMessages.filter(
-          msg => msg.conversationId === 'conv-001'
-        );
-        setMessages(conversationMessages);
+        // 会話を開始または取得
+        const context: ConversationContextType = selectedClient ? 'client_direct' : 'personal';
+        const chatResponse = await chatService.startChat({
+          context,
+          clientId: selectedClient?.id,
+        });
+        
+        if (chatResponse.success && chatResponse.data) {
+          setCurrentConversation(chatResponse.data.conversation);
+          
+          // 既存の会話がある場合はメッセージ履歴を取得
+          if (!chatResponse.data.isNew) {
+            const messagesResponse = await chatService.getMessages(
+              chatResponse.data.conversation.id,
+              { order: 'asc' }
+            );
+            if (messagesResponse.success && messagesResponse.data) {
+              setMessages(messagesResponse.data);
+            }
+          }
+        }
       } catch (error) {
         console.error('Failed to load data:', error);
+        setError('データの読み込みに失敗しました');
       } finally {
         setLoading(false);
       }
     };
 
     loadData();
-  }, [location.state]);
+  }, [location.state, navigate]);
+  
+  // クライアント選択時に新しい会話を開始
+  useEffect(() => {
+    if (!aiCharacter || loading) return;
+    
+    const switchConversation = async () => {
+      try {
+        setMessages([]);
+        setCurrentConversation(null);
+        
+        // 会話を開始または取得
+        const context: ConversationContextType = selectedClient ? 'client_direct' : 'personal';
+        const chatResponse = await chatService.startChat({
+          context,
+          clientId: selectedClient?.id,
+        });
+        
+        if (chatResponse.success && chatResponse.data) {
+          setCurrentConversation(chatResponse.data.conversation);
+          
+          // 既存の会話がある場合はメッセージ履歴を取得
+          if (!chatResponse.data.isNew) {
+            const messagesResponse = await chatService.getMessages(
+              chatResponse.data.conversation.id,
+              { order: 'asc' }
+            );
+            if (messagesResponse.success && messagesResponse.data) {
+              setMessages(messagesResponse.data);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to switch conversation:', error);
+      }
+    };
+    
+    switchConversation();
+  }, [selectedClient, aiCharacter, loading]);
 
   useEffect(() => {
     // 新しいメッセージが追加されたら自動スクロール
@@ -178,14 +240,14 @@ const ChatPage: React.FC = () => {
   };
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || !currentConversation) return;
     
     // クライアントが選択されていない場合の警告
     if (!selectedClient && inputValue.includes('クライアント')) {
       // クライアント関連の質問の場合、選択を促す
       const systemMessage: ChatMessage = {
         id: `msg-${Date.now()}`,
-        conversationId: 'conv-001',
+        conversationId: currentConversation.id,
         type: MessageType.AI,
         content: 'どのクライアントさんについて話したい？上のメニューから選んでね♡',
         createdAt: new Date(),
@@ -196,7 +258,7 @@ const ChatPage: React.FC = () => {
 
     const newUserMessage: ChatMessage = {
       id: `msg-${Date.now()}`,
-      conversationId: 'conv-001',
+      conversationId: currentConversation.id,
       type: MessageType.USER,
       content: inputValue,
       createdAt: new Date(),
@@ -206,30 +268,30 @@ const ChatPage: React.FC = () => {
     setInputValue('');
     setIsTyping(true);
 
-    // AIの返答をシミュレート
-    setTimeout(() => {
-      let responseContent = 'そうなんだ！もっと詳しく教えて♪';
+    try {
+      // AIに返答を求める
+      const response = await chatService.sendMessage(currentConversation.id, {
+        content: inputValue,
+      });
       
-      // クライアントが選択されている場合、それに応じた返答
-      if (selectedClient) {
-        const responses = [
-          `${selectedClient.name}さんのことね！どんなスタイルが似合いそうかな？`,
-          `${selectedClient.name}さんは${selectedClient.gender === 'female' ? '素敵な女性' : 'かっこいい方'}だよね♡`,
-          `今日の${selectedClient.name}さんはどんな感じ？`,
-        ];
-        responseContent = responses[Math.floor(Math.random() * responses.length)];
+      if (response.success && response.data) {
+        setMessages((prev: ChatMessage[]) => [...prev, response.data as ChatMessage]);
+      } else {
+        // エラーメッセージを表示
+        const errorMessage: ChatMessage = {
+          id: `msg-error-${Date.now()}`,
+          conversationId: currentConversation.id,
+          type: MessageType.AI,
+          content: 'ごめんね、メッセージの送信に失敗しちゃった。もう一度試してみて？',
+          createdAt: new Date(),
+        };
+        setMessages(prev => [...prev, errorMessage]);
       }
-      
-      const aiResponse: ChatMessage = {
-        id: `msg-${Date.now() + 1}`,
-        conversationId: 'conv-001',
-        type: MessageType.AI,
-        content: responseContent,
-        createdAt: new Date(),
-      };
-      setMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleQuickAction = (action: string) => {
@@ -365,6 +427,24 @@ const ChatPage: React.FC = () => {
         height="100vh"
       >
         <CircularProgress color="primary" />
+      </Box>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Box
+        display="flex"
+        flexDirection="column"
+        justifyContent="center"
+        alignItems="center"
+        height="100vh"
+        gap={2}
+      >
+        <Alert severity="error">{error}</Alert>
+        <Button variant="contained" onClick={() => navigate(ROUTES.stylist.dashboard)}>
+          ダッシュボードに戻る
+        </Button>
       </Box>
     );
   }
@@ -577,7 +657,7 @@ const ChatPage: React.FC = () => {
             },
           }}
         >
-          <MenuItem onClick={() => navigate('/stylist/new-client')}>
+          <MenuItem onClick={() => navigate(ROUTES.stylist.newClient)}>
             <ListItemIcon>
               <AddIcon fontSize="small" />
             </ListItemIcon>

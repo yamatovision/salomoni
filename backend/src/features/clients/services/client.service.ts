@@ -114,23 +114,28 @@ export class ClientService {
     pagination: PaginationInfo;
   }> {
     try {
-      logger.info('Getting clients', { organizationId, filters, pagination });
+      // ページネーションパラメータのデフォルト値を設定
+      const page = pagination.page ?? 1;
+      const limit = pagination.limit ?? 20;
+      const normalizedPagination = { page, limit };
+      
+      logger.info('Getting clients', { organizationId, filters, pagination: normalizedPagination });
 
       const { clients, total } = await this.clientRepository.findAll(
         organizationId,
         filters,
-        pagination,
+        normalizedPagination,
         sortBy,
         sortOrder
       );
-
+      
       const paginationInfo: PaginationInfo = {
-        currentPage: pagination.page,
-        totalPages: Math.ceil(total / pagination.limit),
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
         totalItems: total,
-        itemsPerPage: pagination.limit,
-        hasNext: pagination.page * pagination.limit < total,
-        hasPrev: pagination.page > 1,
+        itemsPerPage: limit,
+        hasNext: page * limit < total,
+        hasPrev: page > 1,
       };
 
       return {

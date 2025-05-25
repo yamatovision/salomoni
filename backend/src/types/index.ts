@@ -34,8 +34,8 @@ export interface Timestamps {
 
 // ページネーション
 export interface PaginationParams {
-  page: number;
-  limit: number;
+  page?: number;
+  limit?: number;
 }
 
 export interface PaginationInfo {
@@ -152,7 +152,19 @@ export const API_PATHS = {
     CONVERSATIONS: '/api/chat/conversations',
     MESSAGES: (conversationId: string) => `/api/chat/conversations/${conversationId}/messages`,
     SEND: (conversationId: string) => `/api/chat/conversations/${conversationId}/send`,
+    SEND_MESSAGE: (conversationId: string) => `/api/chat/conversations/${conversationId}/send`,
     MEMORY: (characterId: string) => `/api/chat/characters/${characterId}/memory`,
+    START: '/api/chat/conversations/start',
+    END_CONVERSATION: (conversationId: string) => `/api/chat/conversations/${conversationId}/end`,
+  },
+
+  // AIキャラクター関連
+  AI_CHARACTERS: {
+    BASE: '/api/ai-characters',
+    CHARACTERS: '/api/ai-characters',
+    MY_CHARACTER: '/api/ai-characters/my-character',
+    CHARACTER: (characterId: string) => `/api/ai-characters/${characterId}`,
+    CHARACTER_MEMORY: (characterId: string) => `/api/ai-characters/${characterId}/memory`,
   },
 
   // 予約関連
@@ -246,6 +258,22 @@ export const API_PATHS = {
 // ==========================================
 // 認証関連
 // ==========================================
+
+// JWTペイロードの型定義
+export interface JWTPayload {
+  id: string; // userIdと同じ値（互換性のため）
+  userId: string;
+  email: string;
+  roles: UserRole[];
+  currentRole: UserRole;
+  organizationId: string;
+  sessionId: string;
+  platform: 'mobile' | 'web';
+  // 以下は自動的に追加されるフィールド
+  iat?: number;
+  exp?: number;
+  jti?: string;
+}
 
 // 認証方法
 export enum AuthMethod {
@@ -541,14 +569,55 @@ export interface AICharacter {
     energy: number;      // 0-100: エネルギー度
     formality: number;   // 0-100: フォーマル度
   };
+  personalityTraits?: PersonalityTrait[]; // オプショナル：性格特性配列
+  communicationStyle?: string; // オプショナル：コミュニケーションスタイル
   createdAt: Date;
   lastInteractionAt?: Date;
+}
+
+// AIキャラクター作成リクエスト
+export interface AICharacterCreateRequest {
+  name: string;
+  styleFlags: AICharacterStyle[];
+  personalityScore?: {
+    softness: number;
+    energy: number;
+    formality: number;
+  };
+  personalityTraits?: string[];
+  communicationStyle?: string;
+  backgroundStory?: string;
+}
+
+// AIキャラクター更新リクエスト
+export interface AICharacterUpdateRequest {
+  name?: string;
+  styleFlags?: AICharacterStyle[];
+  personalityScore?: {
+    softness: number;
+    energy: number;
+    formality: number;
+  };
 }
 
 // AIメモリタイプ
 export enum AIMemoryType {
   EXPLICIT = 'explicit', // 明示的記憶
   AUTO = 'auto',        // 自動抽出
+}
+
+// AIメモリカテゴリー
+export enum AIMemoryCategory {
+  PERSONAL_INFO = 'personal_info',      // 個人情報
+  PREFERENCES = 'preferences',          // 好み・嗜好
+  RELATIONSHIPS = 'relationships',      // 人間関係
+  EXPERIENCES = 'experiences',          // 経験・体験
+  GOALS = 'goals',                     // 目標・願望
+  EMOTIONS = 'emotions',               // 感情・気持ち
+  HABITS = 'habits',                   // 習慣・癖
+  WORK = 'work',                       // 仕事関連
+  HEALTH = 'health',                   // 健康関連
+  OTHER = 'other',                     // その他
 }
 
 // AIメモリ
@@ -558,11 +627,34 @@ export interface AIMemory {
   memoryType: AIMemoryType;
   content: string;
   category: string;
+  type?: string; // オプショナル：メモリータイプ
   extractedFrom?: string;
   confidence?: number; // 0-100（自動抽出時）
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// AIメモリ作成リクエスト
+export interface AIMemoryCreateRequest {
+  characterId: ID;
+  memoryType: AIMemoryType;
+  content: string;
+  category: AIMemoryCategory | string;
+  type?: string;
+  extractedFrom?: string;
+  confidence?: number;
+  isActive?: boolean;
+  importance?: 'high' | 'medium' | 'low';
+  relatedEntities?: string[];
+  tags?: string[];
+}
+
+// AIメモリ更新リクエスト
+export interface AIMemoryUpdateRequest {
+  content?: string;
+  category?: AIMemoryCategory | string;
+  isActive?: boolean;
 }
 
 // ==========================================
@@ -586,17 +678,61 @@ export interface ChatMessage {
   createdAt: Date;
 }
 
+// 会話状態
+export type ConversationState = 'active' | 'ended' | 'expired' | 'paused' | 'archived';
+
+// 会話コンテキストタイプ
+export type ConversationContextType = 'personal' | 'stylist_consultation' | 'client_direct';
+
 // 会話セッション
 export interface Conversation {
   id: ID;
   userId?: ID;
   clientId?: ID;
   aiCharacterId: ID;
-  context: 'personal' | 'stylist_consultation' | 'client_direct';
+  context: ConversationContextType;
+  status?: ConversationState; // オプショナル：会話状態
   startedAt: Date;
   endedAt?: Date;
+  updatedAt?: Date; // オプショナル：最終更新日時
   messageCount: number;
   memoryUpdates?: ID[]; // 更新されたメモリID配列
+}
+
+// 会話コンテキスト
+export interface ConversationContext {
+  clientInfo?: {
+    name: string;
+    recentTopics?: string[];
+    preferences?: Record<string, any>;
+  };
+  stylistInfo?: {
+    name: string;
+    specialties?: string[];
+  };
+  sessionGoal?: string;
+}
+
+// 会話作成リクエスト
+export interface ConversationCreateRequest {
+  aiCharacterId: ID;
+  context: ConversationContextType;
+  initialContext?: ConversationContext;
+  clientId?: ID; // オプショナル：クライアントID
+}
+
+// メッセージ送信リクエスト
+export interface MessageSendRequest {
+  content: string;
+  metadata?: Record<string, any>;
+}
+
+// 会話開始レスポンス
+export interface ConversationStartResponse {
+  conversation: Conversation;
+  aiCharacter: AICharacter;
+  initialMessage?: ChatMessage;
+  isNew?: boolean; // オプショナル：新規会話かどうか
 }
 
 // ==========================================
@@ -1846,13 +1982,6 @@ export enum ChatContext {
   DAILY_CHECK_IN = 'daily_check_in', // デイリーチェックイン
 }
 
-// セッション状態
-export enum ConversationState {
-  ACTIVE = 'active',
-  PAUSED = 'paused',
-  ENDED = 'ended',
-  ARCHIVED = 'archived',
-}
 
 // 拡張会話セッション
 export interface ConversationExtended extends Conversation {

@@ -65,7 +65,7 @@ const appointmentSchema = new Schema<IAppointment>(
   {
     timestamps: true,
     toJSON: {
-      transform: (doc, ret) => {
+      transform: (_doc, ret) => {
         ret.id = ret._id.toString();
         delete ret._id;
         delete ret.__v;

@@ -1,5 +1,4 @@
-import type { AICharacter } from '../../../types';
-import { AICharacterStyle } from '../../../types';
+import { AICharacter, AICharacterStyle } from '../../../types';
 
 // �ïAI��鯿����
 export const mockAICharacters: AICharacter[] = [

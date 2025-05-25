@@ -170,10 +170,26 @@ export class TestAuthHelper {
   /**
    * テスト用ユーザーを作成してトークンも生成
    */
-  static async createTestUserWithToken(data: Partial<UserProfile & { password?: string }> = {}): Promise<{
+  static async createTestUserWithToken(
+    roleOrData?: UserRole | Partial<UserProfile & { password?: string }>,
+    organizationId?: string
+  ): Promise<{
     user: UserProfile;
     token: string;
   }> {
+    // 後方互換性のための処理
+    let data: Partial<UserProfile & { password?: string }>;
+    if (typeof roleOrData === 'string') {
+      // 旧形式: createTestUserWithToken(role, organizationId)
+      data = {
+        role: roleOrData,
+        organizationId: organizationId,
+      };
+    } else {
+      // 新形式: createTestUserWithToken(data)
+      data = roleOrData || {};
+    }
+
     const user = await this.createTestUser(data);
     const token = this.generateTestToken({
       id: user.id,

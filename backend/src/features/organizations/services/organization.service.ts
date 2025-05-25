@@ -46,9 +46,16 @@ export class OrganizationService {
     organizations: Organization[];
     pagination: PaginationInfo;
   }> {
-    const { organizations, total } = await this.organizationRepository.findAll(params);
+    // ページネーションパラメータのデフォルト値を設定
+    const page = params.pagination.page ?? 1;
+    const limit = params.pagination.limit ?? 20;
+    const normalizedParams = {
+      ...params,
+      pagination: { page, limit }
+    };
     
-    const { page, limit } = params.pagination;
+    const { organizations, total } = await this.organizationRepository.findAll(normalizedParams);
+    
     const totalPages = Math.ceil(total / limit);
     
     return {

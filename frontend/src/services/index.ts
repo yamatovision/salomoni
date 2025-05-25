@@ -5,10 +5,14 @@ import { ClientService } from './api/client';
 import { StylistService } from './api/stylists';
 import { SajuService } from './api/saju';
 import { OrganizationService } from './api/organizations';
+import { ChatService } from './api/chat';
+import { AICharacterService } from './api/aiCharacter';
 import { MockAuthService } from './mock/handlers/auth';
 import { MockUserService } from './mock/handlers/users';
 import { MockClientService } from './mock/handlers/clients';
 import { MockStylistService } from './mock/handlers/stylistService';
+import { MockChatService } from './mock/handlers/chat';
+import { MockAICharacterService } from './mock/handlers/aiCharacter';
 
 // サポート関連（モック/実API切り替え用）
 import * as supportAPI from './api/support';
@@ -28,6 +32,8 @@ export const authService = USE_MOCK ? new MockAuthService() : new AuthService();
 export const userService = USE_MOCK ? new MockUserService() : new UserService();
 export const clientService = USE_MOCK ? new MockClientService() : new ClientService();
 export const stylistService = USE_MOCK ? new MockStylistService() : new StylistService();
+export const chatService = USE_MOCK ? new MockChatService() : new ChatService();
+export const aiCharacterService = USE_MOCK ? new MockAICharacterService() : new AICharacterService();
 
 // 新規追加サービス（モックなし、実APIのみ）
 export const sajuService = new SajuService();

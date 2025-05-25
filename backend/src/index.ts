@@ -17,6 +17,7 @@ import sajuRoutes from './features/saju/routes/saju.routes';
 import { clientRoutes } from './features/clients/routes/client.routes';
 import { aiCharacterRoutes } from './features/ai-characters/routes/ai-character.routes';
 import { chatRoutes } from './features/chat/routes/chat.routes';
+import { appointmentRoutes, adminAppointmentRoutes } from './features/appointments/routes/appointment.routes';
 import { logger } from './common/utils/logger';
 
 const app = express();
@@ -49,6 +50,8 @@ app.use('/api/saju', sajuRoutes);
 app.use('/api', clientRoutes); // クライアント管理ルート（/api/admin/clients, /api/clients）
 app.use('/api/chat', chatRoutes); // チャット・会話管理ルート
 app.use('/api/chat', aiCharacterRoutes); // AIキャラクター・メモリ管理ルート
+app.use('/api/appointments', appointmentRoutes); // 予約管理ルート
+app.use('/api/admin', adminAppointmentRoutes); // 管理者用予約ルート
 
 // エラーハンドリング
 app.use(errorHandler);

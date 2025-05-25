@@ -25,7 +25,7 @@ export class AppointmentRepository {
     try {
       const appointment = new AppointmentModel(appointmentData);
       const savedAppointment = await appointment.save();
-      const result = savedAppointment.toJSON() as Appointment;
+      const result = savedAppointment.toJSON() as unknown as Appointment;
       
       logger.info('[AppointmentRepository] Appointment created successfully', {
         appointmentId: result.id,
@@ -76,23 +76,20 @@ export class AppointmentRepository {
         }
       }
 
-      const skip = (pagination.page - 1) * pagination.limit;
+      const page = pagination.page ?? 1;
+      const limit = pagination.limit ?? 10;
+      const skip = (page - 1) * limit;
 
       const [appointments, total] = await Promise.all([
         AppointmentModel.find(query)
           .sort({ scheduledAt: 1 })
           .skip(skip)
-          .limit(pagination.limit)
-          .lean(),
+          .limit(limit),
         AppointmentModel.countDocuments(query),
       ]);
 
       const results = appointments.map((appointment) => {
-        const transformed = AppointmentModel.schema.methods.toJSON.call({
-          ...appointment,
-          toJSON: AppointmentModel.prototype.toJSON,
-        });
-        return transformed as Appointment;
+        return appointment.toJSON() as unknown as Appointment;
       });
 
       logger.info('[AppointmentRepository] Appointments fetched successfully', {
@@ -123,7 +120,7 @@ export class AppointmentRepository {
         return null;
       }
 
-      const result = appointment.toJSON() as Appointment;
+      const result = appointment.toJSON() as unknown as Appointment;
       logger.info('[AppointmentRepository] Appointment found', {
         appointmentId: result.id,
         status: result.status,
@@ -160,7 +157,7 @@ export class AppointmentRepository {
         return null;
       }
 
-      const result = appointment.toJSON() as Appointment;
+      const result = appointment.toJSON() as unknown as Appointment;
       logger.info('[AppointmentRepository] Appointment updated successfully', {
         appointmentId: result.id,
         status: result.status,
@@ -204,15 +201,10 @@ export class AppointmentRepository {
         },
         status: { $nin: [AppointmentStatus.CANCELED, AppointmentStatus.NO_SHOW] },
       })
-        .sort({ scheduledAt: 1 })
-        .lean();
+        .sort({ scheduledAt: 1 });
 
       const results = appointments.map((appointment) => {
-        const transformed = AppointmentModel.schema.methods.toJSON.call({
-          ...appointment,
-          toJSON: AppointmentModel.prototype.toJSON,
-        });
-        return transformed as Appointment;
+        return appointment.toJSON() as unknown as Appointment;
       });
 
       logger.info('[AppointmentRepository] Today appointments fetched', {

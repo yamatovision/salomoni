@@ -5,6 +5,7 @@ import type {
   CalendarSyncStatus,
   ApiResponse,
 } from '../../../types';
+import { ImportStatus } from '../../../types';
 import type { CSVPreviewData, FileUploadInfo } from '../data/mockImportData';
 import {
   mockImportHistories,
@@ -154,8 +155,9 @@ export const executeImport = async (
     totalRecords: mockCSVPreviewData.totalRows,
     successCount: mockCSVPreviewData.validRows - 6,
     failureCount: 6,
-    errors: [],
+    importErrors: [],
     importedBy: 'user-1',
+    status: ImportStatus.COMPLETED,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

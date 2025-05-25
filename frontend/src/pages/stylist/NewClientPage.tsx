@@ -432,17 +432,17 @@ export const NewClientPage: React.FC = () => {
         memo: `五行バランス: ${getElementName(results.elementBalance.mainElement)}が強い\n相性スコア: ${results.compatibility.totalScore}/100`,
       };
       
-      const response = await clientService.createClient(clientData);
+      const newClient = await clientService.createClient(clientData);
       
-      if (response.success && response.data) {
+      if (newClient && newClient.id) {
         setShowSuccessMessage(true);
         
         // 2秒後にチャットページへ遷移
         setTimeout(() => {
           navigate('/stylist/chat', { 
             state: { 
-              clientId: response.data?.id,
-              clientName: response.data?.name 
+              clientId: newClient.id,
+              clientName: newClient.name 
             } 
           });
         }, 2000);

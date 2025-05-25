@@ -9,13 +9,14 @@ import { ChatService } from './api/chat';
 import { AICharacterService } from './api/aiCharacter';
 import { AppointmentService } from './api/appointments';
 import { FortuneService } from './api/fortune';
+import { BillingService } from './api/billing';
 import { MockAuthService } from './mock/handlers/auth';
 import { MockUserService } from './mock/handlers/users';
 import { MockStylistService } from './mock/handlers/stylistService';
 import { MockChatService } from './mock/handlers/chat';
 import { MockAICharacterService } from './mock/handlers/aiCharacter';
-import { MockAppointmentService } from './mock/handlers/appointments';
-import { MockFortuneService } from './mock/handlers/fortune';
+// import { MockAppointmentService } from './mock/handlers/appointments';
+// import { MockFortuneService } from './mock/handlers/fortune';
 
 // サポート関連（モック/実API切り替え用）
 import * as supportAPI from './api/support';
@@ -39,6 +40,7 @@ export const chatService = USE_MOCK ? new MockChatService() : new ChatService();
 export const aiCharacterService = USE_MOCK ? new MockAICharacterService() : new AICharacterService();
 export const appointmentService = new AppointmentService(); // 実APIを使用
 export const fortuneService = new FortuneService(); // 実APIを使用
+export const billingService = new BillingService(); // 実APIを使用
 
 // 新規追加サービス（モックなし、実APIのみ）
 export const sajuService = new SajuService();

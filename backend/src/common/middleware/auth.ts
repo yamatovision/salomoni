@@ -25,6 +25,11 @@ declare global {
   }
 }
 
+// 認証済みリクエストの型定義
+export interface AuthenticatedRequest extends Request {
+  user: JWTPayload;
+}
+
 // JWT検証ミドルウェア
 export const authenticate = async (
   req: Request,

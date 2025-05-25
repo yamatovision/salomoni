@@ -148,12 +148,12 @@ const ChatPage: React.FC = () => {
         
         // クライアントリストを取得
         const clientsResponse = await clientService.getClients();
-        if (clientsResponse.success && clientsResponse.data) {
-          setAvailableClients(clientsResponse.data);
+        if (clientsResponse.clients) {
+          setAvailableClients(clientsResponse.clients);
           
           // NewClientPageから遷移してきた場合
           if (location.state?.clientId) {
-            const client = clientsResponse.data.find(c => c.id === location.state.clientId);
+            const client = clientsResponse.clients.find((c: Client) => c.id === location.state.clientId);
             if (client) {
               setSelectedClient(client);
             }

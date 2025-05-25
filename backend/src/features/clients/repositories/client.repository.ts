@@ -167,6 +167,46 @@ export class ClientRepository {
   }
 
   /**
+   * 名前と組織IDでクライアントを検索
+   */
+  async findByNameAndOrganization(
+    name: string,
+    organizationId: string
+  ): Promise<IClientDocument | null> {
+    try {
+      logger.debug('Finding client by name and organization', { name, organizationId });
+      const client = await ClientModel.findOne({ name, organizationId });
+      
+      if (!client) {
+        logger.debug('Client not found by name', { name, organizationId });
+      }
+      
+      return client;
+    } catch (error) {
+      logger.error('Failed to find client by name', { error, name, organizationId });
+      throw error;
+    }
+  }
+
+  /**
+   * クライアント情報を更新（エイリアスメソッド）
+   */
+  async updateClient(
+    id: string,
+    organizationId: string,
+    data: Partial<IClientDocument>
+  ): Promise<IClientDocument | null> {
+    return this.update(id, organizationId, data);
+  }
+
+  /**
+   * クライアントを作成（エイリアスメソッド）
+   */
+  async createClient(data: Partial<IClientDocument>): Promise<IClientDocument> {
+    return this.create(data);
+  }
+
+  /**
    * 重複チェック（メールアドレスまたは電話番号）
    */
   async checkDuplicate(

@@ -24,7 +24,6 @@ export class MockClientService {
       ...data,
       birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
       visitCount: 0,
-      isFavorite: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -58,7 +57,7 @@ export class MockClientService {
     }
 
     // 生年月日未設定フィルター
-    if (filters.birthDateMissing) {
+    if (filters.missingBirthDate) {
       filteredClients = filteredClients.filter(client => !client.birthDate);
     }
 
@@ -144,7 +143,7 @@ export class MockClientService {
     console.warn('🔧 Using MOCK data for client deletion');
   }
 
-  async getDailyClients(stylistId?: string, date?: string): Promise<Client[]> {
+  async getDailyClients(_stylistId?: string, _date?: string): Promise<Client[]> {
     // 今日の日付でフィルタリング（モックでは最初の5件を返す）
     const dailyClients = this.clients.slice(0, 5);
 

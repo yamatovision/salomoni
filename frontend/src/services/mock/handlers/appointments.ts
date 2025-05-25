@@ -5,6 +5,7 @@ import type {
   PaginationParams,
   PaginationInfo 
 } from '../../../types';
+import { AppointmentStatus } from '../../../types';
 import { mockAppointments } from '../data/mockAppointments';
 
 interface AppointmentsResponse {
@@ -27,9 +28,9 @@ export class MockAppointmentService {
       scheduledAt: new Date(data.scheduledAt),
       duration: data.duration || 60,
       services: data.services || [],
-      status: 'pending',
-      notes: data.notes,
-      createdBy: 'mock-user-id',
+      status: AppointmentStatus.PENDING,
+      note: data.note,
+      // createdBy: 'mock-user-id', // Appointmentに存在しない
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -145,7 +146,7 @@ export class MockAppointmentService {
     this.appointments[index] = {
       ...this.appointments[index],
       stylistId,
-      status: 'confirmed',
+      status: AppointmentStatus.CONFIRMED,
       updatedAt: new Date(),
     };
 
@@ -184,7 +185,7 @@ export class MockAppointmentService {
    */
   async updateAppointmentStatus(
     appointmentId: string,
-    status: 'confirmed' | 'completed' | 'cancelled'
+    status: AppointmentStatus
   ): Promise<Appointment> {
     const index = this.appointments.findIndex(apt => apt.id === appointmentId);
     

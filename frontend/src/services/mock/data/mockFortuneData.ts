@@ -2,10 +2,14 @@ import type {
   DailyFortune, 
   StylistFortuneDetail,
   FourPillarsData,
-  ElementBalance
+  ElementBalance,
+  FortuneCard,
+  DailyAdviceData
 } from '../../../types';
 import { 
-  FiveElements
+  FiveElements,
+  FortuneCardCategory,
+  FortuneCardIconTheme
 } from '../../../types';
 
 // スタイリスト向け日運データ
@@ -122,3 +126,55 @@ export const mockOtherStylists: Array<{userId: string; name: string; fortune: Da
     }
   }
 ];
+
+// フォーチュンカード
+export const mockFortuneCards: FortuneCard[] = [
+  {
+    id: 'card-001',
+    category: FortuneCardCategory.OVERALL_FLOW,
+    iconTheme: FortuneCardIconTheme.SPARKLE,
+    icon: '🔑',
+    title: '成功の鍵',
+    shortAdvice: '今日のあなたの努力は必ず実を結びます',
+    detailAdvice: '目標達成に向けて大きく前進する時期です。プロジェクトが成功に向かい、信頼関係が深まります。体調が安定し、活力が増します。自信を持って前進しましょう。',
+    gradientColors: {
+      from: '#FFD700',
+      to: '#FF6B6B'
+    },
+    position: 0
+  },
+  {
+    id: 'card-002',
+    category: FortuneCardCategory.CUSTOMER_COMMUNICATION,
+    iconTheme: FortuneCardIconTheme.CHAT,
+    icon: '✨',
+    title: '調和の光',
+    shortAdvice: '人間関係に恵まれる一日',
+    detailAdvice: '周囲との調和が取れ、物事がスムーズに進みます。チームワークが向上し、相手を理解し、理解される関係になります。心身のバランスが整います。感謝の気持ちを忘れずに。',
+    gradientColors: {
+      from: '#667EEA',
+      to: '#764BA2'
+    },
+    position: 1
+  }
+];
+
+// デイリーアドバイス
+export const mockDailyAdvice: DailyAdviceData = {
+  id: 'advice-001',
+  userId: 'mock-user-001',
+  date: new Date('2025-05-24'),
+  aiCharacterName: 'ラッキー',
+  aiCharacterAvatar: '/images/ai-characters/lucky.png',
+  greetingMessage: '今日も素敵な一日になりそうだね♡',
+  cards: mockFortuneCards,
+  compatibleStylist: {
+    stylistId: 'mock-user-003',
+    stylistName: '佐藤 愛子',
+    compatibilityScore: 5,
+    reason: '同じタイプのクリエイティビティを持っているため',
+    collaborationAdvice: '今日は特に意気投合しそう！一緒にランチに行ってみては？'
+  },
+  createdAt: new Date('2025-05-24T00:00:00Z'),
+  expiresAt: new Date('2025-05-24T23:59:59Z')
+};

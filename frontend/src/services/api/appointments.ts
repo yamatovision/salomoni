@@ -3,7 +3,6 @@ import { API_PATHS } from '../../types';
 import type { 
   Appointment,
   AppointmentCreateRequest,
-  AppointmentUpdateRequest,
   PaginationParams,
   PaginationInfo 
 } from '../../types';
@@ -46,7 +45,7 @@ export class AppointmentService {
       success: boolean;
       data: Appointment[];
       meta: { pagination: PaginationInfo };
-    }>(API_PATHS.APPOINTMENTS.ADMIN_LIST, { params });
+    }>(API_PATHS.ADMIN.APPOINTMENTS, { params });
 
     return {
       appointments: response.data.data,

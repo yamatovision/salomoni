@@ -25,7 +25,6 @@ import {
   Stack,
   Alert,
   Divider,
-  CircularProgress,
   Snackbar,
 } from '@mui/material';
 import {
@@ -48,7 +47,6 @@ export const ClientManagementPage: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [page, setPage] = useState(1);
@@ -92,11 +90,10 @@ export const ClientManagementPage: React.FC = () => {
   // クライアント一覧を取得
   const fetchClients = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const filters: ClientSearchFilter = {
         searchTerm,
-        birthDateMissing: activeFilter === 'noBirthDate',
+        missingBirthDate: activeFilter === 'noBirthDate',
         visitedThisMonth: activeFilter === 'thisMonth',
         isFavorite: activeFilter === 'favorite',
       };
@@ -109,7 +106,6 @@ export const ClientManagementPage: React.FC = () => {
       setClients(response.clients);
       setTotalPages(response.pagination.totalPages);
     } catch (err) {
-      setError('クライアント一覧の取得に失敗しました');
       console.error('Failed to fetch clients:', err);
     } finally {
       setLoading(false);
@@ -180,7 +176,7 @@ export const ClientManagementPage: React.FC = () => {
         email: newClientForm.email || undefined,
         gender: newClientForm.gender as 'male' | 'female' | 'other' | undefined,
         birthDate,
-        notes: newClientForm.memo || undefined,
+        memo: newClientForm.memo || undefined,
       };
 
       await clientService.createClient(createRequest);
@@ -269,7 +265,7 @@ export const ClientManagementPage: React.FC = () => {
       birthDay,
       birthHour: '',
       birthMinute: '',
-      memo: selectedClient.notes || '',
+      memo: selectedClient.memo || '',
     });
 
     setOpenEditClientDialog(true);
@@ -367,7 +363,7 @@ export const ClientManagementPage: React.FC = () => {
 
         {/* クライアントリスト */}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 3 }}>
-          {paginatedClients.map((client) => (
+          {clients.map((client) => (
               <Card
                 sx={{
                   cursor: 'pointer',

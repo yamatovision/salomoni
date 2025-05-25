@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -28,6 +28,9 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Alert,
+  TextField,
+  CircularProgress,
+  Snackbar,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -38,143 +41,147 @@ import {
   CreditCard as CreditCardIcon,
 } from '@mui/icons-material';
 import { AdminLayout } from '../../layouts/AdminLayout';
+import { billingService } from '../../services';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import type {
   Invoice,
-  PaymentMethod,
-  TokenPackageDetail,
+  BillingSummary,
+  TokenPackageItem,
 } from '../../types';
 import {
   OrganizationPlan,
-  TokenPackage,
   InvoiceStatus,
   PaymentMethodType,
 } from '../../types';
 
-// モックデータ
-const mockPlanInfo = {
-  plan: OrganizationPlan.PROFESSIONAL,
-  monthlyFee: 18000,
-  taxIncludedFee: 19800,
-  renewalDate: new Date('2025-05-31'),
-  nextBillingDate: new Date('2025-05-01'),
-};
-
-const mockTokenBalance = {
-  current: 250,
-  used: 750,
-  total: 1000,
-  lastChargeDate: new Date('2025-04-15'),
-};
-
-const mockTokenPackages: any[] = [
-  {
-    id: '1',
-    package: TokenPackage.STANDARD,
-    amount: 100,
-    price: 10000,
-    bonusTokens: 0,
-    description: '100トークン',
-  },
-  {
-    id: '2',
-    package: TokenPackage.STANDARD,
-    amount: 500,
-    price: 48000,
-    bonusTokens: 25,
-    description: '500トークン + ボーナス25トークン',
-  },
-  {
-    id: '3',
-    package: TokenPackage.PREMIUM,
-    amount: 1000,
-    price: 95000,
-    bonusTokens: 50,
-    description: '1000トークン + ボーナス50トークン',
-  },
-];
-
-const mockPaymentMethods: PaymentMethod[] = [
-  {
-    id: '1',
-    organizationId: 'org_1',
-    type: PaymentMethodType.CREDIT_CARD,
-    last4: '4242',
-    brand: 'Visa',
-    expiryMonth: 12,
-    expiryYear: 2025,
-    isDefault: true,
-    createdAt: new Date('2025-01-15'),
-  },
-];
-
-const mockInvoices: Invoice[] = [
-  {
-    id: 'inv_001',
-    invoiceNumber: 'SLM-2025-04-001',
-    organizationId: 'org_1',
-    amount: 19800,
-    tax: 1800,
-    subtotal: 18000,
-    total: 19800,
-    totalAmount: 19800,
-    issueDate: new Date('2025-04-01'),
-    status: InvoiceStatus.PAID,
-    dueDate: new Date('2025-04-30'),
-    paidAt: new Date('2025-04-28'),
-    items: [],
-    billingPeriod: { start: new Date('2025-04-01'), end: new Date('2025-04-30') },
-    type: 'subscription' as 'subscription',
-    paymentMethodId: '1', // Mock payment method ID
-    createdAt: new Date('2025-04-01'),
-    updatedAt: new Date('2025-04-28'),
-  },
-  {
-    id: 'inv_002',
-    invoiceNumber: 'SLM-2025-03-001',
-    organizationId: 'org_1',
-    amount: 19800,
-    tax: 1800,
-    subtotal: 18000,
-    total: 19800,
-    totalAmount: 19800,
-    issueDate: new Date('2025-03-01'),
-    status: InvoiceStatus.PAID,
-    dueDate: new Date('2025-03-31'),
-    paidAt: new Date('2025-03-28'),
-    items: [],
-    billingPeriod: { start: new Date('2025-03-01'), end: new Date('2025-03-31') },
-    type: 'subscription' as 'subscription',
-    paymentMethodId: '1', // Mock payment method ID
-    createdAt: new Date('2025-03-01'),
-    updatedAt: new Date('2025-03-28'),
-  },
-];
-
 const AdminBillingPage: React.FC = () => {
-  const [tokenPurchaseOpen, setTokenPurchaseOpen] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState<TokenPackageDetail | null>(null);
-  const [paymentMethodOpen, setPaymentMethodOpen] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(mockPaymentMethods[0]?.id || '');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [billingSummary, setBillingSummary] = useState<BillingSummary | null>(null);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [tokenPackages, setTokenPackages] = useState<TokenPackageItem[]>([]);
+  const [subscriptionPlans, setSubscriptionPlans] = useState<any>(null);
+  
+  const [tokenChargeDialog, setTokenChargeDialog] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<string>('');
+  const [paymentMethodDialog, setPaymentMethodDialog] = useState(false);
+  const [changePlanDialog, setChangePlanDialog] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string>('');
+  const [processing, setProcessing] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
-  const handleTokenPurchase = (pkg: TokenPackageDetail) => {
-    setSelectedPackage(pkg);
-    setTokenPurchaseOpen(true);
+  // カード情報入力用の状態
+  const [cardData, setCardData] = useState({
+    number: '',
+    exp_month: '',
+    exp_year: '',
+    cvv: '',
+    holder_name: '',
+  });
+
+  useEffect(() => {
+    loadBillingData();
+  }, []);
+
+  const loadBillingData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // 並列でデータを取得
+      const [summary, invoiceData, packages, plans] = await Promise.all([
+        billingService.getBillingSummary(),
+        billingService.getInvoices({ limit: 10 }),
+        Promise.resolve(billingService.getTokenPackages()),
+        Promise.resolve(billingService.getSubscriptionPlans()),
+      ]);
+
+      setBillingSummary(summary);
+      setInvoices(invoiceData.invoices);
+      setTokenPackages(packages);
+      setSubscriptionPlans(plans);
+      
+      if (summary.subscription?.planType) {
+        setSelectedPlan(summary.subscription.planType);
+      }
+    } catch (err) {
+      console.error('請求データの取得に失敗しました:', err);
+      setError('請求データの取得に失敗しました。');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleTokenPurchaseConfirm = () => {
-    // 実際にはAPIを呼び出してトークンを購入
-    console.log('トークン購入:', selectedPackage);
-    setTokenPurchaseOpen(false);
-    setSelectedPackage(null);
+  const handleTokenCharge = async () => {
+    if (!selectedPackage) {
+      setError('パッケージを選択してください。');
+      return;
+    }
+
+    try {
+      setProcessing(true);
+      setError(null);
+
+      // 決済トークンを作成
+      const tokenResponse = await billingService.createToken({
+        number: cardData.number.replace(/\s/g, ''),
+        exp_month: parseInt(cardData.exp_month),
+        exp_year: parseInt(cardData.exp_year),
+        cvv: cardData.cvv,
+        holder_name: cardData.holder_name,
+      });
+
+      // トークンチャージを実行
+      await billingService.chargeTokens({
+        packageId: selectedPackage,
+        paymentToken: tokenResponse.token,
+      });
+
+      setSuccessMessage('トークンチャージが完了しました。');
+      setTokenChargeDialog(false);
+      
+      // データを再読み込み
+      await loadBillingData();
+      
+      // カード情報をリセット
+      setCardData({
+        number: '',
+        exp_month: '',
+        exp_year: '',
+        cvv: '',
+        holder_name: '',
+      });
+      setSelectedPackage('');
+    } catch (err) {
+      console.error('トークンチャージに失敗しました:', err);
+      setError('トークンチャージに失敗しました。カード情報を確認してください。');
+    } finally {
+      setProcessing(false);
+    }
   };
 
-  const handlePaymentMethodAdd = () => {
-    setPaymentMethodOpen(true);
-  };
+  const handlePlanChange = async () => {
+    if (!selectedPlan || selectedPlan === billingSummary?.subscription?.planType) {
+      return;
+    }
 
-  const handleInvoiceDownload = (invoice: Invoice) => {
-    // 実際にはAPIを呼び出して請求書をダウンロード
-    console.log('請求書ダウンロード:', invoice.invoiceNumber);
+    try {
+      setProcessing(true);
+      setError(null);
+
+      await billingService.changePlan(selectedPlan as 'basic' | 'standard' | 'premium');
+      
+      setSuccessMessage('プラン変更が完了しました。');
+      setChangePlanDialog(false);
+      
+      // データを再読み込み
+      await loadBillingData();
+    } catch (err) {
+      console.error('プラン変更に失敗しました:', err);
+      setError('プラン変更に失敗しました。');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const getPlanName = (plan: OrganizationPlan) => {
@@ -220,12 +227,26 @@ const AdminBillingPage: React.FC = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <AdminLayout>
+        <LoadingSpinner />
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout>
       <Box sx={{ p: 3 }}>
         <Typography variant="h4" gutterBottom color="primary">
           請求・プラン管理
         </Typography>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
         <Grid container spacing={3}>
           {/* 現在のプラン */}
@@ -237,30 +258,39 @@ const AdminBillingPage: React.FC = () => {
                 </Typography>
                 <Box sx={{ mt: 2 }}>
                   <Typography variant="h5" color="primary" gutterBottom>
-                    {getPlanName(mockPlanInfo.plan)}
+                    {billingSummary?.subscription?.planType && 
+                      getPlanName(billingSummary.subscription.planType as unknown as OrganizationPlan)}
                   </Typography>
                   <List dense>
                     <ListItem>
                       <ListItemText
                         primary="月額料金"
-                        secondary={`¥${mockPlanInfo.monthlyFee.toLocaleString()} (税込 ¥${mockPlanInfo.taxIncludedFee.toLocaleString()})`}
+                        secondary={`¥${billingSummary?.subscription?.monthlyPrice?.toLocaleString() || 0}`}
                       />
                     </ListItem>
                     <ListItem>
                       <ListItemText
                         primary="次回更新日"
-                        secondary={mockPlanInfo.renewalDate.toLocaleDateString('ja-JP')}
+                        secondary={billingSummary?.subscription?.nextBillingDate ?
+                          new Date(billingSummary.subscription.nextBillingDate).toLocaleDateString('ja-JP') :
+                          '-'
+                        }
                       />
                     </ListItem>
                     <ListItem>
                       <ListItemText
-                        primary="次回請求日"
-                        secondary={mockPlanInfo.nextBillingDate.toLocaleDateString('ja-JP')}
+                        primary="ステータス"
+                        secondary={billingSummary?.subscription?.status || '-'}
                       />
                     </ListItem>
                   </List>
                   <Box sx={{ mt: 2 }}>
-                    <Button variant="outlined" color="primary" fullWidth>
+                    <Button 
+                      variant="outlined" 
+                      color="primary" 
+                      fullWidth
+                      onClick={() => setChangePlanDialog(true)}
+                    >
                       プラン変更
                     </Button>
                   </Box>
@@ -278,17 +308,20 @@ const AdminBillingPage: React.FC = () => {
                 </Typography>
                 <Box sx={{ mt: 2 }}>
                   <Typography variant="h3" color="primary" align="center" gutterBottom>
-                    {mockTokenBalance.current}
+                    {billingSummary?.tokenBalance?.current || 0}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" align="center" gutterBottom>
-                    / {mockTokenBalance.total} トークン
+                    / {billingSummary?.tokenBalance?.total || 0} トークン
                   </Typography>
                   <Box sx={{ mt: 2 }}>
                     <Typography variant="body2" color="text.secondary">
-                      使用済み: {mockTokenBalance.used} トークン
+                      使用済み: {billingSummary?.tokenBalance?.used || 0} トークン
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      最終チャージ: {mockTokenBalance.lastChargeDate.toLocaleDateString('ja-JP')}
+                      最終チャージ: {billingSummary?.tokenBalance?.lastChargeDate ?
+                        new Date(billingSummary.tokenBalance.lastChargeDate).toLocaleDateString('ja-JP') :
+                        '-'
+                      }
                     </Typography>
                   </Box>
                 </Box>
@@ -299,41 +332,33 @@ const AdminBillingPage: React.FC = () => {
           {/* トークン購入 */}
           <Grid size={{ xs: 12 }}>
             <Paper sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
                   トークン購入
                 </Typography>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={() => setTokenChargeDialog(true)}
+                >
+                  トークンチャージ
+                </Button>
               </Box>
               <Grid container spacing={2}>
-                {mockTokenPackages.map((pkg) => (
-                  <Grid key={pkg.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                    <Card variant="outlined" sx={{ height: '100%' }}>
+                {tokenPackages.map((pkg) => (
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={pkg.id}>
+                    <Card variant="outlined">
                       <CardContent>
-                        <Typography variant="h5" color="primary" gutterBottom>
-                          {pkg.amount}トークン
+                        <Typography variant="h6" gutterBottom>
+                          {pkg.name}
                         </Typography>
-                        {pkg.bonusTokens > 0 && (
-                          <Chip
-                            label={`+${pkg.bonusTokens}ボーナス`}
-                            color="secondary"
-                            size="small"
-                            sx={{ mb: 2 }}
-                          />
-                        )}
-                        <Typography variant="h4" gutterBottom>
+                        <Typography variant="h4" color="primary" gutterBottom>
                           ¥{pkg.price.toLocaleString()}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                        <Typography variant="body2" color="text.secondary">
                           {pkg.description}
                         </Typography>
-                        <Button
-                          variant="contained"
-                          fullWidth
-                          sx={{ mt: 2 }}
-                          onClick={() => handleTokenPurchase(pkg)}
-                        >
-                          購入する
-                        </Button>
                       </CardContent>
                     </Card>
                   </Grid>
@@ -343,35 +368,32 @@ const AdminBillingPage: React.FC = () => {
           </Grid>
 
           {/* 支払い方法 */}
-          <Grid size={{ xs: 12, md: 6 }}>
+          <Grid size={{ xs: 12 }}>
             <Paper sx={{ p: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
                   支払い方法
                 </Typography>
                 <Button
+                  variant="outlined"
+                  color="primary"
                   startIcon={<AddIcon />}
-                  onClick={handlePaymentMethodAdd}
+                  onClick={() => setPaymentMethodDialog(true)}
                 >
-                  追加
+                  支払い方法を追加
                 </Button>
               </Box>
               <List>
-                {mockPaymentMethods.map((method) => (
+                {billingSummary?.paymentMethods?.map((method) => (
                   <ListItem key={method.id}>
+                    <CreditCardIcon sx={{ mr: 2 }} />
                     <ListItemText
                       primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <CreditCardIcon />
-                          <Typography>
-                            VISA •••• {method.last4}
-                          </Typography>
-                          {method.isDefault && (
-                            <Chip label="デフォルト" size="small" color="primary" />
-                          )}
-                        </Box>
+                        method.type === PaymentMethodType.CREDIT_CARD ?
+                          `${method.brand} •••• ${method.last4}` :
+                          '銀行振込'
                       }
-                      secondary={`有効期限: ${method.expiryMonth}/${method.expiryYear}`}
+                      secondary={method.isDefault ? 'デフォルト' : ''}
                     />
                     <ListItemSecondaryAction>
                       <IconButton edge="end" aria-label="edit">
@@ -387,40 +409,35 @@ const AdminBillingPage: React.FC = () => {
             </Paper>
           </Grid>
 
-          {/* 請求履歴 */}
+          {/* 請求書履歴 */}
           <Grid size={{ xs: 12 }}>
             <Paper sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6">
-                  請求履歴
-                </Typography>
-              </Box>
+              <Typography variant="h6" gutterBottom>
+                請求書履歴
+              </Typography>
               <TableContainer>
                 <Table>
                   <TableHead>
                     <TableRow>
                       <TableCell>請求書番号</TableCell>
-                      <TableCell>請求期間</TableCell>
-                      <TableCell>種別</TableCell>
-                      <TableCell align="right">金額</TableCell>
+                      <TableCell>発行日</TableCell>
+                      <TableCell>期限</TableCell>
+                      <TableCell>金額</TableCell>
                       <TableCell>ステータス</TableCell>
-                      <TableCell>支払日</TableCell>
-                      <TableCell align="center">アクション</TableCell>
+                      <TableCell align="right">アクション</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {mockInvoices.map((invoice) => (
+                    {invoices.map((invoice) => (
                       <TableRow key={invoice.id}>
                         <TableCell>{invoice.invoiceNumber}</TableCell>
                         <TableCell>
-                          {invoice.billingPeriod?.start.toLocaleDateString('ja-JP')} - {invoice.billingPeriod?.end.toLocaleDateString('ja-JP')}
+                          {new Date(invoice.issueDate).toLocaleDateString('ja-JP')}
                         </TableCell>
                         <TableCell>
-                          {invoice.type === 'subscription' ? '月額プラン' : 'トークン購入'}
+                          {new Date(invoice.dueDate).toLocaleDateString('ja-JP')}
                         </TableCell>
-                        <TableCell align="right">
-                          ¥{invoice.totalAmount?.toLocaleString()}
-                        </TableCell>
+                        <TableCell>¥{(invoice.totalAmount || 0).toLocaleString()}</TableCell>
                         <TableCell>
                           <Chip
                             label={getInvoiceStatusLabel(invoice.status)}
@@ -428,14 +445,8 @@ const AdminBillingPage: React.FC = () => {
                             size="small"
                           />
                         </TableCell>
-                        <TableCell>
-                          {invoice.paidAt ? invoice.paidAt.toLocaleDateString('ja-JP') : '-'}
-                        </TableCell>
-                        <TableCell align="center">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleInvoiceDownload(invoice)}
-                          >
+                        <TableCell align="right">
+                          <IconButton size="small">
                             <DownloadIcon />
                           </IconButton>
                           <IconButton size="small">
@@ -451,70 +462,154 @@ const AdminBillingPage: React.FC = () => {
           </Grid>
         </Grid>
 
-        {/* トークン購入確認ダイアログ */}
-        <Dialog open={tokenPurchaseOpen} onClose={() => setTokenPurchaseOpen(false)}>
-          <DialogTitle>トークン購入確認</DialogTitle>
+        {/* トークンチャージダイアログ */}
+        <Dialog open={tokenChargeDialog} onClose={() => setTokenChargeDialog(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>トークンチャージ</DialogTitle>
           <DialogContent>
-            {selectedPackage && (
-              <Box sx={{ py: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                  {selectedPackage.amount}トークン
-                  {(selectedPackage.bonusTokens ?? 0) > 0 && ` (+${selectedPackage.bonusTokens}ボーナス)`}
-                </Typography>
-                <Typography variant="h5" color="primary" gutterBottom>
-                  ¥{selectedPackage.price.toLocaleString()}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  {selectedPackage.description}
-                </Typography>
-                <FormControl fullWidth sx={{ mt: 3 }}>
-                  <InputLabel>支払い方法</InputLabel>
-                  <Select
-                    value={selectedPaymentMethod}
-                    label="支払い方法"
-                    onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                  >
-                    {mockPaymentMethods.map((method) => (
-                      <MenuItem key={method.id} value={method.id}>
-                        VISA •••• {method.last4}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-            )}
+            <FormControl fullWidth sx={{ mt: 2, mb: 3 }}>
+              <InputLabel>パッケージを選択</InputLabel>
+              <Select
+                value={selectedPackage}
+                onChange={(e) => setSelectedPackage(e.target.value)}
+                label="パッケージを選択"
+              >
+                {tokenPackages.map((pkg) => (
+                  <MenuItem key={pkg.id} value={pkg.id}>
+                    {pkg.name} - ¥{pkg.price.toLocaleString()}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <Typography variant="subtitle2" gutterBottom>
+              カード情報
+            </Typography>
+            <TextField
+              fullWidth
+              label="カード番号"
+              value={cardData.number}
+              onChange={(e) => setCardData({ ...cardData, number: e.target.value })}
+              sx={{ mb: 2 }}
+            />
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 6 }}>
+                <TextField
+                  fullWidth
+                  label="有効期限（月）"
+                  placeholder="MM"
+                  value={cardData.exp_month}
+                  onChange={(e) => setCardData({ ...cardData, exp_month: e.target.value })}
+                />
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <TextField
+                  fullWidth
+                  label="有効期限（年）"
+                  placeholder="YY"
+                  value={cardData.exp_year}
+                  onChange={(e) => setCardData({ ...cardData, exp_year: e.target.value })}
+                />
+              </Grid>
+            </Grid>
+            <TextField
+              fullWidth
+              label="セキュリティコード"
+              value={cardData.cvv}
+              onChange={(e) => setCardData({ ...cardData, cvv: e.target.value })}
+              sx={{ mt: 2, mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="カード名義人"
+              value={cardData.holder_name}
+              onChange={(e) => setCardData({ ...cardData, holder_name: e.target.value })}
+            />
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setTokenPurchaseOpen(false)}>
-              キャンセル
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleTokenPurchaseConfirm}
-              disabled={!selectedPaymentMethod}
+            <Button onClick={() => setTokenChargeDialog(false)}>キャンセル</Button>
+            <Button 
+              onClick={handleTokenCharge} 
+              variant="contained" 
+              color="primary"
+              disabled={processing || !selectedPackage}
             >
-              購入する
+              {processing ? <CircularProgress size={24} /> : '購入する'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* プラン変更ダイアログ */}
+        <Dialog open={changePlanDialog} onClose={() => setChangePlanDialog(false)} maxWidth="md" fullWidth>
+          <DialogTitle>プラン変更</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={3} sx={{ mt: 1 }}>
+              {subscriptionPlans && Object.entries(subscriptionPlans).map(([key, plan]: [string, any]) => (
+                <Grid size={{ xs: 12, md: 4 }} key={key}>
+                  <Card 
+                    variant="outlined" 
+                    sx={{ 
+                      cursor: 'pointer',
+                      border: selectedPlan === key ? 2 : 1,
+                      borderColor: selectedPlan === key ? 'primary.main' : 'divider',
+                    }}
+                    onClick={() => setSelectedPlan(key)}
+                  >
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>
+                        {plan.name}
+                      </Typography>
+                      <Typography variant="h4" color="primary" gutterBottom>
+                        ¥{plan.monthlyPrice.toLocaleString()}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        月額（税別）
+                      </Typography>
+                      <List dense>
+                        {plan.features.map((feature: string, index: number) => (
+                          <ListItem key={index}>
+                            <ListItemText primary={`• ${feature}`} />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setChangePlanDialog(false)}>キャンセル</Button>
+            <Button 
+              onClick={handlePlanChange} 
+              variant="contained" 
+              color="primary"
+              disabled={processing || !selectedPlan || selectedPlan === billingSummary?.subscription?.planType}
+            >
+              {processing ? <CircularProgress size={24} /> : 'プラン変更'}
             </Button>
           </DialogActions>
         </Dialog>
 
         {/* 支払い方法追加ダイアログ */}
-        <Dialog open={paymentMethodOpen} onClose={() => setPaymentMethodOpen(false)}>
-          <DialogTitle>支払い方法の追加</DialogTitle>
+        <Dialog open={paymentMethodDialog} onClose={() => setPaymentMethodDialog(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>支払い方法を追加</DialogTitle>
           <DialogContent>
-            <Alert severity="info" sx={{ mb: 2 }}>
-              実装予定：クレジットカード情報の入力フォームがここに表示されます。
+            <Alert severity="info" sx={{ mt: 2 }}>
+              この機能は現在開発中です。
             </Alert>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setPaymentMethodOpen(false)}>
-              キャンセル
-            </Button>
-            <Button variant="contained" disabled>
-              追加する
-            </Button>
+            <Button onClick={() => setPaymentMethodDialog(false)}>閉じる</Button>
           </DialogActions>
         </Dialog>
+
+        {/* 成功メッセージ */}
+        <Snackbar
+          open={!!successMessage}
+          autoHideDuration={6000}
+          onClose={() => setSuccessMessage('')}
+          message={successMessage}
+        />
       </Box>
     </AdminLayout>
   );

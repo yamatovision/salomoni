@@ -228,6 +228,11 @@ export const API_PATHS = {
     SUPPORT_TICKETS: '/api/admin/support/tickets',
     SUPPORT_TICKET_DETAIL: (ticketId: string) => `/api/admin/support/tickets/${ticketId}`,
     SUPPORT_TICKET_REPLY: (ticketId: string) => `/api/admin/support/tickets/${ticketId}/reply`,
+    // インポート関連
+    IMPORT_UPLOAD: '/api/admin/import/upload',
+    IMPORT_EXECUTE: '/api/admin/import/execute',
+    IMPORT_HISTORY: '/api/admin/import/history',
+    CALENDAR_CONNECT: '/api/admin/calendar/connect',
   },
 
   // オーナー向け（課金管理）
@@ -540,6 +545,14 @@ export interface ClientUpdateRequest {
   email?: string;
   phoneNumber?: string;
   memo?: string;
+}
+
+// クライアント検索フィルター
+export interface ClientSearchFilter {
+  searchTerm?: string;
+  missingBirthDate?: boolean; // birthDateMissingから変更
+  visitedThisMonth?: boolean;
+  isFavorite?: boolean;
 }
 
 // ==========================================
@@ -1071,6 +1084,7 @@ export interface Appointment extends Timestamps {
   note?: string;
   completedAt?: Date;
   canceledAt?: Date;
+  amount?: number; // 金額（オプショナル）
 }
 
 // 予約作成リクエスト
@@ -1159,6 +1173,15 @@ export interface TokenUsage {
 export enum TokenPackage {
   STANDARD = 'standard', // 1,000,000トークン
   PREMIUM = 'premium',   // 10,000,000トークン
+}
+
+// トークンパッケージ（API用）
+export interface TokenPackageItem {
+  id: string;
+  name: string;
+  tokens: number;
+  price: number;
+  description: string;
 }
 
 
@@ -1514,6 +1537,45 @@ export interface BillingSummary {
     totalSpent: number;
     lastPaymentDate: Date;
   }[];
+  paymentMethods?: PaymentMethod[]; // 支払い方法リスト（オプショナル）
+  subscription?: {
+    planType: string;
+    monthlyPrice: number;
+    nextBillingDate: Date;
+    status: string;
+  };
+  tokenBalance?: {
+    current: number;
+    total: number;
+    used: number;
+    lastChargeDate: Date;
+  };
+}
+
+// 決済関連のリクエスト/レスポンス型
+export interface CreateTokenResponse {
+  token: string;
+}
+
+export interface ChargeTokensRequest {
+  packageId: string;
+  paymentToken: string;
+}
+
+export interface ChargeTokensResponse {
+  success: boolean;
+  chargeId?: string;
+  tokens?: number;
+}
+
+export interface CreateSubscriptionRequest {
+  planType: string;
+  paymentMethodId?: string;
+}
+
+export interface CreateSubscriptionResponse {
+  success: boolean;
+  subscriptionId: string;
 }
 
 // ==========================================
@@ -1676,6 +1738,15 @@ export enum ImportMethod {
   CSV = 'csv',
 }
 
+// インポートステータス
+export enum ImportStatus {
+  PENDING = 'pending',
+  PROCESSING = 'processing',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  CANCELLED = 'cancelled',
+}
+
 // インポート設定
 export interface ImportSettings {
   method: ImportMethod;
@@ -1696,8 +1767,13 @@ export interface ImportHistory extends Timestamps {
   totalRecords: number;
   successCount: number;
   failureCount: number;
-  errors?: string[];
+  importErrors?: string[];
   importedBy: ID;
+  fileName?: string;
+  status: ImportStatus;
+  startedAt?: Date;
+  completedAt?: Date;
+  mapping?: FieldMapping[];
 }
 
 // フィールドマッピング
@@ -1706,6 +1782,84 @@ export interface FieldMapping {
   targetField: string;
   isEnabled: boolean;
   priority: 'standard' | 'recommended' | 'optional';
+}
+
+// インポートプレビューデータ
+export interface ImportPreviewData {
+  clients: ClientImportPreview[];
+  summary: {
+    total: number;
+    new: number;
+    update: number;
+    errors: number;
+  };
+}
+
+// クライアントインポートプレビュー
+export interface ClientImportPreview {
+  rowNumber: number;
+  data: Partial<Client>;
+  status: 'new' | 'update' | 'error';
+  importErrors?: string[];
+}
+
+// インポートオプション
+export interface ImportOptions {
+  autoCreateClients?: boolean;
+  updateExisting?: boolean;
+  skipErrors?: boolean;
+  dryRun?: boolean;
+}
+
+// インポートアップロードレスポンス
+export interface ImportUploadResponse {
+  fileId: string;
+  fileName: string;
+  fileSize: number;
+  recordCount: number;
+  preview: ImportPreviewData;
+  mapping: FieldMapping[];
+}
+
+// インポート実行リクエスト
+export interface ImportExecuteRequest {
+  fileId: string;
+  mapping: FieldMapping[];
+  options: ImportOptions;
+}
+
+// インポート実行レスポンス
+export interface ImportExecuteResponse {
+  importId: string;
+  processed: number;
+  success: number;
+  failed: number;
+  importErrors?: string[];
+}
+
+// インポート履歴フィルター
+export interface ImportHistoryFilter {
+  method?: ImportMethod;
+  status?: ImportStatus;
+  dateFrom?: Date;
+  dateTo?: Date;
+}
+
+// カレンダー連携設定
+export interface CalendarConnectionRequest {
+  provider: 'google' | 'icloud' | 'outlook';
+  authCode: string;
+  syncFrequency: number; // 分単位
+}
+
+// カレンダー同期設定
+export interface CalendarSyncSettings {
+  provider: 'google' | 'icloud' | 'outlook';
+  connected: boolean;
+  calendarId?: string;
+  syncFrequency: number;
+  lastSyncAt?: Date;
+  syncEnabled: boolean;
 }
 
 // ==========================================

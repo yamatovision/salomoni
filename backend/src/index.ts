@@ -19,6 +19,9 @@ import { aiCharacterRoutes } from './features/ai-characters/routes/ai-character.
 import { chatRoutes } from './features/chat/routes/chat.routes';
 import { appointmentRoutes, adminAppointmentRoutes } from './features/appointments/routes/appointment.routes';
 import { fortuneRoutes } from './features/fortune/routes/fortune.routes';
+import billingRoutes from './features/billing/routes/billing.routes';
+import importRoutes, { calendarRouter } from './features/import/routes/import.routes';
+import { univapayService } from './features/billing/services/univapay.service';
 import { logger } from './common/utils/logger';
 
 const app = express();
@@ -54,6 +57,10 @@ app.use('/api/chat', aiCharacterRoutes); // AIキャラクター・メモリ管�
 app.use('/api/appointments', appointmentRoutes); // 予約管理ルート
 app.use('/api/admin', adminAppointmentRoutes); // 管理者用予約ルート
 app.use('/api/fortune', fortuneRoutes); // 運勢・アドバイス管理ルート
+app.use('/api/billing', billingRoutes); // 決済・課金管理ルート
+app.use('/api/owner/billing', billingRoutes); // オーナー向け決済管理ルート
+app.use('/api/admin/import', importRoutes); // データインポート管理ルート
+app.use('/api/admin/calendar', calendarRouter); // カレンダー連携管理ルート
 
 // エラーハンドリング
 app.use(errorHandler);
@@ -68,6 +75,15 @@ const startServer = async (): Promise<void> => {
   try {
     // データベース接続
     await connectDatabase();
+    
+    // Univapay設定の初期化
+    try {
+      univapayService.loadConfigFromEnv();
+      logger.info('Univapay service initialized successfully');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn('Univapay service initialization failed:', errorMessage);
+    }
     
     app.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);

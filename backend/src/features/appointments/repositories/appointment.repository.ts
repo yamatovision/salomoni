@@ -34,8 +34,9 @@ export class AppointmentRepository {
       
       return result;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('[AppointmentRepository] Failed to create appointment', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         appointmentData,
       });
       throw error;
@@ -99,8 +100,9 @@ export class AppointmentRepository {
 
       return { appointments: results, total };
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('[AppointmentRepository] Failed to fetch appointments', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         filters,
       });
       throw error;
@@ -128,8 +130,9 @@ export class AppointmentRepository {
 
       return result;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('[AppointmentRepository] Failed to fetch appointment', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         id,
       });
       throw error;
@@ -165,8 +168,9 @@ export class AppointmentRepository {
 
       return result;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('[AppointmentRepository] Failed to update appointment', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         id,
         updateData,
       });
@@ -213,8 +217,9 @@ export class AppointmentRepository {
 
       return results;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('[AppointmentRepository] Failed to fetch today appointments', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         organizationId,
         stylistId,
       });
@@ -276,8 +281,9 @@ export class AppointmentRepository {
 
       return hasOverlap;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('[AppointmentRepository] Failed to check overlap', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         organizationId,
         stylistId,
       });

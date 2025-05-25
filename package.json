@@ -10,5 +10,8 @@
     "ts:suggest": "node scripts/ts-error/fix-suggestions.js"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "glob": "^11.0.2"
+  }
 }

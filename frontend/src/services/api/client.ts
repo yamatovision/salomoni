@@ -31,7 +31,6 @@ export class ClientService {
       ...filters,
       ...pagination,
       // フィルター条件をクエリパラメータに変換
-      missingBirthDate: filters.birthDateMissing,
       hasAppointmentInMonth: filters.visitedThisMonth,
     };
 

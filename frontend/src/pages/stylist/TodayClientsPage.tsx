@@ -21,7 +21,6 @@ import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   AccessTime as AccessTimeIcon,
-  Stars as StarsIcon,
   ChatBubble as ChatBubbleIcon,
   Person as PersonIcon
 } from '@mui/icons-material';
@@ -81,25 +80,26 @@ const ClientAvatar = styled(Avatar)(({ theme }) => ({
   boxShadow: '0 2px 8px rgba(242, 106, 141, 0.25)',
 }));
 
-const CompatibilityBadge = styled(Chip)<{ level?: 'excellent' | 'good' | 'average' }>(({ theme, level = 'good' }) => ({
-  fontWeight: 500,
-  fontSize: '0.8rem',
-  '& .MuiChip-icon': {
-    fontSize: '0.9rem',
-  },
-  ...(level === 'excellent' && {
-    backgroundColor: theme.palette.primary.main,
-    color: 'white',
-  }),
-  ...(level === 'good' && {
-    backgroundColor: 'rgba(242, 106, 141, 0.6)',
-    color: 'white',
-  }),
-  ...(level === 'average' && {
-    backgroundColor: 'rgba(242, 106, 141, 0.3)',
-    color: theme.palette.text.primary,
-  }),
-}));
+// TODO: 四柱推命統合後に実装
+// const CompatibilityBadge = styled(Chip)<{ level?: 'excellent' | 'good' | 'average' }>(({ theme, level = 'good' }) => ({
+//   fontWeight: 500,
+//   fontSize: '0.8rem',
+//   '& .MuiChip-icon': {
+//     fontSize: '0.9rem',
+//   },
+//   ...(level === 'excellent' && {
+//     backgroundColor: theme.palette.primary.main,
+//     color: 'white',
+//   }),
+//   ...(level === 'good' && {
+//     backgroundColor: 'rgba(242, 106, 141, 0.6)',
+//     color: 'white',
+//   }),
+//   ...(level === 'average' && {
+//     backgroundColor: 'rgba(242, 106, 141, 0.3)',
+//     color: theme.palette.text.primary,
+//   }),
+// }));
 
 const ActionButton = styled(Button)(() => ({
   borderRadius: 8,
@@ -150,7 +150,7 @@ const TodayClientsPage: React.FC = () => {
   };
 
   const handleChatClick = (clientId: string) => {
-    navigate(ROUTES.STYLIST.CHAT.replace(':id', clientId));
+    navigate(ROUTES.stylist.chat.replace(':id', clientId));
   };
 
   const getInitials = (name: string) => {
@@ -299,6 +299,7 @@ const TodayClientsPage: React.FC = () => {
                         </Box>
 
                         <Box display="flex" alignItems="center" gap={1}>
+                          {/* TODO: 四柱推命データ統合後に実装
                           {client.fourPillarsDataId && (
                             <CompatibilityBadge
                               level="good"
@@ -306,7 +307,7 @@ const TodayClientsPage: React.FC = () => {
                               label="相性良好"
                               size="small"
                             />
-                          )}
+                          )} */}
                           <IconButton
                             size="small"
                             onClick={(e) => {
@@ -342,7 +343,7 @@ const TodayClientsPage: React.FC = () => {
                         </Box>
 
                         {/* メモ */}
-                        {client.notes && (
+                        {client.memo && (
                           <Box mb={2}>
                             <Typography
                               variant="subtitle2"
@@ -352,7 +353,7 @@ const TodayClientsPage: React.FC = () => {
                               メモ
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              {client.notes}
+                              {client.memo}
                             </Typography>
                           </Box>
                         )}

@@ -39,7 +39,7 @@ export const errorHandler = (
     name: error.name,
     message: error.message,
     stack: error.stack,
-    ...(error instanceof AppError && { code: error.code, details: error.details }),
+    ...(error instanceof AppError && { code: error.code }),
   });
 
   // AppErrorの場合
@@ -48,7 +48,6 @@ export const errorHandler = (
       success: false,
       error: error.message,
       ...(error.code && { code: error.code }),
-      ...(error.details && { details: error.details }),
     };
     res.status(error.statusCode).json(response);
     return;

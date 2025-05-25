@@ -37,8 +37,9 @@ export class AppointmentController {
         data: appointment,
       });
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('[AppointmentController] Create appointment failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? errorMessage : String(error),
       });
       next(error);
     }
@@ -97,8 +98,9 @@ export class AppointmentController {
         },
       });
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('[AppointmentController] Get appointments failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? errorMessage : 'Unknown error',
       });
       next(error);
     }
@@ -135,8 +137,9 @@ export class AppointmentController {
         data: appointment,
       });
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('[AppointmentController] Get appointment detail failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? errorMessage : 'Unknown error',
       });
       next(error);
     }
@@ -175,8 +178,9 @@ export class AppointmentController {
         data: appointment,
       });
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('[AppointmentController] Assign stylist failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? errorMessage : 'Unknown error',
       });
       next(error);
     }
@@ -217,8 +221,9 @@ export class AppointmentController {
         data: appointment,
       });
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('[AppointmentController] Move appointment failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? errorMessage : 'Unknown error',
       });
       next(error);
     }
@@ -247,8 +252,9 @@ export class AppointmentController {
         data: result,
       });
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('[AppointmentController] Calendar sync failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? errorMessage : 'Unknown error',
       });
       next(error);
     }

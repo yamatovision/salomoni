@@ -1,6 +1,6 @@
-import { DailyFortuneModel, DailyFortuneDocument } from '../models/daily-fortune.model';
-import { FortuneCardModel, FortuneCardDocument } from '../models/fortune-card.model';
-import { DailyAdviceModel, DailyAdviceDocument } from '../models/daily-advice.model';
+import { DailyFortuneModel } from '../models/daily-fortune.model';
+import { FortuneCardModel } from '../models/fortune-card.model';
+import { DailyAdviceModel } from '../models/daily-advice.model';
 import { DailyFortune, FortuneCard, DailyAdviceData, ID } from '../../../types';
 import { AppError } from '../../../common/utils/errors';
 import { logger } from '../../../common/utils/logger';
@@ -26,10 +26,10 @@ export class FortuneRepository {
         date: fortune.date,
       });
 
-      return fortune.toJSON() as DailyFortune;
+      return fortune.toJSON() as unknown as DailyFortune;
     } catch (error) {
       logger.error('[FortuneRepository] 日運データ保存エラー:', error);
-      throw new AppError(500, 'Failed to save daily fortune', 'FORTUNE_SAVE_ERROR');
+      throw new AppError('Failed to save daily fortune', 500, 'FORTUNE_SAVE_ERROR');
     }
   }
 
@@ -52,10 +52,10 @@ export class FortuneRepository {
       }
 
       const fortune = await DailyFortuneModel.findOne(query);
-      return fortune ? (fortune.toJSON() as DailyFortune) : null;
+      return fortune ? (fortune.toJSON() as unknown as DailyFortune) : null;
     } catch (error) {
       logger.error('[FortuneRepository] 日運データ取得エラー:', error);
-      throw new AppError(500, 'Failed to fetch daily fortune', 'FORTUNE_FETCH_ERROR');
+      throw new AppError('Failed to fetch daily fortune', 500, 'FORTUNE_FETCH_ERROR');
     }
   }
 
@@ -71,10 +71,10 @@ export class FortuneRepository {
         title: card.title,
       });
 
-      return card.toJSON() as FortuneCard;
+      return card.toJSON() as unknown as FortuneCard;
     } catch (error) {
       logger.error('[FortuneRepository] 運勢カード作成エラー:', error);
-      throw new AppError(500, 'Failed to create fortune card', 'CARD_CREATE_ERROR');
+      throw new AppError('Failed to create fortune card', 500, 'CARD_CREATE_ERROR');
     }
   }
 
@@ -86,10 +86,10 @@ export class FortuneRepository {
     try {
       const query = category ? { category } : {};
       const cards = await FortuneCardModel.find(query).limit(limit);
-      return cards.map(card => card.toJSON() as FortuneCard);
+      return cards.map(card => card.toJSON() as unknown as FortuneCard);
     } catch (error) {
       logger.error('[FortuneRepository] 運勢カード検索エラー:', error);
-      throw new AppError(500, 'Failed to fetch fortune cards', 'CARD_FETCH_ERROR');
+      throw new AppError('Failed to fetch fortune cards', 500, 'CARD_FETCH_ERROR');
     }
   }
 
@@ -110,10 +110,10 @@ export class FortuneRepository {
         date: advice.date,
       });
 
-      return advice.toJSON() as DailyAdviceData;
+      return advice.toJSON() as unknown as DailyAdviceData;
     } catch (error) {
       logger.error('[FortuneRepository] デイリーアドバイス保存エラー:', error);
-      throw new AppError(500, 'Failed to save daily advice', 'ADVICE_SAVE_ERROR');
+      throw new AppError('Failed to save daily advice', 500, 'ADVICE_SAVE_ERROR');
     }
   }
 
@@ -133,10 +133,10 @@ export class FortuneRepository {
       }
 
       const advice = await DailyAdviceModel.findOne(query).sort({ date: -1 });
-      return advice ? (advice.toJSON() as DailyAdviceData) : null;
+      return advice ? (advice.toJSON() as unknown as DailyAdviceData) : null;
     } catch (error) {
       logger.error('[FortuneRepository] デイリーアドバイス取得エラー:', error);
-      throw new AppError(500, 'Failed to fetch daily advice', 'ADVICE_FETCH_ERROR');
+      throw new AppError('Failed to fetch daily advice', 500, 'ADVICE_FETCH_ERROR');
     }
   }
 

@@ -19,6 +19,14 @@ export const fortuneValidator = {
       .trim()
       .notEmpty()
       .withMessage('クライアントIDが不正です'),
+    query()
+      .custom((_value, { req }) => {
+        const { userId, clientId } = req.query as any;
+        if (!userId && !clientId) {
+          throw new Error('ユーザーIDまたはクライアントIDが必要です');
+        }
+        return true;
+      }),
   ] as ValidationChain[],
 
   // AIアドバイス生成のバリデーション
@@ -54,6 +62,8 @@ export const fortuneValidator = {
   // 本日の相性スタイリスト取得のバリデーション
   getCompatibilityToday: [
     query('userId')
+      .exists({ checkFalsy: true })
+      .withMessage('ユーザーIDは必須です')
       .isString()
       .trim()
       .notEmpty()

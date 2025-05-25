@@ -54,12 +54,27 @@ export const ClientManagementPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [openNewClientDialog, setOpenNewClientDialog] = useState(false);
   const [openClientDetailDialog, setOpenClientDetailDialog] = useState(false);
+  const [openEditClientDialog, setOpenEditClientDialog] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [openImportDialog, setOpenImportDialog] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   
   // 新規クライアントフォームの状態
   const [newClientForm, setNewClientForm] = useState({
+    name: '',
+    phoneNumber: '',
+    email: '',
+    gender: '',
+    birthYear: '',
+    birthMonth: '',
+    birthDay: '',
+    birthHour: '',
+    birthMinute: '',
+    memo: '',
+  });
+
+  // 編集フォームの状態
+  const [editClientForm, setEditClientForm] = useState({
     name: '',
     phoneNumber: '',
     email: '',
@@ -194,6 +209,72 @@ export const ClientManagementPage: React.FC = () => {
     }
   };
 
+  // クライアント更新処理
+  const handleEditClientSubmit = async () => {
+    if (!selectedClient) return;
+
+    try {
+      // 生年月日を組み立て
+      let birthDate: string | undefined;
+      if (editClientForm.birthYear && editClientForm.birthMonth && editClientForm.birthDay) {
+        birthDate = `${editClientForm.birthYear}-${editClientForm.birthMonth.padStart(2, '0')}-${editClientForm.birthDay.padStart(2, '0')}`;
+      }
+
+      const updateRequest = {
+        name: editClientForm.name,
+        phoneNumber: editClientForm.phoneNumber || undefined,
+        email: editClientForm.email || undefined,
+        gender: editClientForm.gender as 'male' | 'female' | 'other' | undefined,
+        birthDate,
+        notes: editClientForm.memo || undefined,
+      };
+
+      await clientService.updateClient(selectedClient.id, updateRequest);
+      
+      setSnackbar({ open: true, message: 'クライアント情報を更新しました', severity: 'success' });
+      setOpenEditClientDialog(false);
+      setOpenClientDetailDialog(false);
+      
+      // リストを再取得
+      fetchClients();
+    } catch (err: any) {
+      setSnackbar({ open: true, message: err.message || 'クライアントの更新に失敗しました', severity: 'error' });
+    }
+  };
+
+  // 編集ダイアログを開く
+  const handleEditClick = () => {
+    if (!selectedClient) return;
+
+    // 生年月日を分解
+    let birthYear = '';
+    let birthMonth = '';
+    let birthDay = '';
+    
+    if (selectedClient.birthDate) {
+      const date = new Date(selectedClient.birthDate);
+      birthYear = date.getFullYear().toString();
+      birthMonth = (date.getMonth() + 1).toString();
+      birthDay = date.getDate().toString();
+    }
+
+    // フォームに現在の値を設定
+    setEditClientForm({
+      name: selectedClient.name,
+      phoneNumber: selectedClient.phoneNumber || '',
+      email: selectedClient.email || '',
+      gender: selectedClient.gender || '',
+      birthYear,
+      birthMonth,
+      birthDay,
+      birthHour: '',
+      birthMinute: '',
+      memo: selectedClient.notes || '',
+    });
+
+    setOpenEditClientDialog(true);
+  };
+
   const getClientInitials = (name: string) => {
     const names = name.split(' ');
     if (names.length >= 2) {
@@ -216,6 +297,7 @@ export const ClientManagementPage: React.FC = () => {
 
   return (
     <Container maxWidth="lg">
+      <Box>
         {/* ヘッダー */}
         <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h4" fontWeight="bold">
@@ -344,7 +426,7 @@ export const ClientManagementPage: React.FC = () => {
               </Card>
             ))}
           </Box>
-        )}
+        )
 
         {/* ページネーション */}
         {!loading && totalPages > 1 && (
@@ -568,7 +650,7 @@ export const ClientManagementPage: React.FC = () => {
             >
               削除
             </Button>
-            <Button startIcon={<Edit />} onClick={() => setOpenClientDetailDialog(false)}>
+            <Button startIcon={<Edit />} onClick={handleEditClick}>
               編集
             </Button>
             <Button variant="contained" onClick={() => setOpenClientDetailDialog(false)}>
@@ -630,6 +712,111 @@ export const ClientManagementPage: React.FC = () => {
           </DialogActions>
         </Dialog>
 
+        {/* クライアント編集ダイアログ */}
+        <Dialog
+          open={openEditClientDialog}
+          onClose={() => setOpenEditClientDialog(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>
+            クライアント情報編集
+            <IconButton
+              onClick={() => setOpenEditClientDialog(false)}
+              sx={{ position: 'absolute', right: 8, top: 8 }}
+            >
+              <Close />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent>
+            <Stack spacing={3} sx={{ mt: 1 }}>
+              <TextField
+                fullWidth
+                label="お名前"
+                required
+                value={editClientForm.name}
+                onChange={(e) => setEditClientForm({ ...editClientForm, name: e.target.value })}
+              />
+              
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+                <TextField
+                  fullWidth
+                  label="電話番号"
+                  value={editClientForm.phoneNumber}
+                  onChange={(e) => setEditClientForm({ ...editClientForm, phoneNumber: e.target.value })}
+                />
+                <TextField
+                  fullWidth
+                  label="メールアドレス"
+                  type="email"
+                  value={editClientForm.email}
+                  onChange={(e) => setEditClientForm({ ...editClientForm, email: e.target.value })}
+                />
+              </Box>
+
+              <FormControl>
+                <FormLabel>性別</FormLabel>
+                <RadioGroup
+                  row
+                  value={editClientForm.gender}
+                  onChange={(e) => setEditClientForm({ ...editClientForm, gender: e.target.value })}
+                >
+                  <FormControlLabel value="male" control={<Radio />} label="男性" />
+                  <FormControlLabel value="female" control={<Radio />} label="女性" />
+                  <FormControlLabel value="other" control={<Radio />} label="その他" />
+                </RadioGroup>
+              </FormControl>
+
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  生年月日
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
+                  <TextField
+                    fullWidth
+                    placeholder="西暦"
+                    type="number"
+                    value={editClientForm.birthYear}
+                    onChange={(e) => setEditClientForm({ ...editClientForm, birthYear: e.target.value })}
+                  />
+                  <TextField
+                    fullWidth
+                    placeholder="月"
+                    type="number"
+                    value={editClientForm.birthMonth}
+                    onChange={(e) => setEditClientForm({ ...editClientForm, birthMonth: e.target.value })}
+                  />
+                  <TextField
+                    fullWidth
+                    placeholder="日"
+                    type="number"
+                    value={editClientForm.birthDay}
+                    onChange={(e) => setEditClientForm({ ...editClientForm, birthDay: e.target.value })}
+                  />
+                </Box>
+              </Box>
+
+              <TextField
+                fullWidth
+                label="メモ"
+                multiline
+                rows={3}
+                placeholder="お客様の特徴や好み、注意事項など..."
+                value={editClientForm.memo}
+                onChange={(e) => setEditClientForm({ ...editClientForm, memo: e.target.value })}
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenEditClientDialog(false)}>
+              キャンセル
+            </Button>
+            <Button variant="contained" onClick={handleEditClientSubmit}>
+              更新する
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         {/* Snackbar */}
         <Snackbar
           open={snackbar.open}
@@ -640,6 +827,7 @@ export const ClientManagementPage: React.FC = () => {
             {snackbar.message}
           </Alert>
         </Snackbar>
+      </Box>
     </Container>
   );
 };

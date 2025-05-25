@@ -78,6 +78,31 @@ export const errorHandler = (
     return;
   }
 
+  // MongoDBのCastError（ObjectId変換エラー）
+  if (error.name === 'CastError') {
+    const castError = error as any;
+    if (castError.path === '_id' && castError.kind === 'ObjectId') {
+      // エラーメッセージからどのモデルでエラーが発生したか判定
+      const isUser = castError.message?.includes('User');
+      const response: ApiError = {
+        success: false,
+        error: isUser ? 'ユーザーが見つかりません' : 'リソースが見つかりません',
+        code: 'RESOURCE_NOT_FOUND',
+      };
+      res.status(404).json(response);
+      return;
+    }
+    // その他のCastError
+    const response: ApiError = {
+      success: false,
+      error: '無効なパラメータです',
+      code: 'INVALID_PARAMETER',
+      details: { field: castError.path, value: castError.value },
+    };
+    res.status(400).json(response);
+    return;
+  }
+
   // JWT関連のエラー
   if (error.name === 'JsonWebTokenError') {
     const response: ApiError = {

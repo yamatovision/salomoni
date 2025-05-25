@@ -14,7 +14,8 @@ import {
   Fade,
   CircularProgress,
   AppBar,
-  Toolbar
+  Toolbar,
+  Alert
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
@@ -27,8 +28,8 @@ import {
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import type { DailyClientDisplay } from '../../types';
-import { mockDailyClientDisplays } from '../../services/mock/data/mockClients';
+import type { Client } from '../../types';
+import { clientService } from '../../services';
 import { ROUTES } from '../../routes/routes';
 
 // ページID: M-004
@@ -80,7 +81,7 @@ const ClientAvatar = styled(Avatar)(({ theme }) => ({
   boxShadow: '0 2px 8px rgba(242, 106, 141, 0.25)',
 }));
 
-const CompatibilityBadge = styled(Chip)<{ level: 'excellent' | 'good' | 'average' }>(({ theme, level }) => ({
+const CompatibilityBadge = styled(Chip)<{ level?: 'excellent' | 'good' | 'average' }>(({ theme, level = 'good' }) => ({
   fontWeight: 500,
   fontSize: '0.8rem',
   '& .MuiChip-icon': {
@@ -108,51 +109,48 @@ const ActionButton = styled(Button)(() => ({
 }));
 
 const TodayClientsPage: React.FC = () => {
-  const { } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const [clientDisplays, setClientDisplays] = useState<DailyClientDisplay[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // モックデータを読み込み
+    // 本日のクライアントデータを取得
     const loadClientData = async () => {
       try {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        setClientDisplays(mockDailyClientDisplays);
+        setLoading(true);
+        setError(null);
+        const todayClients = await clientService.getDailyClients(
+          user?.role === 'stylist' ? user.id : undefined
+        );
+        setClients(todayClients);
       } catch (error) {
         console.error('Failed to load client data:', error);
+        setError('本日のクライアント情報の取得に失敗しました');
       } finally {
         setLoading(false);
       }
     };
 
     loadClientData();
-  }, []);
+  }, [user]);
 
-  const handleCardToggle = (appointmentId: string) => {
+  const handleCardToggle = (clientId: string) => {
     setExpandedCards(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(appointmentId)) {
-        newSet.delete(appointmentId);
+      if (newSet.has(clientId)) {
+        newSet.delete(clientId);
       } else {
-        newSet.add(appointmentId);
+        newSet.add(clientId);
       }
       return newSet;
     });
   };
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('ja-JP', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const formatDateRange = (start: Date, duration: number) => {
-    const end = new Date(start);
-    end.setMinutes(end.getMinutes() + duration);
-    return `${formatTime(start)} - ${formatTime(end)}`;
+  const handleChatClick = (clientId: string) => {
+    navigate(ROUTES.STYLIST.CHAT.replace(':id', clientId));
   };
 
   const getInitials = (name: string) => {
@@ -173,9 +171,8 @@ const TodayClientsPage: React.FC = () => {
   }
 
   const todayDate = new Date();
-  const completedCount = clientDisplays.filter(cd => 
-    cd.appointment.status === 'completed'
-  ).length;
+  const completedCount = 0; // 予約管理機能の統合後に実装
+  const newClientsCount = clients.filter(client => client.visitCount === 0).length;
 
   return (
     <PageContainer>
@@ -199,6 +196,13 @@ const TodayClientsPage: React.FC = () => {
 
         {/* メインコンテンツ */}
         <Container sx={{ pt: 3, pb: 10 }}>
+          {/* エラー表示 */}
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
+
           {/* サマリー統計 */}
           <SummaryCards>
             <StatCard>
@@ -208,7 +212,7 @@ const TodayClientsPage: React.FC = () => {
                 fontWeight={600}
                 mb={0.5}
               >
-                {clientDisplays.length}
+                {clients.length}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 予約数
@@ -236,7 +240,7 @@ const TodayClientsPage: React.FC = () => {
                 fontWeight={600}
                 mb={0.5}
               >
-                {clientDisplays.filter(cd => cd.isFirstVisit).length}
+                {newClientsCount}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 新規
@@ -258,16 +262,16 @@ const TodayClientsPage: React.FC = () => {
               本日の予約
             </Typography>
 
-            {clientDisplays.map((clientDisplay, index) => {
-              const { appointment, client, compatibility } = clientDisplay;
-              const isExpanded = expandedCards.has(appointment.id);
+            {clients.map((client, index) => {
+              const isExpanded = expandedCards.has(client.id);
+              const isFirstVisit = client.visitCount === 0;
 
               return (
-                <Fade in timeout={600 + index * 100} key={appointment.id}>
+                <Fade in timeout={600 + index * 100} key={client.id}>
                   <ClientCard>
                     <Box
                       p={2}
-                      onClick={() => handleCardToggle(appointment.id)}
+                      onClick={() => handleCardToggle(client.id)}
                     >
                       <Box display="flex" alignItems="center" gap={2}>
                         <ClientAvatar>
@@ -277,7 +281,7 @@ const TodayClientsPage: React.FC = () => {
                         <Box flex={1}>
                           <Typography variant="subtitle1" fontWeight={500}>
                             {client.name}
-                            {clientDisplay.isFirstVisit && (
+                            {isFirstVisit && (
                               <Chip
                                 label="新規"
                                 size="small"
@@ -289,114 +293,93 @@ const TodayClientsPage: React.FC = () => {
                           <Typography
                             variant="body2"
                             color="text.secondary"
-                            display="flex"
-                            alignItems="center"
-                            gap={0.5}
                           >
-                            <AccessTimeIcon fontSize="small" />
-                            {formatDateRange(appointment.scheduledAt, appointment.duration)}
+                            来店回数: {client.visitCount}回
                           </Typography>
                         </Box>
 
                         <Box display="flex" alignItems="center" gap={1}>
-                          <CompatibilityBadge
-                            icon={<StarsIcon />}
-                            label={`相性 ${compatibility.score}%`}
-                            level={compatibility.level}
+                          {client.fourPillarsDataId && (
+                            <CompatibilityBadge
+                              level="good"
+                              icon={<StarsIcon />}
+                              label="相性良好"
+                              size="small"
+                            />
+                          )}
+                          <IconButton
                             size="small"
-                          />
-                          <IconButton size="small">
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCardToggle(client.id);
+                            }}
+                          >
                             {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                           </IconButton>
                         </Box>
                       </Box>
                     </Box>
 
-                    <Collapse in={isExpanded}>
-                      <Divider />
-                      <Box p={2} bgcolor="rgba(250, 250, 250, 0.5)">
-                        {/* 詳細情報 */}
-                        <Stack spacing={1.5} mb={2}>
-                          <Box display="flex" justifyContent="space-between">
-                            <Typography variant="body2" color="text.secondary">
-                              施術内容
-                            </Typography>
-                            <Typography variant="body2" fontWeight={500}>
-                              {appointment.services.join('・')}
-                            </Typography>
-                          </Box>
-                          
-                          <Box display="flex" justifyContent="space-between">
-                            <Typography variant="body2" color="text.secondary">
-                              来店回数
-                            </Typography>
-                            <Typography variant="body2" fontWeight={500}>
-                              {client.visitCount}回目
-                            </Typography>
-                          </Box>
-                          
-                          {client.birthDate && (
-                            <Box display="flex" justifyContent="space-between">
-                              <Typography variant="body2" color="text.secondary">
-                                生年月日
-                              </Typography>
-                              <Typography variant="body2" fontWeight={500}>
-                                {client.birthDate.toLocaleDateString('ja-JP')}
-                              </Typography>
-                            </Box>
-                          )}
-                          
-                          {appointment.note && (
-                            <Box>
-                              <Typography variant="body2" color="text.secondary" mb={0.5}>
-                                メモ
-                              </Typography>
-                              <Typography variant="body2">
-                                {appointment.note}
-                              </Typography>
-                            </Box>
-                          )}
-                        </Stack>
+                    {/* 拡張表示エリア */}
+                    <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                      <Box sx={{ px: 2, pb: 2 }}>
+                        <Divider sx={{ mb: 2 }} />
 
-                        {/* 相性アドバイス */}
-                        {compatibility.advice && (
-                          <Box
-                            p={1.5}
-                            bgcolor="rgba(242, 106, 141, 0.08)"
-                            borderRadius={2}
-                            mb={2}
+                        {/* クライアント情報 */}
+                        <Box mb={2}>
+                          <Typography
+                            variant="subtitle2"
+                            fontWeight={500}
+                            mb={0.5}
                           >
-                            <Typography variant="body2" color="primary" fontWeight={500} mb={0.5}>
-                              相性アドバイス
+                            クライアント情報
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            メール: {client.email || '未登録'}<br />
+                            電話: {client.phoneNumber || '未登録'}<br />
+                            最終来店: {client.lastVisitDate ? new Date(client.lastVisitDate).toLocaleDateString('ja-JP') : '初回'}
+                          </Typography>
+                        </Box>
+
+                        {/* メモ */}
+                        {client.notes && (
+                          <Box mb={2}>
+                            <Typography
+                              variant="subtitle2"
+                              fontWeight={500}
+                              mb={0.5}
+                            >
+                              メモ
                             </Typography>
-                            <Typography variant="body2">
-                              {compatibility.advice}
+                            <Typography variant="body2" color="text.secondary">
+                              {client.notes}
                             </Typography>
                           </Box>
                         )}
 
                         {/* アクションボタン */}
-                        <Stack direction="row" spacing={1}>
+                        <Stack direction="row" spacing={1} mt={2}>
                           <ActionButton
-                            fullWidth
                             variant="contained"
-                            color="primary"
                             startIcon={<ChatBubbleIcon />}
-                            onClick={() => navigate(ROUTES.stylist.chat)}
-                          >
-                            スタイリスト相談
-                          </ActionButton>
-                          
-                          <ActionButton
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleChatClick(client.id);
+                            }}
                             fullWidth
+                          >
+                            AIチャット
+                          </ActionButton>
+                          <ActionButton
                             variant="outlined"
                             startIcon={<PersonIcon />}
-                            sx={{
-                              borderColor: 'rgba(0,0,0,0.12)',
-                              color: 'text.primary',
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // クライアント詳細へ
                             }}
+                            fullWidth
                           >
-                            詳細を見る
+                            詳細情報
                           </ActionButton>
                         </Stack>
                       </Box>
@@ -405,24 +388,25 @@ const TodayClientsPage: React.FC = () => {
                 </Fade>
               );
             })}
-          </Box>
 
-          {/* 空の状態 */}
-          {clientDisplays.length === 0 && (
-            <Box textAlign="center" py={8}>
-              <AccessTimeIcon
-                sx={{ fontSize: 60, color: 'rgba(242, 106, 141, 0.3)', mb: 2 }}
-              />
-              <Typography variant="h6" gutterBottom>
-                本日の予約はありません
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                予約が入ると、ここに表示されます
-              </Typography>
-            </Box>
-          )}
+            {/* データがない場合 */}
+            {clients.length === 0 && !loading && (
+              <Box
+                textAlign="center"
+                py={8}
+                color="text.secondary"
+              >
+                <Typography variant="h6" mb={1}>
+                  本日の予約はありません
+                </Typography>
+                <Typography variant="body2">
+                  新しい予約が入ると、ここに表示されます
+                </Typography>
+              </Box>
+            )}
+          </Box>
         </Container>
-      </PageContainer>
+    </PageContainer>
   );
 };
 

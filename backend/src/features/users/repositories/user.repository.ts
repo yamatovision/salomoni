@@ -348,6 +348,23 @@ export class UserRepository {
   }
 
   /**
+   * 組織内のユーザーを取得
+   */
+  async findByOrganization(organizationId: string): Promise<UserProfile[]> {
+    try {
+      const users = await UserModel.find({ 
+        organizationId,
+        status: UserStatus.ACTIVE,
+        role: { $ne: 'client' as UserRole }
+      });
+      return users.map(user => user.toJSON() as UserProfile);
+    } catch (error) {
+      logger.error('Failed to find users by organization', { error, organizationId });
+      throw error;
+    }
+  }
+
+  /**
    * 組織内のアクティブユーザー数を取得
    */
   async countActiveByOrganization(organizationId: string): Promise<number> {

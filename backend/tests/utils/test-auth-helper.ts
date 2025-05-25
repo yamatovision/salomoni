@@ -204,6 +204,32 @@ export class TestAuthHelper {
   }
 
   /**
+   * テスト用に組織内にユーザーを作成
+   */
+  static async createTestUserInOrganization(
+    organizationId: string,
+    roleOrData?: UserRole | Partial<UserProfile>
+  ): Promise<{
+    user: UserProfile;
+    token: string;
+  }> {
+    let data: Partial<UserProfile>;
+    if (typeof roleOrData === 'string') {
+      data = {
+        role: roleOrData,
+        organizationId,
+      };
+    } else {
+      data = {
+        ...roleOrData,
+        organizationId,
+      };
+    }
+
+    return this.createTestUserWithToken(data);
+  }
+
+  /**
    * 各ロールのテストユーザーセットを作成
    */
   static async createTestUserSet(organizationId: string): Promise<{
@@ -310,3 +336,5 @@ export const loginTestUser = TestAuthHelper.loginTestUser.bind(TestAuthHelper);
 export const authenticatedRequest = TestAuthHelper.authenticatedRequest.bind(TestAuthHelper);
 export const setupTestOrganizationWithOwner = TestAuthHelper.setupTestOrganizationWithOwner.bind(TestAuthHelper);
 export const createTestUserSet = TestAuthHelper.createTestUserSet.bind(TestAuthHelper);
+export const createTestUserInOrganization = TestAuthHelper.createTestUserInOrganization.bind(TestAuthHelper);
+export const createTestOrganizationWithOwner = setupTestOrganizationWithOwner;

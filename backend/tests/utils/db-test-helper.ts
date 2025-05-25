@@ -181,3 +181,8 @@ export const seedTestData = DatabaseTestHelper.seedTestData.bind(DatabaseTestHel
 export const connectDB = connectTestDatabase;
 export const clearDB = clearTestDatabase;
 export const closeDB = disconnectTestDatabase;
+export const setupTestDatabase = connectTestDatabase;
+export const cleanupTestDatabase = disconnectTestDatabase;
+
+// test-auth-helperから再エクスポート
+export { createTestOrganizationWithOwner, createTestUserInOrganization } from './test-auth-helper';

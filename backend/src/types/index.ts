@@ -118,9 +118,9 @@ export const API_PATHS = {
 
   // クライアント関連
   CLIENTS: {
-    BASE: '/api/clients',
-    LIST: '/api/clients',
-    CREATE: '/api/clients',
+    BASE: '/api/admin/clients',
+    LIST: '/api/admin/clients',
+    CREATE: '/api/admin/clients',
     DETAIL: (clientId: string) => `/api/clients/${clientId}`,
     UPDATE: (clientId: string) => `/api/clients/${clientId}`,
     DELETE: (clientId: string) => `/api/clients/${clientId}`,
@@ -935,10 +935,13 @@ export interface FortuneCard {
   title: string;          // カードタイトル
   shortAdvice: string;    // 短いアドバイス（展開前に表示）
   detailAdvice: string;   // 詳細アドバイス（展開後に表示）
-  gradientColors?: {      // アイコン背景のグラデーション色
+  gradientColors: {       // アイコン背景のグラデーション色
     from: string;
     to: string;
   };
+  color?: string;         // カードの色
+  position: number;       // カードの位置
+  isMainCard?: boolean;   // メインカードかどうか
 }
 
 // 相性スタイリスト情報
@@ -1044,11 +1047,13 @@ export interface MonthlyFortune {
 
 // 予約ステータス
 export enum AppointmentStatus {
+  PENDING = 'pending',
   SCHEDULED = 'scheduled',
   CONFIRMED = 'confirmed',
   IN_PROGRESS = 'in_progress',
   COMPLETED = 'completed',
   CANCELED = 'canceled',
+  CANCELLED = 'cancelled', // 互換性のため
   NO_SHOW = 'no_show',
 }
 
@@ -1740,22 +1745,6 @@ export interface AppointmentSearchFilter {
 // 四柱推命・占い拡張型定義
 // ==========================================
 
-// 運勢表示カード型
-export interface FortuneCard {
-  id: ID;
-  title: string;
-  icon: string;
-  color: string;
-  position: number;
-  isMainCard: boolean;
-  expandedContent?: {
-    detailText: string;
-    subCards?: {
-      label: string;
-      value: string;
-    }[];
-  };
-}
 
 // 拡張デイリー運勢
 export interface DailyFortuneExtended extends DailyFortune {

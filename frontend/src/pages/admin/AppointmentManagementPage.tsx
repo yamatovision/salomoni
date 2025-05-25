@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -38,19 +38,8 @@ import {
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
-// import { format } from 'date-fns';
-// import { ja } from 'date-fns/locale';
-import {
-  mockTimeSlots,
-  mockDaySummary,
-  mockCalendarSyncStatus,
-  mockAssignmentRecommendations,
-  getAppointmentsByTimeSlot,
-  getAppointmentWithDetails,
-  serviceMenus,
-} from '../../services/mock/data/mockAppointments';
-import { mockUsers } from '../../services/mock/data/mockUsers';
-import type { Appointment } from '../../types';
+import { appointmentService, userService, clientService, stylistService } from '../../services';
+import type { Appointment, User, Client } from '../../types';
 import { UserRole } from '../../types';
 
 // ページID: A-004
@@ -106,22 +95,69 @@ const EmptySlot = styled(Paper)(({ theme }) => ({
 }));
 
 const AppointmentManagementPage: React.FC = () => {
-  const [selectedDate, setSelectedDate] = useState(new Date('2025-04-26'));
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [stylists, setStylists] = useState<User[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [newClientMode, setNewClientMode] = useState(false);
+  
+  // タイムスロット（10:00-20:00）
+  const timeSlots = Array.from({ length: 11 }, (_, i) => {
+    const hour = 10 + i;
+    return `${hour}:00`;
+  });
 
-  useEffect(() => {
-    setTimeout(() => setLoading(false), 1000);
+  // 予約データ取得
+  const fetchAppointments = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      const response = await appointmentService.getAppointments({ date: dateStr });
+      setAppointments(response.appointments);
+    } catch (err) {
+      setError('予約データの取得に失敗しました');
+      console.error('Failed to fetch appointments:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedDate]);
+
+  // スタイリスト一覧取得
+  const fetchStylists = useCallback(async () => {
+    try {
+      const response = await userService.getUsers({ role: UserRole.STYLIST });
+      setStylists(response.users);
+    } catch (err) {
+      console.error('Failed to fetch stylists:', err);
+    }
   }, []);
 
-  const getStylists = () => {
-    return mockUsers.filter(user => user.role === UserRole.STYLIST);
-  };
+  // クライアント一覧取得
+  const fetchClients = useCallback(async () => {
+    try {
+      const response = await clientService.getClients();
+      setClients(response.clients);
+    } catch (err) {
+      console.error('Failed to fetch clients:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAppointments();
+  }, [fetchAppointments]);
+
+  useEffect(() => {
+    fetchStylists();
+    fetchClients();
+  }, [fetchStylists, fetchClients]);
 
   const handleDateChange = (direction: 'prev' | 'next') => {
     const newDate = new Date(selectedDate);
@@ -143,11 +179,46 @@ const AppointmentManagementPage: React.FC = () => {
     setAddModalOpen(true);
   };
 
-  const handleAssignStylist = (stylistId: string) => {
-    // 実際の実装では、APIを呼び出してスタイリストを割り当てる
-    console.log(`Assigning stylist ${stylistId} to appointment ${selectedAppointment?.id}`);
-    setAssignModalOpen(false);
+  const handleAssignStylist = async (stylistId: string) => {
+    if (!selectedAppointment) return;
+    
+    try {
+      await appointmentService.assignStylist(selectedAppointment.id, stylistId);
+      setAssignModalOpen(false);
+      // 予約リストを再取得
+      fetchAppointments();
+    } catch (err) {
+      console.error('Failed to assign stylist:', err);
+    }
   };
+
+  // 時間帯ごとの予約を取得
+  const getAppointmentsByTimeSlot = (timeSlot: string): Appointment[] => {
+    const hour = parseInt(timeSlot.split(':')[0]);
+    return appointments.filter(apt => {
+      const aptHour = new Date(apt.scheduledAt).getHours();
+      return aptHour === hour;
+    });
+  };
+
+  // 日次サマリーの計算
+  const getDaySummary = () => {
+    const total = appointments.length;
+    const unassigned = appointments.filter(apt => !apt.stylistId).length;
+    const completed = appointments.filter(apt => apt.status === 'completed').length;
+    const revenue = appointments
+      .filter(apt => apt.status === 'completed')
+      .reduce((sum, apt) => sum + (apt.amount || 0), 0);
+    
+    return {
+      totalAppointments: total,
+      unassignedAppointments: unassigned,
+      attendedClients: completed,
+      totalRevenue: revenue,
+    };
+  };
+
+  const daySummary = getDaySummary();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -230,46 +301,38 @@ const AppointmentManagementPage: React.FC = () => {
         </Box>
         
         {/* 日次サマリー */}
-        <Grid container spacing={2} sx={{ mt: 1 }}>
-          <Grid size={{ xs: 6, sm: 3 }}>
-            <Box textAlign="center">
-              <Typography variant="h4">{mockDaySummary.totalAppointments}</Typography>
-              <Typography variant="body2">総予約数</Typography>
-            </Box>
-          </Grid>
-          <Grid size={{ xs: 6, sm: 3 }}>
-            <Box textAlign="center">
-              <Typography variant="h4">{mockDaySummary.unassignedAppointments}</Typography>
-              <Typography variant="body2">未割当</Typography>
-            </Box>
-          </Grid>
-          <Grid size={{ xs: 6, sm: 3 }}>
-            <Box textAlign="center">
-              <Typography variant="h4">{mockDaySummary.attendedClients}</Typography>
-              <Typography variant="body2">来店済み</Typography>
-            </Box>
-          </Grid>
-          <Grid size={{ xs: 6, sm: 3 }}>
-            <Box textAlign="center">
-              <Typography variant="h4">{mockDaySummary.cancelledAppointments}</Typography>
-              <Typography variant="body2">キャンセル</Typography>
-            </Box>
-          </Grid>
-        </Grid>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mt: 2 }}>
+          <Box textAlign="center">
+            <Typography variant="h4">{daySummary.totalAppointments}</Typography>
+            <Typography variant="body2">総予約数</Typography>
+          </Box>
+          <Box textAlign="center">
+            <Typography variant="h4">{daySummary.unassignedAppointments}</Typography>
+            <Typography variant="body2">未割当</Typography>
+          </Box>
+          <Box textAlign="center">
+            <Typography variant="h4">{daySummary.attendedClients}</Typography>
+            <Typography variant="body2">来店済み</Typography>
+          </Box>
+          <Box textAlign="center">
+            <Typography variant="h4">{appointments.filter(apt => apt.status === 'cancelled').length}</Typography>
+            <Typography variant="body2">キャンセル</Typography>
+          </Box>
+        </Box>
       </DateNavigator>
 
       {/* タイムスロット一覧 */}
       <Box>
-        {mockTimeSlots.map((timeSlot) => {
-          const appointments = getAppointmentsByTimeSlot(timeSlot);
-          const hasUnassigned = appointments.some(app => !app.stylistId);
+        {timeSlots.map((timeSlot) => {
+          const slotAppointments = getAppointmentsByTimeSlot(timeSlot);
+          const hasUnassigned = slotAppointments.some(app => !app.stylistId);
           
           return (
-            <TimeSlotCard key={timeSlot.id}>
+            <TimeSlotCard key={timeSlot}>
               <CardContent>
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                   <Typography variant="h6">
-                    {timeSlot.startTime} - {timeSlot.endTime}
+                    {timeSlot}
                   </Typography>
                   <Stack direction="row" spacing={1}>
                     {hasUnassigned && (
@@ -281,37 +344,38 @@ const AppointmentManagementPage: React.FC = () => {
                       />
                     )}
                     <Typography variant="body2" color="text.secondary">
-                      {appointments.length}件
+                      {slotAppointments.length}件
                     </Typography>
                   </Stack>
                 </Box>
                 
-                <Grid container spacing={2}>
-                  {appointments.length === 0 ? (
-                    <Grid size={{ xs: 12 }}>
-                      <EmptySlot onClick={() => handleOpenAddModal(`${timeSlot.startTime} - ${timeSlot.endTime}`)}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+                  {slotAppointments.length === 0 ? (
+                    <Box sx={{ gridColumn: '1 / -1' }}>
+                      <EmptySlot onClick={() => handleOpenAddModal(timeSlot)}>
                         <AddIcon sx={{ fontSize: 40, mb: 1, color: 'primary.main' }} />
                         <Typography>クリックして新規予約追加</Typography>
                         <Typography variant="caption" color="text.secondary">
                           または他の時間帯からドラッグ＆ドロップ
                         </Typography>
                       </EmptySlot>
-                    </Grid>
+                    </Box>
                   ) : (
-                    appointments.map((appointment) => {
-                      const details = getAppointmentWithDetails(appointment);
+                    slotAppointments.map((appointment) => {
+                      const client = clients.find(c => c.id === appointment.clientId);
+                      const stylist = stylists.find(s => s.id === appointment.stylistId);
                       const isUnassigned = !appointment.stylistId;
                       
                       return (
-                        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={appointment.id}>
+                        <Box key={appointment.id}>
                           <AppointmentCard
                             onClick={() => isUnassigned && handleOpenAssignModal(appointment)}
                           >
-                            <GenderBorder gender={details.client?.gender || 'female'} />
+                            <GenderBorder gender={client?.gender || 'female'} />
                             <Box ml={1.5}>
                               <Box display="flex" justifyContent="space-between" alignItems="center">
                                 <Typography variant="subtitle1" fontWeight={500}>
-                                  {details.client?.name}
+                                  {client?.name || 'クライアント名不明'}
                                 </Typography>
                                 <Chip 
                                   label={appointment.status === 'confirmed' ? '確定' : appointment.status} 
@@ -320,7 +384,7 @@ const AppointmentManagementPage: React.FC = () => {
                                 />
                               </Box>
                               <Typography variant="body2" color="text.secondary" gutterBottom>
-                                {appointment.servicemenu}
+                                {appointment.services?.join(', ') || 'サービス未設定'}
                               </Typography>
                               <Box display="flex" alignItems="center" gap={1} mt={1}>
                                 {isUnassigned ? (
@@ -343,7 +407,7 @@ const AppointmentManagementPage: React.FC = () => {
                                       {details.stylist && getInitials(details.stylist.name)}
                                     </Avatar>
                                     <Typography variant="body2">
-                                      {details.stylist?.name}
+                                      {stylist?.name || 'スタイリスト名不明'}
                                     </Typography>
                                   </>
                                 )}
@@ -362,11 +426,11 @@ const AppointmentManagementPage: React.FC = () => {
                               </IconButton>
                             )}
                           </AppointmentCard>
-                        </Grid>
+                        </Box>
                       );
                     })
                   )}
-                </Grid>
+                </Box>
               </CardContent>
             </TimeSlotCard>
           );

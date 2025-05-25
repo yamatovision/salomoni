@@ -35,7 +35,7 @@ export class StylistService {
 
   // スタイリストレポート取得
   async getStylistReport(stylistId: string): Promise<ApiResponse<StylistReport>> {
-    const response = await apiClient.get(API_PATHS.ADMIN.STYLIST_REPORT(stylistId));
+    const response = await apiClient.get(`${API_PATHS.ADMIN.STYLISTS}/${stylistId}/report`);
     return response.data;
   }
 

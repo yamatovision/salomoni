@@ -5,8 +5,7 @@ import type {
   ElementBalance
 } from '../../../types';
 import { 
-  FiveElements,
-  YinYang
+  FiveElements
 } from '../../../types';
 
 // スタイリスト向け日運データ
@@ -52,37 +51,6 @@ export const mockStylistFortuneDetail: StylistFortuneDetail = {
   todaysKeyPoints: ['今日のポイント1', '今日のポイント2']
 };
 
-// 四柱推命データ（鈴木 美咲）
-export const mockFourPillarsData: FourPillarsData = {
-  id: 'fourpillars-001',
-  userId: 'mock-user-001',
-  yearPillar: {
-    stem: '甲',
-    branch: '子',
-    element: FiveElements.WOOD,
-    yinYang: YinYang.YANG,
-  },
-  monthPillar: {
-    stem: '丙',
-    branch: '寅',
-    element: FiveElements.FIRE,
-    yinYang: YinYang.YANG,
-  },
-  dayPillar: {
-    stem: '戊',
-    branch: '辰',
-    element: FiveElements.EARTH,
-    yinYang: YinYang.YANG,
-  },
-  hourPillar: {
-    stem: '庚',
-    branch: '申',
-    element: FiveElements.METAL,
-    yinYang: YinYang.YANG,
-  },
-  calculatedAt: new Date('2025-01-15'),
-};
-
 // 五行バランス
 export const mockElementBalance: ElementBalance = {
   wood: 20,
@@ -92,6 +60,47 @@ export const mockElementBalance: ElementBalance = {
   water: 10,
   mainElement: FiveElements.EARTH,
   isBalanced: false,
+};
+
+// 四柱推命データ（鈴木 美咲）
+export const mockFourPillarsData: FourPillarsData = {
+  _id: 'fourpillars-001',
+  userId: 'mock-user-001',
+  birthDate: '1991-03-15',
+  birthTime: '10:30',
+  timezone: 'Asia/Tokyo',
+  elementBalance: mockElementBalance,
+  tenGods: {
+    year: '比肩',
+    month: '食神',
+    day: '正官',
+    hour: '偏財'
+  },
+  yearPillar: {
+    heavenlyStem: '甲',
+    earthlyBranch: '子',
+    element: '木',
+    yinYang: '陽',
+  },
+  monthPillar: {
+    heavenlyStem: '丙',
+    earthlyBranch: '寅',
+    element: '火',
+    yinYang: '陽',
+  },
+  dayPillar: {
+    heavenlyStem: '戊',
+    earthlyBranch: '辰',
+    element: '土',
+    yinYang: '陽',
+  },
+  hourPillar: {
+    heavenlyStem: '庚',
+    earthlyBranch: '申',
+    element: '金',
+    yinYang: '陽',
+  },
+  calculatedAt: new Date('2025-01-15'),
 };
 
 // 他のスタイリストの運勢データ

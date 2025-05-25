@@ -6,6 +6,7 @@ import { logger } from '../utils/logger';
 
 // JWTペイロードの型定義
 export interface JWTPayload {
+  id: string; // userIdと同じ値（互換性のため）
   userId: string;
   email: string;
   roles: UserRole[];
@@ -150,6 +151,28 @@ export const checkOrganizationAccess = (
     return;
   }
 
+  next();
+};
+
+// クライアントアクセスチェックミドルウェア
+export const checkClientAccess = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
+  if (!req.user) {
+    next(new AppError(401, 'Not authenticated', 'AUTH001'));
+    return;
+  }
+
+  // SuperAdminは全クライアントにアクセス可能
+  if (req.user.roles.includes('superadmin' as UserRole)) {
+    next();
+    return;
+  }
+
+  // クライアントIDから組織IDを確認する必要がある
+  // これはサービス層で組織境界チェックを行うため、ここでは認証のみチェック
   next();
 };
 

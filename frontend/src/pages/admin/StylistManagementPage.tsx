@@ -58,7 +58,21 @@ import {
   FiveElements
 } from '../../types';
 import { stylistService } from '../../services';
-import { positionOptions, permissionOptions } from '../../services/mock/data/mockStylists';
+
+// 役職リスト
+const positionOptions = [
+  { value: 'trainee', label: '研修生' },
+  { value: 'junior', label: 'ジュニアスタイリスト' },
+  { value: 'stylist', label: 'スタイリスト' },
+  { value: 'senior', label: 'シニアスタイリスト' },
+  { value: 'manager', label: 'マネージャー' }
+];
+
+// 権限レベルリスト
+const permissionOptions = [
+  { value: UserRole.USER, label: '基本権限（顧客管理・チャット）' },
+  { value: UserRole.ADMIN, label: '管理者権限（全機能）' }
+];
 
 // 離職リスクレベルの色設定
 const getRiskColor = (level: TurnoverRiskLevel) => {

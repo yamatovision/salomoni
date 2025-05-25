@@ -4,12 +4,12 @@ import type { Client, ClientCreateRequest, ClientUpdateRequest, ApiResponse, Pag
 
 export class ClientService {
   async createClient(data: ClientCreateRequest): Promise<ApiResponse<Client>> {
-    const response = await apiClient.post<ApiResponse<Client>>(API_PATHS.CLIENTS.BASE, data);
+    const response = await apiClient.post<ApiResponse<Client>>(API_PATHS.ADMIN.CLIENTS, data);
     return response.data;
   }
 
   async getClients(params?: PaginationParams): Promise<ApiResponse<Client[]>> {
-    const response = await apiClient.get<ApiResponse<Client[]>>(API_PATHS.CLIENTS.BASE, { params });
+    const response = await apiClient.get<ApiResponse<Client[]>>(API_PATHS.ADMIN.CLIENTS, { params });
     return response.data;
   }
 
@@ -30,6 +30,11 @@ export class ClientService {
 
   async getDailyClients(): Promise<ApiResponse<Client[]>> {
     const response = await apiClient.get<ApiResponse<Client[]>>(API_PATHS.CLIENTS.DAILY);
+    return response.data;
+  }
+
+  async recordVisit(clientId: string): Promise<ApiResponse<void>> {
+    const response = await apiClient.post<ApiResponse<void>>(API_PATHS.CLIENTS.VISIT(clientId));
     return response.data;
   }
 }

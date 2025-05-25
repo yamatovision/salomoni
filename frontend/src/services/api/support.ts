@@ -20,13 +20,13 @@ export const getSupportTickets = async (params?: {
   organizationId?: string;
   userId?: string;
 }): Promise<{ tickets: SupportTicket[]; total: number }> => {
-  const response = await apiClient.get(API_PATHS.support.list, { params });
+  const response = await apiClient.get(API_PATHS.SUPPORT.TICKETS, { params });
   return response.data;
 };
 
 // チケット詳細取得
 export const getSupportTicket = async (ticketId: string): Promise<SupportTicket> => {
-  const response = await apiClient.get(API_PATHS.support.detail(ticketId));
+  const response = await apiClient.get(API_PATHS.SUPPORT.TICKET_DETAIL(ticketId));
   return response.data;
 };
 
@@ -34,7 +34,7 @@ export const getSupportTicket = async (ticketId: string): Promise<SupportTicket>
 export const createSupportTicket = async (
   data: SupportTicketCreateInput
 ): Promise<SupportTicket> => {
-  const response = await apiClient.post(API_PATHS.support.create, data);
+  const response = await apiClient.post(API_PATHS.SUPPORT.CREATE, data);
   return response.data;
 };
 
@@ -43,7 +43,7 @@ export const replySupportTicket = async (
   ticketId: string,
   data: SupportTicketReplyInput
 ): Promise<SupportTicketMessage> => {
-  const response = await apiClient.post(API_PATHS.support.reply(ticketId), data);
+  const response = await apiClient.post(API_PATHS.SUPPORT.REPLY(ticketId), data);
   return response.data;
 };
 
@@ -52,13 +52,13 @@ export const updateSupportTicket = async (
   ticketId: string,
   data: SupportTicketUpdateInput
 ): Promise<SupportTicket> => {
-  const response = await apiClient.patch(API_PATHS.support.update(ticketId), data);
+  const response = await apiClient.patch(API_PATHS.SUPPORT.UPDATE_STATUS(ticketId), data);
   return response.data;
 };
 
 // チケット削除
 export const deleteSupportTicket = async (ticketId: string): Promise<void> => {
-  await apiClient.delete(API_PATHS.support.delete(ticketId));
+  await apiClient.delete(API_PATHS.SUPPORT.TICKET_DETAIL(ticketId));
 };
 
 // 統計情報取得
@@ -67,6 +67,6 @@ export const getSupportTicketStats = async (params?: {
   startDate?: string;
   endDate?: string;
 }): Promise<SupportTicketStats> => {
-  const response = await apiClient.get(API_PATHS.support.stats, { params });
+  const response = await apiClient.get(`${API_PATHS.SUPPORT.BASE}/stats`, { params });
   return response.data;
 };

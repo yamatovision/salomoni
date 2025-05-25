@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { validationResult } from 'express-validator';
+import { validationResult, ValidationChain } from 'express-validator';
 import { AppError } from './errorHandler';
 
 export const handleValidationErrors = (
@@ -16,7 +16,10 @@ export const handleValidationErrors = (
       value: error.type === 'field' ? error.value : undefined,
     }));
 
-    next(new AppError(400, 'Validation failed', 'VALIDATION_ERROR', {
+    // 最初のエラーメッセージを主要メッセージとして使用
+    const primaryMessage = errorMessages[0]?.message || 'Validation failed';
+
+    next(new AppError(400, primaryMessage, 'VALIDATION_ERROR', {
       errors: errorMessages,
     }));
     return;
@@ -24,3 +27,16 @@ export const handleValidationErrors = (
   
   next();
 };
+
+// バリデーションスキーマと、任意のフィールドロケーションを受け取る関数
+export const validationHandler = (
+  validationRules: ValidationChain[]
+) => {
+  return [
+    ...validationRules,
+    handleValidationErrors
+  ];
+};
+
+// エイリアスをエクスポート（後方互換性のため）
+export const validate = validationHandler;

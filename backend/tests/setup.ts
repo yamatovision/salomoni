@@ -1,4 +1,8 @@
 import { disconnectDatabase } from '../src/config/database';
+import dotenv from 'dotenv';
+
+// .envファイルを読み込む
+dotenv.config();
 
 // テスト環境の設定
 process.env.NODE_ENV = 'test';

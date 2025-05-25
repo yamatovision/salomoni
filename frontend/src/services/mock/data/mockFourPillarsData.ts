@@ -5,7 +5,6 @@ import type {
 } from '../../../types';
 import {
   FiveElements,
-  YinYang,
 } from '../../../types';
 
 // モック四柱推命データ生成関数
@@ -20,34 +19,50 @@ export const generateMockFourPillarsData = (
   // 簡易的な天干地支の割り当て（実際は暦計算が必要）
   const heavenlyStems = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
   const earthlyBranches = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-  const elements = [FiveElements.WOOD, FiveElements.FIRE, FiveElements.EARTH, FiveElements.METAL, FiveElements.WATER];
+  const elements = ['木', '火', '土', '金', '水'];
   
   return {
-    id: `mock-saju-${Date.now()}`,
+    _id: `mock-saju-${Date.now()}`,
     clientId: `mock-client-${Date.now()}`,
+    birthDate: birthDate.toISOString().split('T')[0],
+    birthTime: '12:00',
+    timezone: 'Asia/Tokyo',
+    elementBalance: {
+      wood: 20,
+      fire: 20,
+      earth: 20,
+      metal: 20,
+      water: 20
+    },
+    tenGods: {
+      year: '比肩',
+      month: '食神',
+      day: '正官',
+      hour: '偏財'
+    },
     yearPillar: {
-      stem: heavenlyStems[year % 10],
-      branch: earthlyBranches[year % 12],
+      heavenlyStem: heavenlyStems[year % 10],
+      earthlyBranch: earthlyBranches[year % 12],
       element: elements[year % 5],
-      yinYang: year % 2 === 0 ? YinYang.YANG : YinYang.YIN,
+      yinYang: year % 2 === 0 ? '陽' : '陰',
     },
     monthPillar: {
-      stem: heavenlyStems[month % 10],
-      branch: earthlyBranches[month % 12],
+      heavenlyStem: heavenlyStems[month % 10],
+      earthlyBranch: earthlyBranches[month % 12],
       element: elements[month % 5],
-      yinYang: month % 2 === 0 ? YinYang.YANG : YinYang.YIN,
+      yinYang: month % 2 === 0 ? '陽' : '陰',
     },
     dayPillar: {
-      stem: heavenlyStems[day % 10],
-      branch: earthlyBranches[day % 12],
+      heavenlyStem: heavenlyStems[day % 10],
+      earthlyBranch: earthlyBranches[day % 12],
       element: elements[day % 5],
-      yinYang: day % 2 === 0 ? YinYang.YANG : YinYang.YIN,
+      yinYang: day % 2 === 0 ? '陽' : '陰',
     },
     hourPillar: {
-      stem: heavenlyStems[8], // 仮に午後4時生まれとする
-      branch: earthlyBranches[8],
+      heavenlyStem: heavenlyStems[8], // 仮に午後4時生まれとする
+      earthlyBranch: earthlyBranches[8],
       element: elements[3],
-      yinYang: YinYang.YANG,
+      yinYang: '陽',
     },
     calculatedAt: new Date(),
   };
@@ -64,27 +79,29 @@ export const generateMockElementBalance = (fourPillars: FourPillarsData): Elemen
   ];
   
   // 五行ごとのカウント
-  const counts = {
-    [FiveElements.WOOD]: 0,
-    [FiveElements.FIRE]: 0,
-    [FiveElements.EARTH]: 0,
-    [FiveElements.METAL]: 0,
-    [FiveElements.WATER]: 0,
+  const counts: Record<string, number> = {
+    '木': 0,
+    '火': 0,
+    '土': 0,
+    '金': 0,
+    '水': 0,
   };
   
   elements.forEach(element => {
-    counts[element]++;
+    if (element in counts) {
+      counts[element]++;
+    }
   });
   
   // パーセンテージに変換
   const total = 4;
   const balance: ElementBalance = {
-    wood: (counts[FiveElements.WOOD] / total) * 100,
-    fire: (counts[FiveElements.FIRE] / total) * 100,
-    earth: (counts[FiveElements.EARTH] / total) * 100,
-    metal: (counts[FiveElements.METAL] / total) * 100,
-    water: (counts[FiveElements.WATER] / total) * 100,
-    mainElement: fourPillars.dayPillar.element, // 日柱の要素を主要素とする
+    wood: (counts['木'] / total) * 100,
+    fire: (counts['火'] / total) * 100,
+    earth: (counts['土'] / total) * 100,
+    metal: (counts['金'] / total) * 100,
+    water: (counts['水'] / total) * 100,
+    mainElement: FiveElements.WOOD, // デフォルト値として
     isBalanced: Math.max(...Object.values(counts)) <= 2, // 偏りが少ないかチェック
   };
   
@@ -109,25 +126,30 @@ export const generateMockCompatibility = (
   else relationshipType = 'difficult';
   
   return {
-    id: `mock-compat-${Date.now()}`,
-    user1Id: clientId,
-    user2Id: stylistId,
-    totalScore: baseScore,
-    relationshipType,
+    _id: `mock-compat-${Date.now()}`,
+    userIds: [clientId, stylistId],
+    overallScore: baseScore,
     details: {
-      yinYangBalance: 70 + Math.floor(Math.random() * 20),
-      strengthBalance: 65 + Math.floor(Math.random() * 25),
-      dayBranchRelationship: {
-        score: 75 + Math.floor(Math.random() * 15),
-        relationship: '調和',
-      },
-      usefulGods: 80 + Math.floor(Math.random() * 10),
-      dayGanCombination: {
+      elementHarmony: {
         score: 70 + Math.floor(Math.random() * 20),
-        isGangou: Math.random() > 0.5,
+        description: '五行の調和が良好です'
+      },
+      yinYangBalance: {
+        score: 65 + Math.floor(Math.random() * 25),
+        description: '陰陽のバランスが取れています'
+      },
+      tenGodCompatibility: {
+        score: 75 + Math.floor(Math.random() * 15),
+        description: '十神の相性が良好です'
+      },
+      lifePurpose: {
+        score: 80 + Math.floor(Math.random() * 10),
+        description: '人生の目的が調和しています'
       },
     },
     advice: getCompatibilityAdvice(relationshipType),
+    challenges: baseScore < 70 ? ['コミュニケーションの改善が必要'] : [],
+    strengths: baseScore >= 70 ? ['お互いを補完し合える関係'] : [],
     calculatedAt: new Date(),
   };
 };
@@ -158,7 +180,9 @@ export const generateBeautyAdvice = (elementBalance: ElementBalance): string[] =
     [FiveElements.WATER]: '柔軟性と適応力に富む水の要素が強いお客様です。季節や気分に合わせた変化を楽しまれます。',
   };
   
-  advice.push(elementAdviceMap[elementBalance.mainElement]);
+  if (elementBalance.mainElement) {
+    advice.push(elementAdviceMap[elementBalance.mainElement]);
+  }
   
   // バランスに基づくアドバイス
   if (elementBalance.isBalanced) {

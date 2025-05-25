@@ -64,6 +64,186 @@ export interface ApiError {
 }
 
 // ==========================================
+// APIパス定義（最優先）
+// ==========================================
+
+export const API_PATHS = {
+  // 認証関連
+  AUTH: {
+    BASE: '/api/auth',
+    LOGIN: '/api/auth/login',
+    LOGIN_LINE: '/api/auth/login-line',
+    LINE_CALLBACK: '/api/auth/line-callback',
+    LOGOUT: '/api/auth/logout',
+    REFRESH: '/api/auth/refresh',
+    REGISTER: '/api/auth/register',
+    REGISTER_ORGANIZATION: '/api/auth/register-organization',
+    PASSWORD_RESET_REQUEST: '/api/auth/password-reset-request',
+    VERIFY_RESET_TOKEN: '/api/auth/verify-reset-token',
+    COMPLETE_PASSWORD_RESET: '/api/auth/complete-password-reset',
+    VERIFY_INVITE: '/api/auth/verify-invite',
+    COMPLETE_REGISTRATION: '/api/auth/complete-registration',
+    INVITE: '/api/auth/invite',
+  },
+
+  // 組織関連
+  ORGANIZATIONS: {
+    BASE: '/api/organizations',
+    LIST: '/api/organizations',
+    CREATE: '/api/organizations',
+    DETAIL: (orgId: string) => `/api/organizations/${orgId}`,
+    UPDATE: (orgId: string) => `/api/organizations/${orgId}`,
+    DELETE: (orgId: string) => `/api/organizations/${orgId}`,
+    STATS: (orgId: string) => `/api/organizations/${orgId}/stats`,
+    STATUS: (orgId: string) => `/api/organizations/${orgId}/status`,
+    PLAN: (orgId: string) => `/api/organizations/${orgId}/plan`,
+    MEMBERS: (orgId: string) => `/api/organizations/${orgId}/members`,
+  },
+
+  // ユーザー関連
+  USERS: {
+    BASE: '/api/users',
+    LIST: '/api/users',
+    CREATE: '/api/users',
+    ME: '/api/users/me',
+    DETAIL: (userId: string) => `/api/users/${userId}`,
+    UPDATE: (userId: string) => `/api/users/${userId}`,
+    DELETE: (userId: string) => `/api/users/${userId}`,
+    PROFILE: '/api/users/profile',
+    STYLISTS: '/api/users/stylists',
+    INVITE: '/api/users/invite',
+    FORCE_LOGOUT: (userId: string) => `/api/users/${userId}/force-logout`,
+    TOKEN_USAGE: (userId: string) => `/api/users/${userId}/token-usage`,
+  },
+
+  // クライアント関連
+  CLIENTS: {
+    BASE: '/api/clients',
+    LIST: '/api/clients',
+    CREATE: '/api/clients',
+    DETAIL: (clientId: string) => `/api/clients/${clientId}`,
+    UPDATE: (clientId: string) => `/api/clients/${clientId}`,
+    DELETE: (clientId: string) => `/api/clients/${clientId}`,
+    DAILY: '/api/clients/daily',
+    VISIT: (clientId: string) => `/api/clients/${clientId}/visit`,
+    FORTUNE: (clientId: string) => `/api/clients/${clientId}/fortune`,
+    COMPATIBILITY: (clientId: string) => `/api/clients/${clientId}/compatibility`,
+    CHAT: (clientId: string) => `/api/clients/${clientId}/chat`,
+  },
+
+  // 四柱推命関連
+  SAJU: {
+    BASE: '/api/saju',
+    CALCULATE: '/api/saju/calculate',
+    ANALYZE: '/api/saju/analyze',
+    COMPATIBILITY: '/api/saju/compatibility',
+    FORTUNE: '/api/saju/fortune',
+    DAILY_ADVICE: '/api/saju/daily-advice',
+    MASTERS: '/api/saju/masters',
+    USER: (userId: string) => `/api/saju/user/${userId}`,
+    CLIENT: (clientId: string) => `/api/saju/client/${clientId}`,
+    COMPATIBILITY_ENHANCED: (userId1: string, userId2: string) => `/api/saju/compatibility/enhanced/${userId1}/${userId2}`,
+    TEAM: (teamId: string) => `/api/saju/compatibility/team/${teamId}`,
+  },
+
+  // チャット関連
+  CHAT: {
+    BASE: '/api/chat',
+    CONVERSATIONS: '/api/chat/conversations',
+    MESSAGES: (conversationId: string) => `/api/chat/conversations/${conversationId}/messages`,
+    SEND: (conversationId: string) => `/api/chat/conversations/${conversationId}/send`,
+    MEMORY: (characterId: string) => `/api/chat/characters/${characterId}/memory`,
+  },
+
+  // 予約関連
+  APPOINTMENTS: {
+    BASE: '/api/appointments',
+    DETAIL: (appointmentId: string) => `/api/appointments/${appointmentId}`,
+    ASSIGN: (appointmentId: string) => `/api/appointments/${appointmentId}/assign`,
+    MOVE: (appointmentId: string) => `/api/appointments/${appointmentId}/move`,
+    CALENDAR_SYNC: '/api/appointments/calendar/sync',
+  },
+
+  // ダッシュボード関連
+  DASHBOARD: {
+    BASE: '/api/dashboard',
+    SUMMARY: '/api/dashboard/summary',
+    STATISTICS: '/api/dashboard/statistics',
+  },
+
+  // 請求関連
+  BILLING: {
+    BASE: '/api/billing',
+    SUBSCRIPTION: '/api/billing/subscription',
+    SUBSCRIPTION_CANCEL: (subscriptionId: string) => `/api/billing/subscription/${subscriptionId}/cancel`,
+    PLANS: '/api/billing/plans',
+    TOKEN: '/api/billing/token',
+    HISTORY: '/api/billing/history',
+    REFUND: (chargeId: string) => `/api/billing/refund/${chargeId}`,
+    WEBHOOK: '/api/billing/webhook',
+  },
+
+  // 運勢関連
+  FORTUNE: {
+    BASE: '/api/fortune',
+    DAILY: '/api/fortune/daily',
+    WEEKLY: '/api/fortune/weekly',
+    MONTHLY: '/api/fortune/monthly',
+    COMPATIBILITY_TODAY: '/api/fortune/compatibility/today',
+    DAILY_ADVICE: (userId: string) => `/api/fortune/users/${userId}/daily-advice`,
+    STYLIST_FORTUNE: (userId: string) => `/api/fortune/stylists/${userId}/detail`,
+    FORTUNE_CARDS: '/api/fortune/cards',
+    REGENERATE_ADVICE: (userId: string) => `/api/fortune/users/${userId}/regenerate`,
+  },
+
+  // サポート関連
+  SUPPORT: {
+    BASE: '/api/support',
+    TICKETS: '/api/support/tickets',
+    TICKET_DETAIL: (ticketId: string) => `/api/support/tickets/${ticketId}`,
+    CREATE: '/api/support/tickets',
+    REPLY: (ticketId: string) => `/api/support/tickets/${ticketId}/messages`,
+    UPDATE_STATUS: (ticketId: string) => `/api/support/tickets/${ticketId}/status`,
+  },
+
+  // 管理者向け
+  ADMIN: {
+    DASHBOARD: '/api/admin/dashboard',
+    CLIENTS: '/api/admin/clients',
+    STYLISTS: '/api/admin/stylists',
+    APPOINTMENTS: '/api/admin/appointments',
+    BULK_IMPORT: '/api/admin/import/bulk',
+    SUPPORT_TICKETS: '/api/admin/support/tickets',
+    SUPPORT_TICKET_DETAIL: (ticketId: string) => `/api/admin/support/tickets/${ticketId}`,
+    SUPPORT_TICKET_REPLY: (ticketId: string) => `/api/admin/support/tickets/${ticketId}/reply`,
+  },
+
+  // オーナー向け（課金管理）
+  OWNER: {
+    BILLING_SUMMARY: '/api/owner/billing/summary',
+    CHARGE_TOKENS: '/api/owner/billing/charge-tokens',
+    INVOICES: '/api/owner/billing/invoices',
+    PLAN: '/api/owner/billing/plan',
+    PAYMENT_METHOD: '/api/owner/billing/payment-method',
+    PAYMENT_HISTORY: '/api/owner/billing/payment-history',
+  },
+
+  // SuperAdmin向け
+  SUPERADMIN: {
+    ORGANIZATIONS: '/api/superadmin/organizations',
+    ORGANIZATION_DETAIL: (orgId: string) => `/api/superadmin/organizations/${orgId}`,
+    PLANS: '/api/superadmin/plans',
+    PLAN_DETAIL: (planId: string) => `/api/superadmin/plans/${planId}`,
+    REVENUE_SIMULATE: '/api/superadmin/revenue/simulate',
+    INVOICES: '/api/superadmin/invoices',
+    SUPPORT_TICKETS: '/api/superadmin/support/tickets',
+    SUPPORT_TICKET_DETAIL: (ticketId: string) => `/api/superadmin/support/tickets/${ticketId}`,
+    SUPPORT_TICKET_REPLY: (ticketId: string) => `/api/superadmin/support/tickets/${ticketId}/reply`,
+    SUPPORT_TICKET_STATUS: (ticketId: string) => `/api/superadmin/support/tickets/${ticketId}/status`,
+  },
+} as const;
+
+// ==========================================
 // 認証関連
 // ==========================================
 
@@ -440,22 +620,41 @@ export enum YinYang {
 
 // 四柱推命基本データ
 export interface FourPillarsData {
-  id: ID;
+  _id: ID;
   userId?: ID;
   clientId?: ID;
+  birthDate: string;
+  birthTime: string;
+  location?: {
+    name: string;
+    longitude: number;
+    latitude: number;
+  };
+  timezone: string;
   yearPillar: PillarData;
   monthPillar: PillarData;
   dayPillar: PillarData;
   hourPillar: PillarData;
+  elementBalance: ElementBalance;
+  tenGods: {
+    year: string;
+    month: string;
+    day: string;
+    hour: string;
+  };
+  hiddenStems?: any;
+  twelveFortunes?: any;
+  kakukyoku?: string;
+  yojin?: string[];
   calculatedAt: Date;
 }
 
 // 柱データ
 export interface PillarData {
-  stem: string;        // 天干
-  branch: string;      // 地支
-  element: FiveElements;
-  yinYang: YinYang;
+  heavenlyStem: string;    // 天干
+  earthlyBranch: string;   // 地支
+  element: string;         // 五行要素（string型に変更）
+  yinYang: string;         // 陰陽（string型に変更）
 }
 
 // 五行バランス
@@ -465,31 +664,85 @@ export interface ElementBalance {
   earth: number; // 土の比率
   metal: number; // 金の比率
   water: number; // 水の比率
-  mainElement: FiveElements;
-  isBalanced: boolean;
+  mainElement?: FiveElements;
+  isBalanced?: boolean;
+}
+
+// 四柱推命計算リクエスト
+export interface FourPillarsCalculateRequest {
+  birthDate: string; // ISO8601形式
+  birthTime: string; // HH:mm形式
+  timezone?: string;
+  location?: {
+    name: string;
+    longitude: number;
+    latitude: number;
+  };
+}
+
+// 四柱推命分析リクエスト
+export interface FourPillarsAnalyzeRequest {
+  fourPillarsData: FourPillarsData;
+  analysisType: 'personality' | 'element_balance' | 'ten_gods' | 'all';
+}
+
+// 相性計算リクエスト
+export interface CompatibilityCalculateRequest {
+  users: Array<{
+    userId: ID;
+    birthDate: string;
+    birthTime: string;
+    timezone?: string;
+    location?: {
+      name: string;
+      longitude: number;
+      latitude: number;
+    };
+  }>;
+}
+
+// 性格特性
+export interface PersonalityTrait {
+  trait: string;
+  score: number; // 0-100
+  description: string;
+}
+
+// 相性詳細
+export interface CompatibilityDetail {
+  userId1: ID;
+  userId2: ID;
+  score: number;
+  relationship: string;
+  advice: string;
 }
 
 // 相性診断結果
 export interface CompatibilityResult {
-  id: ID;
-  user1Id: ID;
-  user2Id: ID;
-  totalScore: number; // 0-100
-  relationshipType: 'excellent' | 'good' | 'average' | 'challenging' | 'difficult';
+  _id: ID;
+  userIds: ID[];
+  overallScore: number; // 0-100
   details: {
-    yinYangBalance: number;
-    strengthBalance: number;
-    dayBranchRelationship: {
+    elementHarmony: {
       score: number;
-      relationship: string;
+      description: string;
     };
-    usefulGods: number;
-    dayGanCombination: {
+    yinYangBalance: {
       score: number;
-      isGangou: boolean;
+      description: string;
+    };
+    tenGodCompatibility: {
+      score: number;
+      description: string;
+    };
+    lifePurpose: {
+      score: number;
+      description: string;
     };
   };
   advice: string;
+  challenges?: string[];
+  strengths?: string[];
   calculatedAt: Date;
 }
 
@@ -767,172 +1020,6 @@ export enum TokenPackage {
   PREMIUM = 'premium',   // 10,000,000トークン
 }
 
-// ==========================================
-// APIパス定義
-// ==========================================
-
-export const API_PATHS = {
-  // 認証関連
-  AUTH: {
-    LOGIN: '/api/auth/login',
-    LOGIN_LINE: '/api/auth/login-line',
-    LINE_CALLBACK: '/api/auth/line-callback',
-    LOGOUT: '/api/auth/logout',
-    REFRESH: '/api/auth/refresh',
-    REGISTER: '/api/auth/register',
-    REGISTER_ORGANIZATION: '/api/auth/register-organization',
-    PASSWORD_RESET_REQUEST: '/api/auth/password-reset-request',
-    VERIFY_RESET_TOKEN: '/api/auth/verify-reset-token',
-    COMPLETE_PASSWORD_RESET: '/api/auth/complete-password-reset',
-    VERIFY_INVITE: '/api/auth/verify-invite',
-    COMPLETE_REGISTRATION: '/api/auth/complete-registration',
-  },
-
-  // ユーザー関連
-  USERS: {
-    BASE: '/api/users',
-    LIST: '/api/users',
-    ME: '/api/users/me',
-    DETAIL: (userId: string) => `/api/users/${userId}`,
-    UPDATE: (userId: string) => `/api/users/${userId}`,
-    DELETE: (userId: string) => `/api/users/${userId}`,
-    INVITE: '/api/users/invite',
-    FORCE_LOGOUT: (userId: string) => `/api/users/${userId}/force-logout`,
-    TOKEN_USAGE: (userId: string) => `/api/users/${userId}/token-usage`,
-  },
-
-  // 組織関連
-  ORGANIZATIONS: {
-    BASE: '/api/organizations',
-    DETAIL: (orgId: string) => `/api/organizations/${orgId}`,
-    STATS: (orgId: string) => `/api/organizations/${orgId}/stats`,
-    MEMBERS: (orgId: string) => `/api/organizations/${orgId}/members`,
-  },
-
-  // クライアント関連
-  CLIENTS: {
-    BASE: '/api/clients',
-    DETAIL: (clientId: string) => `/api/clients/${clientId}`,
-    FORTUNE: (clientId: string) => `/api/clients/${clientId}/fortune`,
-    COMPATIBILITY: (clientId: string) => `/api/clients/${clientId}/compatibility`,
-    CHAT: (clientId: string) => `/api/clients/${clientId}/chat`,
-    DAILY: '/api/clients/daily',
-  },
-
-  // AIチャット関連
-  CHAT: {
-    CONVERSATIONS: '/api/chat/conversations',
-    MESSAGES: (conversationId: string) => `/api/chat/conversations/${conversationId}/messages`,
-    SEND: (conversationId: string) => `/api/chat/conversations/${conversationId}/send`,
-    MEMORY: (characterId: string) => `/api/chat/characters/${characterId}/memory`,
-  },
-
-  // 四柱推命関連
-  SAJU: {
-    CALCULATE: '/api/saju/calculate',
-    ANALYZE: '/api/saju/analyze',
-    MASTERS: '/api/saju/masters',
-    USER: (userId: string) => `/api/saju/user/${userId}`,
-    CLIENT: (clientId: string) => `/api/saju/client/${clientId}`,
-    COMPATIBILITY: '/api/saju/compatibility',
-    COMPATIBILITY_ENHANCED: (userId1: string, userId2: string) => `/api/saju/compatibility/enhanced/${userId1}/${userId2}`,
-    TEAM: (teamId: string) => `/api/saju/compatibility/team/${teamId}`,
-  },
-
-  // 予約関連
-  APPOINTMENTS: {
-    BASE: '/api/appointments',
-    DETAIL: (appointmentId: string) => `/api/appointments/${appointmentId}`,
-    ASSIGN: (appointmentId: string) => `/api/appointments/${appointmentId}/assign`,
-    MOVE: (appointmentId: string) => `/api/appointments/${appointmentId}/move`,
-    CALENDAR_SYNC: '/api/appointments/calendar/sync',
-  },
-
-  // 管理者向け
-  ADMIN: {
-    DASHBOARD: '/api/admin/dashboard',
-    CLIENTS: '/api/admin/clients',
-    STYLISTS: '/api/admin/stylists',
-    STYLIST_DETAIL: (stylistId: string) => `/api/admin/stylists/${stylistId}`,
-    STYLIST_REPORT: (stylistId: string) => `/api/admin/stylists/${stylistId}/report`,
-    APPOINTMENTS: '/api/admin/appointments',
-    IMPORT: '/api/admin/import',
-    IMPORT_UPLOAD: '/api/admin/import/upload',
-    IMPORT_EXECUTE: '/api/admin/import/execute',
-    IMPORT_HISTORY: '/api/admin/import/history',
-    CALENDAR_CONNECT: '/api/admin/calendar/connect',
-    SUPPORT_TICKETS: '/api/admin/support/tickets',
-    SUPPORT_TICKET_DETAIL: (ticketId: string) => `/api/admin/support/tickets/${ticketId}`,
-    SUPPORT_TICKET_REPLY: (ticketId: string) => `/api/admin/support/tickets/${ticketId}/reply`,
-  },
-
-  // オーナー向け（課金管理）
-  OWNER: {
-    BILLING_SUMMARY: '/api/owner/billing/summary',
-    CHARGE_TOKENS: '/api/owner/billing/charge-tokens',
-    INVOICES: '/api/owner/billing/invoices',
-    PLAN: '/api/owner/billing/plan',
-    PAYMENT_METHOD: '/api/owner/billing/payment-method',
-    PAYMENT_HISTORY: '/api/owner/billing/payment-history',
-  },
-
-  // SuperAdmin向け
-  SUPERADMIN: {
-    ORGANIZATIONS: '/api/superadmin/organizations',
-    ORGANIZATION_DETAIL: (orgId: string) => `/api/superadmin/organizations/${orgId}`,
-    PLANS: '/api/superadmin/plans',
-    PLAN_DETAIL: (planId: string) => `/api/superadmin/plans/${planId}`,
-    REVENUE_SIMULATE: '/api/superadmin/revenue/simulate',
-    INVOICES: '/api/superadmin/invoices',
-    SUPPORT_TICKETS: '/api/superadmin/support/tickets',
-    SUPPORT_TICKET_DETAIL: (ticketId: string) => `/api/superadmin/support/tickets/${ticketId}`,
-    SUPPORT_TICKET_REPLY: (ticketId: string) => `/api/superadmin/support/tickets/${ticketId}/reply`,
-    SUPPORT_TICKET_STATUS: (ticketId: string) => `/api/superadmin/support/tickets/${ticketId}/status`,
-  },
-
-  // 決済関連（ユニバペイ）
-  BILLING: {
-    TOKEN: '/api/billing/token',
-    SUBSCRIPTION: '/api/billing/subscription',
-    SUBSCRIPTION_CANCEL: (subscriptionId: string) => `/api/billing/subscription/${subscriptionId}/cancel`,
-    REFUND: (chargeId: string) => `/api/billing/refund/${chargeId}`,
-    WEBHOOK: '/api/billing/webhook',
-  },
-
-  // 日運・占い関連
-  FORTUNE: {
-    DAILY: '/api/fortune/daily',
-    WEEKLY: '/api/fortune/weekly',
-    MONTHLY: '/api/fortune/monthly',
-    COMPATIBILITY_TODAY: '/api/fortune/compatibility/today',
-    DAILY_ADVICE: (userId: string) => `/api/fortune/users/${userId}/daily-advice`,
-    STYLIST_FORTUNE: (userId: string) => `/api/fortune/stylists/${userId}/detail`,
-    FORTUNE_CARDS: '/api/fortune/cards',
-    REGENERATE_ADVICE: (userId: string) => `/api/fortune/users/${userId}/regenerate`,
-  },
-
-  // サポート関連
-  SUPPORT: {
-    TICKETS: '/api/support/tickets',
-    TICKET_DETAIL: (ticketId: string) => `/api/support/tickets/${ticketId}`,
-    CREATE: '/api/support/tickets',
-    REPLY: (ticketId: string) => `/api/support/tickets/${ticketId}/messages`,
-    UPDATE: (ticketId: string) => `/api/support/tickets/${ticketId}`,
-    DELETE: (ticketId: string) => `/api/support/tickets/${ticketId}`,
-    STATS: '/api/support/stats',
-    MESSAGES: (ticketId: string) => `/api/support/tickets/${ticketId}/messages`,
-  },
-  // 後方互換性のため
-  support: {
-    list: '/api/support/tickets',
-    detail: (ticketId: string) => `/api/support/tickets/${ticketId}`,
-    create: '/api/support/tickets',
-    reply: (ticketId: string) => `/api/support/tickets/${ticketId}/messages`,
-    update: (ticketId: string) => `/api/support/tickets/${ticketId}`,
-    delete: (ticketId: string) => `/api/support/tickets/${ticketId}`,
-    stats: '/api/support/stats',
-  },
-};
 
 // ==========================================
 // API認証要件情報
@@ -1872,3 +1959,4 @@ export interface DailyClientDisplay {
     summary: string;
   };
 }
+

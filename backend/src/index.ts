@@ -13,6 +13,10 @@ import { rateLimiter } from './common/middleware/rateLimiter';
 import authRoutes from './features/auth/routes/auth.routes';
 import userRoutes from './features/users/routes/user.routes';
 import organizationRoutes from './features/organizations/routes/organization.routes';
+import sajuRoutes from './features/saju/routes/saju.routes';
+import { clientRoutes } from './features/clients/routes/client.routes';
+import { aiCharacterRoutes } from './features/ai-characters/routes/ai-character.routes';
+import { chatRoutes } from './features/chat/routes/chat.routes';
 import { logger } from './common/utils/logger';
 
 const app = express();
@@ -41,6 +45,10 @@ app.get('/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/organizations', organizationRoutes);
+app.use('/api/saju', sajuRoutes);
+app.use('/api', clientRoutes); // クライアント管理ルート（/api/admin/clients, /api/clients）
+app.use('/api/chat', chatRoutes); // チャット・会話管理ルート
+app.use('/api/chat', aiCharacterRoutes); // AIキャラクター・メモリ管理ルート
 
 // エラーハンドリング
 app.use(errorHandler);

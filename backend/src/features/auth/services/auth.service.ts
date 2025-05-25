@@ -77,6 +77,7 @@ export class AuthService {
     // トークン生成
     const sessionId = uuidv4();
     const payload: JWTPayload = {
+      id: user.id,
       userId: user.id,
       email: user.email,
       roles: [user.role],
@@ -166,6 +167,7 @@ export class AuthService {
     // トークン生成
     const sessionId = uuidv4();
     const payload: JWTPayload = {
+      id: user.id,
       userId: user.id,
       email: user.email,
       roles: [user.role],
@@ -297,6 +299,7 @@ export class AuthService {
       // トークン生成
       const sessionId = uuidv4();
       const payload: JWTPayload = {
+        id: user.id,
         userId: user.id,
         email: user.email,
         roles: [user.role],
@@ -470,6 +473,7 @@ export class AuthService {
       // 自動ログイン用のトークンを生成
       const sessionId = uuidv4();
       const payload: JWTPayload = {
+        id: owner.id,
         userId: owner.id,
         email: owner.email,
         roles: [UserRole.OWNER],
@@ -541,6 +545,7 @@ export class AuthService {
 
       // 新しいアクセストークンを生成
       const newPayload: JWTPayload = {
+        id: user.id,
         userId: user.id,
         email: user.email,
         roles: [user.role],
@@ -660,6 +665,7 @@ export class AuthService {
       // 自動ログイン用のトークンを生成
       const sessionId = uuidv4();
       const payload: JWTPayload = {
+        id: user.id,
         userId: user.id,
         email: user.email,
         roles: [user.role],

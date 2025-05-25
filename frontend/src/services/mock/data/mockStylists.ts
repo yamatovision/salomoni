@@ -8,7 +8,6 @@ import type {
 import {
   TurnoverRiskLevel,
   FiveElements,
-  YinYang,
   UserRole,
   UserStatus,
   AuthMethod
@@ -239,89 +238,418 @@ export const mockStylists: StylistDetail[] = [
 // スタイリストの四柱推命データ
 export const mockStylistFourPillars: Record<string, FourPillarsData> = {
   'stylist-1': {
-    id: 'fp-stylist-1',
+    _id: 'fp-stylist-1',
     userId: 'stylist-1',
+    birthDate: '1991-03-15',
+    birthTime: '10:30',
+    location: {
+      name: '東京',
+      longitude: 139.6917,
+      latitude: 35.6895
+    },
+    timezone: 'Asia/Tokyo',
+    elementBalance: {
+      wood: 5,
+      fire: 40,
+      earth: 30,
+      metal: 15,
+      water: 10,
+      mainElement: FiveElements.FIRE,
+      isBalanced: false
+    },
+    tenGods: {
+      year: '比肩',
+      month: '食神',
+      day: '正官',
+      hour: '偏財'
+    },
     yearPillar: {
-      stem: '辛',
-      branch: '未',
-      element: FiveElements.METAL,
-      yinYang: YinYang.YIN
+      heavenlyStem: '辛',
+      earthlyBranch: '未',
+      element: '金',
+      yinYang: '陰'
     },
     monthPillar: {
-      stem: '庚',
-      branch: '辰',
-      element: FiveElements.METAL,
-      yinYang: YinYang.YANG
+      heavenlyStem: '庚',
+      earthlyBranch: '辰',
+      element: '金',
+      yinYang: '陽'
     },
     dayPillar: {
-      stem: '丙',
-      branch: '午',
-      element: FiveElements.FIRE,
-      yinYang: YinYang.YANG
+      heavenlyStem: '丙',
+      earthlyBranch: '午',
+      element: '火',
+      yinYang: '陽'
     },
     hourPillar: {
-      stem: '戊',
-      branch: '戌',
-      element: FiveElements.EARTH,
-      yinYang: YinYang.YANG
+      heavenlyStem: '戊',
+      earthlyBranch: '戌',
+      element: '土',
+      yinYang: '陽'
     },
     calculatedAt: new Date('2025-05-01')
   },
   'stylist-2': {
-    id: 'fp-stylist-2',
+    _id: 'fp-stylist-2',
     userId: 'stylist-2',
+    birthDate: '1993-07-22',
+    birthTime: '14:00',
+    location: {
+      name: '東京',
+      longitude: 139.6917,
+      latitude: 35.6895
+    },
+    timezone: 'Asia/Tokyo',
+    elementBalance: {
+      wood: 35,
+      fire: 10,
+      earth: 20,
+      metal: 15,
+      water: 20,
+      mainElement: FiveElements.WOOD,
+      isBalanced: true
+    },
+    tenGods: {
+      year: '傷官',
+      month: '正財',
+      day: '偏官',
+      hour: '印綬'
+    },
     yearPillar: {
-      stem: '癸',
-      branch: '酉',
-      element: FiveElements.WATER,
-      yinYang: YinYang.YIN
+      heavenlyStem: '癸',
+      earthlyBranch: '酉',
+      element: '水',
+      yinYang: '陰'
     },
     monthPillar: {
-      stem: '己',
-      branch: '未',
-      element: FiveElements.EARTH,
-      yinYang: YinYang.YIN
+      heavenlyStem: '己',
+      earthlyBranch: '未',
+      element: '土',
+      yinYang: '陰'
     },
     dayPillar: {
-      stem: '甲',
-      branch: '寅',
-      element: FiveElements.WOOD,
-      yinYang: YinYang.YANG
+      heavenlyStem: '甲',
+      earthlyBranch: '寅',
+      element: '木',
+      yinYang: '陽'
     },
     hourPillar: {
-      stem: '乙',
-      branch: '卯',
-      element: FiveElements.WOOD,
-      yinYang: YinYang.YIN
+      heavenlyStem: '乙',
+      earthlyBranch: '卯',
+      element: '木',
+      yinYang: '陰'
     },
     calculatedAt: new Date('2025-05-01')
   },
   'stylist-3': {
-    id: 'fp-stylist-3',
+    _id: 'fp-stylist-3',
     userId: 'stylist-3',
+    birthDate: '1988-11-10',
+    birthTime: '09:00',
+    location: {
+      name: '東京',
+      longitude: 139.6917,
+      latitude: 35.6895
+    },
+    timezone: 'Asia/Tokyo',
+    elementBalance: {
+      wood: 10,
+      fire: 15,
+      earth: 25,
+      metal: 30,
+      water: 20,
+      mainElement: FiveElements.METAL,
+      isBalanced: true
+    },
+    tenGods: {
+      year: '正官',
+      month: '偏印',
+      day: '劫財',
+      hour: '食神'
+    },
     yearPillar: {
-      stem: '戊',
-      branch: '辰',
-      element: FiveElements.EARTH,
-      yinYang: YinYang.YANG
+      heavenlyStem: '戊',
+      earthlyBranch: '辰',
+      element: '土',
+      yinYang: '陽'
     },
     monthPillar: {
-      stem: '癸',
-      branch: '亥',
-      element: FiveElements.WATER,
-      yinYang: YinYang.YIN
+      heavenlyStem: '癸',
+      earthlyBranch: '亥',
+      element: '水',
+      yinYang: '陰'
     },
     dayPillar: {
-      stem: '庚',
-      branch: '申',
-      element: FiveElements.METAL,
-      yinYang: YinYang.YANG
+      heavenlyStem: '庚',
+      earthlyBranch: '申',
+      element: '金',
+      yinYang: '陽'
     },
     hourPillar: {
-      stem: '丁',
-      branch: '巳',
-      element: FiveElements.FIRE,
-      yinYang: YinYang.YIN
+      heavenlyStem: '丁',
+      earthlyBranch: '巳',
+      element: '火',
+      yinYang: '陰'
+    },
+    calculatedAt: new Date('2025-05-01')
+  },
+  'stylist-4': {
+    _id: 'fp-stylist-4',
+    userId: 'stylist-4',
+    birthDate: '1996-02-28',
+    birthTime: '11:00',
+    location: {
+      name: '東京',
+      longitude: 139.6917,
+      latitude: 35.6895
+    },
+    timezone: 'Asia/Tokyo',
+    elementBalance: {
+      wood: 20,
+      fire: 25,
+      earth: 15,
+      metal: 20,
+      water: 20,
+      mainElement: FiveElements.FIRE,
+      isBalanced: true
+    },
+    tenGods: {
+      year: '正印',
+      month: '偏財',
+      day: '比肩',
+      hour: '傷官'
+    },
+    yearPillar: {
+      heavenlyStem: '丙',
+      earthlyBranch: '子',
+      element: '火',
+      yinYang: '陽'
+    },
+    monthPillar: {
+      heavenlyStem: '庚',
+      earthlyBranch: '寅',
+      element: '金',
+      yinYang: '陽'
+    },
+    dayPillar: {
+      heavenlyStem: '乙',
+      earthlyBranch: '巳',
+      element: '木',
+      yinYang: '陰'
+    },
+    hourPillar: {
+      heavenlyStem: '壬',
+      earthlyBranch: '午',
+      element: '水',
+      yinYang: '陽'
+    },
+    calculatedAt: new Date('2025-05-01')
+  },
+  'stylist-5': {
+    _id: 'fp-stylist-5',
+    userId: 'stylist-5',
+    birthDate: '1990-09-05',
+    birthTime: '08:30',
+    location: {
+      name: '東京',
+      longitude: 139.6917,
+      latitude: 35.6895
+    },
+    timezone: 'Asia/Tokyo',
+    elementBalance: {
+      wood: 15,
+      fire: 20,
+      earth: 20,
+      metal: 25,
+      water: 20,
+      mainElement: FiveElements.METAL,
+      isBalanced: true
+    },
+    tenGods: {
+      year: '正官',
+      month: '食神',
+      day: '比肩',
+      hour: '偏財'
+    },
+    yearPillar: {
+      heavenlyStem: '庚',
+      earthlyBranch: '午',
+      element: '金',
+      yinYang: '陽'
+    },
+    monthPillar: {
+      heavenlyStem: '乙',
+      earthlyBranch: '酉',
+      element: '木',
+      yinYang: '陰'
+    },
+    dayPillar: {
+      heavenlyStem: '癸',
+      earthlyBranch: '亥',
+      element: '水',
+      yinYang: '陰'
+    },
+    hourPillar: {
+      heavenlyStem: '丙',
+      earthlyBranch: '辰',
+      element: '火',
+      yinYang: '陽'
+    },
+    calculatedAt: new Date('2025-05-01')
+  },
+  'stylist-6': {
+    _id: 'fp-stylist-6',
+    userId: 'stylist-6',
+    birthDate: '1994-12-18',
+    birthTime: '17:30',
+    location: {
+      name: '東京',
+      longitude: 139.6917,
+      latitude: 35.6895
+    },
+    timezone: 'Asia/Tokyo',
+    elementBalance: {
+      wood: 20,
+      fire: 20,
+      earth: 25,
+      metal: 15,
+      water: 20,
+      mainElement: FiveElements.EARTH,
+      isBalanced: true
+    },
+    tenGods: {
+      year: '正財',
+      month: '偏印',
+      day: '比肩',
+      hour: '正財'
+    },
+    yearPillar: {
+      heavenlyStem: '甲',
+      earthlyBranch: '戌',
+      element: '木',
+      yinYang: '陽'
+    },
+    monthPillar: {
+      heavenlyStem: '丙',
+      earthlyBranch: '子',
+      element: '火',
+      yinYang: '陽'
+    },
+    dayPillar: {
+      heavenlyStem: '己',
+      earthlyBranch: '丑',
+      element: '土',
+      yinYang: '陰'
+    },
+    hourPillar: {
+      heavenlyStem: '癸',
+      earthlyBranch: '酉',
+      element: '水',
+      yinYang: '陰'
+    },
+    calculatedAt: new Date('2025-05-01')
+  },
+  'stylist-7': {
+    _id: 'fp-stylist-7',
+    userId: 'stylist-7',
+    birthDate: '1992-04-10',
+    birthTime: '13:15',
+    location: {
+      name: '東京',
+      longitude: 139.6917,
+      latitude: 35.6895
+    },
+    timezone: 'Asia/Tokyo',
+    elementBalance: {
+      wood: 20,
+      fire: 35,
+      earth: 20,
+      metal: 10,
+      water: 15,
+      mainElement: FiveElements.FIRE,
+      isBalanced: false
+    },
+    tenGods: {
+      year: '偏財',
+      month: '正印',
+      day: '比肩',
+      hour: '比肩'
+    },
+    yearPillar: {
+      heavenlyStem: '壬',
+      earthlyBranch: '申',
+      element: '水',
+      yinYang: '陽'
+    },
+    monthPillar: {
+      heavenlyStem: '甲',
+      earthlyBranch: '辰',
+      element: '木',
+      yinYang: '陽'
+    },
+    dayPillar: {
+      heavenlyStem: '丁',
+      earthlyBranch: '未',
+      element: '火',
+      yinYang: '陰'
+    },
+    hourPillar: {
+      heavenlyStem: '丁',
+      earthlyBranch: '未',
+      element: '火',
+      yinYang: '陰'
+    },
+    calculatedAt: new Date('2025-05-01')
+  },
+  'stylist-8': {
+    _id: 'fp-stylist-8',
+    userId: 'stylist-8',
+    birthDate: '1998-06-25',
+    birthTime: '07:00',
+    location: {
+      name: '東京',
+      longitude: 139.6917,
+      latitude: 35.6895
+    },
+    timezone: 'Asia/Tokyo',
+    elementBalance: {
+      wood: 10,
+      fire: 15,
+      earth: 35,
+      metal: 25,
+      water: 15,
+      mainElement: FiveElements.EARTH,
+      isBalanced: false
+    },
+    tenGods: {
+      year: '正印',
+      month: '正印',
+      day: '比肩',
+      hour: '偏財'
+    },
+    yearPillar: {
+      heavenlyStem: '戊',
+      earthlyBranch: '寅',
+      element: '土',
+      yinYang: '陽'
+    },
+    monthPillar: {
+      heavenlyStem: '戊',
+      earthlyBranch: '午',
+      element: '土',
+      yinYang: '陽'
+    },
+    dayPillar: {
+      heavenlyStem: '辛',
+      earthlyBranch: '酉',
+      element: '金',
+      yinYang: '陰'
+    },
+    hourPillar: {
+      heavenlyStem: '壬',
+      earthlyBranch: '辰',
+      element: '水',
+      yinYang: '陽'
     },
     calculatedAt: new Date('2025-05-01')
   }

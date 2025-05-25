@@ -3,6 +3,8 @@ import { AuthService } from './api/auth';
 import { UserService } from './api/users';
 import { ClientService } from './api/client';
 import { StylistService } from './api/stylists';
+import { SajuService } from './api/saju';
+import { OrganizationService } from './api/organizations';
 import { MockAuthService } from './mock/handlers/auth';
 import { MockUserService } from './mock/handlers/users';
 import { MockClientService } from './mock/handlers/clients';
@@ -26,6 +28,10 @@ export const authService = USE_MOCK ? new MockAuthService() : new AuthService();
 export const userService = USE_MOCK ? new MockUserService() : new UserService();
 export const clientService = USE_MOCK ? new MockClientService() : new ClientService();
 export const stylistService = USE_MOCK ? new MockStylistService() : new StylistService();
+
+// 新規追加サービス（モックなし、実APIのみ）
+export const sajuService = new SajuService();
+export const organizationService = new OrganizationService();
 
 // サポート関連サービス
 export const supportService = USE_MOCK ? supportMock : supportAPI;

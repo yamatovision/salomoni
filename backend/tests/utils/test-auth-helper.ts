@@ -16,8 +16,10 @@ export class TestAuthHelper {
    * テスト用アクセストークンを生成
    */
   static generateTestToken(payload: Partial<JWTPayload>): string {
+    const userId = payload.userId || uuidv4();
     const defaultPayload: JWTPayload = {
-      userId: payload.userId || uuidv4(),
+      id: payload.id || userId,
+      userId: userId,
       email: payload.email || 'test@example.com',
       roles: payload.roles || ['user' as UserRole],
       currentRole: payload.currentRole || ('user' as UserRole),
@@ -150,6 +152,7 @@ export class TestAuthHelper {
 
     // オーナー用のトークンを生成
     const ownerToken = this.generateTestToken({
+      id: owner.id,
       userId: owner.id,
       email: owner.email,
       roles: [owner.role],
@@ -162,6 +165,26 @@ export class TestAuthHelper {
       owner: { ...owner, organizationId: organization.id },
       ownerToken,
     };
+  }
+
+  /**
+   * テスト用ユーザーを作成してトークンも生成
+   */
+  static async createTestUserWithToken(data: Partial<UserProfile & { password?: string }> = {}): Promise<{
+    user: UserProfile;
+    token: string;
+  }> {
+    const user = await this.createTestUser(data);
+    const token = this.generateTestToken({
+      id: user.id,
+      userId: user.id,
+      email: user.email,
+      roles: [user.role],
+      currentRole: user.role,
+      organizationId: user.organizationId || undefined,
+    });
+
+    return { user, token };
   }
 
   /**
@@ -181,6 +204,7 @@ export class TestAuthHelper {
       role: 'superadmin' as UserRole,
     });
     const superAdminToken = this.generateTestToken({
+      id: superAdmin.id,
       userId: superAdmin.id,
       email: superAdmin.email,
       roles: [superAdmin.role],
@@ -195,6 +219,7 @@ export class TestAuthHelper {
       organizationId,
     });
     const ownerToken = this.generateTestToken({
+      id: owner.id,
       userId: owner.id,
       email: owner.email,
       roles: [owner.role],
@@ -210,6 +235,7 @@ export class TestAuthHelper {
       organizationId,
     });
     const adminToken = this.generateTestToken({
+      id: admin.id,
       userId: admin.id,
       email: admin.email,
       roles: [admin.role],
@@ -225,6 +251,7 @@ export class TestAuthHelper {
       organizationId,
     });
     const stylistToken = this.generateTestToken({
+      id: stylist.id,
       userId: stylist.id,
       email: stylist.email,
       roles: [stylist.role],
@@ -240,6 +267,7 @@ export class TestAuthHelper {
       organizationId,
     });
     const clientToken = this.generateTestToken({
+      id: client.id,
       userId: client.id,
       email: client.email,
       roles: [client.role],
@@ -256,3 +284,13 @@ export class TestAuthHelper {
     };
   }
 }
+
+// 便利な関数を直接エクスポート
+export const generateTestToken = TestAuthHelper.generateTestToken.bind(TestAuthHelper);
+export const createTestOrganization = TestAuthHelper.createTestOrganization.bind(TestAuthHelper);
+export const createTestUser = TestAuthHelper.createTestUser.bind(TestAuthHelper);
+export const createTestUserWithToken = TestAuthHelper.createTestUserWithToken.bind(TestAuthHelper);
+export const loginTestUser = TestAuthHelper.loginTestUser.bind(TestAuthHelper);
+export const authenticatedRequest = TestAuthHelper.authenticatedRequest.bind(TestAuthHelper);
+export const setupTestOrganizationWithOwner = TestAuthHelper.setupTestOrganizationWithOwner.bind(TestAuthHelper);
+export const createTestUserSet = TestAuthHelper.createTestUserSet.bind(TestAuthHelper);

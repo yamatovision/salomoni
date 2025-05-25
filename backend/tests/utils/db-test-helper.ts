@@ -169,3 +169,10 @@ export class ProductionDatabaseTestHelper {
     }
   }
 }
+
+// 便利な関数を直接エクスポート
+export const connectTestDatabase = DatabaseTestHelper.connect.bind(DatabaseTestHelper);
+export const disconnectTestDatabase = DatabaseTestHelper.disconnect.bind(DatabaseTestHelper);
+export const clearTestDatabase = DatabaseTestHelper.clearDatabase.bind(DatabaseTestHelper);
+export const clearTestCollection = DatabaseTestHelper.clearCollection.bind(DatabaseTestHelper);
+export const seedTestData = DatabaseTestHelper.seedTestData.bind(DatabaseTestHelper);

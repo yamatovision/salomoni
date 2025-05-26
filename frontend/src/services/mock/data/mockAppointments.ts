@@ -147,11 +147,8 @@ export const mockAppointments: Appointment[] = [
 // カレンダー同期状態
 export const mockCalendarSyncStatus: CalendarSyncStatus = {
   provider: 'google',
-  lastSyncTime: new Date('2025-04-26T09:15:00'),
-  status: 'connected',
-  totalAppointments: 152,
-  successfulClientMatches: 143,
-  successfulStylistMatches: 149,
+  connected: true,
+  lastSyncAt: new Date('2025-04-26T09:15:00'),
   pendingMatches: 9,
 };
 

@@ -21,6 +21,7 @@ import { appointmentRoutes, adminAppointmentRoutes } from './features/appointmen
 import { fortuneRoutes } from './features/fortune/routes/fortune.routes';
 import billingRoutes from './features/billing/routes/billing.routes';
 import importRoutes, { calendarRouter } from './features/import/routes/import.routes';
+import dashboardRoutes from './features/dashboard/routes/dashboard.routes';
 import { univapayService } from './features/billing/services/univapay.service';
 import { logger } from './common/utils/logger';
 
@@ -61,6 +62,7 @@ app.use('/api/billing', billingRoutes); // 決済・課金管理ルート
 app.use('/api/owner/billing', billingRoutes); // オーナー向け決済管理ルート
 app.use('/api/admin/import', importRoutes); // データインポート管理ルート
 app.use('/api/admin/calendar', calendarRouter); // カレンダー連携管理ルート
+app.use('/api/admin', dashboardRoutes); // ダッシュボード管理ルート
 
 // エラーハンドリング
 app.use(errorHandler);

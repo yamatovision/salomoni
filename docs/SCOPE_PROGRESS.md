@@ -151,11 +151,11 @@
 | **8.3** | `/api/owner/billing/charge-tokens` | POST | トークンチャージ購入 | 必要 | A-007 | [x] | [x] | [x] |
 | **8.4** | `/api/owner/billing/summary` | GET | 請求サマリー取得 | 必要 | A-007 | [x] | [x] | [x] |
 | **8.5** | `/api/owner/billing/invoices` | GET | 請求書一覧取得 | 必要 | A-007 | [x] | [x] | [x] |
-| **9.1** | `/api/admin/import/upload` | POST | CSVファイルアップロード | 必要 | A-005: データインポート | [x] | [x] | [ ] |
-| **9.2** | `/api/admin/import/execute` | POST | インポート実行 | 必要 | A-005: データインポート | [x] | [x] | [ ] |
-| **9.3** | `/api/admin/import/history` | GET | インポート履歴取得 | 必要 | A-005: データインポート | [x] | [x] | [ ] |
-| **9.4** | `/api/admin/calendar/connect` | POST | カレンダー連携設定 | 必要 | A-005: データインポート | [x] | [x] | [ ] |
-| **10.1** | `/api/admin/dashboard` | GET | ダッシュボードデータ取得 | 必要 | A-001: 管理者ダッシュボード | [ ] | [ ] | [ ] |
+| **9.1** | `/api/admin/import/upload` | POST | CSVファイルアップロード | 必要 | A-005: データインポート | [x] | [x] | [x] |
+| **9.2** | `/api/admin/import/execute` | POST | インポート実行 | 必要 | A-005: データインポート | [x] | [x] | [x] |
+| **9.3** | `/api/admin/import/history` | GET | インポート履歴取得 | 必要 | A-005: データインポート | [x] | [x] | [x] |
+| **9.4** | `/api/admin/calendar/connect` | POST | カレンダー連携設定 | 必要 | A-005: データインポート | [x] | [x] | [x] |
+| **10.1** | `/api/admin/dashboard` | GET | ダッシュボードデータ取得 | 必要 | A-001: 管理者ダッシュボード | [x] | [ ] | [ ] |
 | **10.2** | `/api/admin/stylists/:id/report` | GET | スタイリストレポート生成 | 必要 | A-003: スタイリスト管理 | [ ] | [ ] | [ ] |
 | **11.1** | `/api/admin/support/tickets` | POST | サポートチケット作成 | 必要 | A-006, S-003 | [ ] | [ ] | [ ] |
 | **11.2** | `/api/admin/support/tickets` | GET | チケット一覧取得 | 必要 | A-006, S-003 | [ ] | [ ] | [ ] |
@@ -294,37 +294,37 @@ npm run dev
 ### ★9統合テスト成功請負人への引き継ぎ情報
 
 **実装完了機能**
-- 垂直スライス9: データインポート・連携システム
-- APIエンドポイント9.1〜9.4（CSVアップロード、インポート実行、履歴管理、カレンダー連携）
+- 垂直スライス10: ダッシュボード・統計管理システム
+- APIエンドポイント10.1（管理者ダッシュボードデータ取得）
 
 **統合テスト情報（★9が実行するテスト）**
-- **作成済み統合テストファイル**: `/backend/tests/integration/import/import.flow.test.ts`
+- **作成済み統合テストファイル**: `/backend/tests/integration/dashboard/dashboard.flow.test.ts`
 - **テスト実行コマンド**: `npm run test:integration`
-- **実装済みテストケース数**: 23個（全APIエンドポイントを網羅）
+- **実装済みテストケース数**: 11個（全APIエンドポイントを網羅）
 - **マイルストーントラッカーの場所**: `/backend/tests/utils/MilestoneTracker.ts`
 - **テストユーティリティの場所**: `/backend/tests/utils/`
 
 **★9への注意事項**
-- CSVファイルのアップロード処理で一時ファイルを作成しています
+- ダッシュボードAPIは複数のコレクションから集計データを取得しています
 - `.env`ファイルに以下の環境変数が必要です：
   - MongoDBの接続情報
   - 認証用のJWT_SECRET
 - モックは一切使用していません。すべて実データでのテストです
-- 大量データインポートテスト（1000件）も含まれています
-- ファイルアップロードにはmulterを使用しています
+- パフォーマンステスト（大量データ）も含まれています
+- date-fnsライブラリを使用した日付処理を行っています
 
 **実装済みテスト内容**
-1. CSVファイルアップロード（正常系、ファイル形式チェック、権限チェック）
-2. インポート実行（自動作成、既存更新、ドライラン、エラーハンドリング）
-3. インポート履歴取得（フィルタリング、ページネーション）
-4. カレンダー連携設定（プロバイダー検証、同期頻度チェック）
-5. 権限チェック（Admin/Owner権限の確認）
-6. エッジケース（空CSV、大量データ）
+1. 管理者ダッシュボードデータ取得（正常系、統計情報、チャートデータ）
+2. 統計情報のみ取得（軽量版エンドポイント）
+3. トークン使用状況チャートデータ取得
+4. 権限チェック（Admin/Owner/SuperAdmin権限の確認）
+5. エッジケース（データ0件、組織IDなし）
+6. パフォーマンステスト（大量データでのレスポンス時間）
 
 **参考資料**
-- CSVパース: csv-parseライブラリ
-- ファイルアップロード: multerライブラリ
-- `/backend/src/features/import/` ディレクトリ内の実装ファイル
+- 集計処理: MongoDB Aggregation Pipeline
+- 日付処理: date-fnsライブラリ
+- `/backend/src/features/dashboard/` ディレクトリ内の実装ファイル
 - `/backend/src/types/index.ts` - 型定義とAPIパス
 
 ### ★9統合テスト成功請負人 完了報告（2025-05-25）

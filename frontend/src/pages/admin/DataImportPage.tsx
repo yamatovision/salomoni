@@ -62,21 +62,21 @@ import type {
   ImportSettings,
   FieldMapping,
   CalendarSyncStatus,
+  ImportMapping,
+  ImportFile,
+  CalendarIntegration,
 } from '../../types';
 import { ImportMethod } from '../../types';
-import {
-  getImportHistory,
-  getImportSettings,
-  // updateImportSettings,
-  getFieldMappings,
-  // updateFieldMappings,
-  getCalendarSyncStatus,
-  connectCalendar,
-  uploadCSVFile,
-  executeImport,
-  // syncCalendar,
-} from '../../services/mock/handlers/import';
-import type { CSVPreviewData, FileUploadInfo } from '../../services/mock/data/mockImportData';
+import { importService } from '../../services';
+
+// 一時的な型定義（モックから移行中）
+type CSVPreviewData = {
+  headers: string[];
+  rows: string[][];
+  totalRows: number;
+};
+
+type FileUploadInfo = ImportFile;
 
 // タブの値の型定義
 type TabValue = 'import' | 'connect' | 'history';
@@ -100,7 +100,7 @@ const DataImportPage: React.FC = () => {
   const [importHistories, setImportHistories] = useState<ImportHistory[]>([]);
   const [importSettings, setImportSettings] = useState<ImportSettings | null>(null);
   const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>([]);
-  const [calendarStatuses, setCalendarStatuses] = useState<CalendarSyncStatus[]>([]);
+  const [calendarStatus, setCalendarStatus] = useState<CalendarSyncStatus | null>(null);
   // const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileInfo, setFileInfo] = useState<FileUploadInfo | null>(null);
   const [csvPreview, setCsvPreview] = useState<CSVPreviewData | null>(null);
@@ -113,30 +113,51 @@ const DataImportPage: React.FC = () => {
   // 初期データの読み込み
   useEffect(() => {
     loadInitialData();
-  }, []);
+  }, [historyPage]);
 
   const loadInitialData = async () => {
     setLoading(true);
     try {
-      const [histories, settings, mappings, statuses] = await Promise.all([
-        getImportHistory(),
-        getImportSettings(),
-        getFieldMappings(),
-        getCalendarSyncStatus(),
-      ]);
+      // インポート履歴を取得
+      const historyResponse = await importService.getHistory({ page: historyPage, limit: 10 });
+      setImportHistories(historyResponse.history);
 
-      if (histories.success && histories.data) {
-        setImportHistories(histories.data);
-      }
-      if (settings.success && settings.data) {
-        setImportSettings(settings.data);
-      }
-      if (mappings.success && mappings.data) {
-        setFieldMappings(mappings.data);
-      }
-      if (statuses.success && statuses.data) {
-        setCalendarStatuses(statuses.data);
-      }
+      // デフォルト設定を適用（モックから移行中）
+      const defaultSettings: ImportSettings = {
+        method: ImportMethod.CSV,
+        defaultMethod: ImportMethod.CSV,
+        autoMapFields: true,
+        updateExisting: false,
+        skipDuplicates: true,
+        validateData: true,
+        matchingRules: {
+          byName: true,
+          byPhone: true,
+          byEmail: false,
+        },
+      };
+      setImportSettings(defaultSettings);
+
+      // デフォルトマッピングを適用
+      const defaultMappings: FieldMapping[] = [
+        { sourceField: '氏名', targetField: 'name', isRequired: true, isEnabled: true, priority: 'standard' as const },
+        { sourceField: '生年月日', targetField: 'birthDate', isRequired: true, isEnabled: true, priority: 'standard' as const },
+        { sourceField: 'メール', targetField: 'email', isRequired: false, isEnabled: true, priority: 'optional' as const },
+        { sourceField: '電話番号', targetField: 'phone', isRequired: false, isEnabled: true, priority: 'optional' as const },
+      ];
+      setFieldMappings(defaultMappings);
+
+      // カレンダーステータスのデフォルト
+      const defaultStatus: CalendarSyncStatus = {
+        provider: 'google',
+        isConnected: false,
+        lastSyncAt: undefined,
+        nextSync: undefined,
+        autoSync: false,
+        syncFrequency: 'daily',
+        connected: false,
+      };
+      setCalendarStatus(defaultStatus);
     } catch (error) {
       console.error('Failed to load import data:', error);
     } finally {
@@ -169,15 +190,22 @@ const DataImportPage: React.FC = () => {
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // setSelectedFile(file);
       setLoading(true);
       try {
-        const response = await uploadCSVFile(file);
-        if (response.success && response.data) {
-          setFileInfo(response.data.fileInfo);
-          setCsvPreview(response.data.preview);
-          handleNextStep();
-        }
+        const importFile = await importService.uploadFile(file);
+        setFileInfo(importFile);
+        
+        // CSVプレビューの生成（仮実装）
+        const preview: CSVPreviewData = {
+          headers: ['氏名', '生年月日', 'メール', '電話番号'],
+          rows: [
+            ['山田花子', '1990/1/15', 'hanako@example.com', '090-1234-5678'],
+            ['佐藤太郎', '1985/5/20', 'taro@example.com', '080-2345-6789'],
+          ],
+          totalRows: importFile.recordCount || 0,
+        };
+        setCsvPreview(preview);
+        handleNextStep();
       } catch (error) {
         console.error('Failed to upload file:', error);
       } finally {
@@ -198,7 +226,7 @@ const DataImportPage: React.FC = () => {
 
   // インポート実行ハンドラー
   const handleExecuteImport = async () => {
-    if (!importSettings) return;
+    if (!importSettings || !fileInfo) return;
 
     setLoading(true);
     setImportProgress(0);
@@ -215,18 +243,28 @@ const DataImportPage: React.FC = () => {
     }, 200);
 
     try {
-      const response = await executeImport('csv', importSettings);
-      if (response.success) {
-        clearInterval(progressInterval);
-        setImportProgress(100);
-        setShowSuccessDialog(true);
-        
-        // 履歴を再読み込み
-        const histories = await getImportHistory();
-        if (histories.success && histories.data) {
-          setImportHistories(histories.data);
-        }
-      }
+      // フィールドマッピングをImportMapping形式に変換
+      const mapping: ImportMapping = {
+        id: '',
+        organizationId: '',
+        name: 'temp_mapping',
+        mapping: fieldMappings.filter(fm => fm.isEnabled !== false),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      await importService.executeImport(fileInfo.id, mapping, {
+        updateExisting: importOption === 'update_and_create' || importOption === 'update_only',
+        dryRun: false,
+      });
+
+      clearInterval(progressInterval);
+      setImportProgress(100);
+      setShowSuccessDialog(true);
+      
+      // 履歴を再読み込み
+      const historyResponse = await importService.getHistory({ page: historyPage, limit: 10 });
+      setImportHistories(historyResponse.history);
     } catch (error) {
       console.error('Failed to execute import:', error);
       clearInterval(progressInterval);
@@ -239,14 +277,27 @@ const DataImportPage: React.FC = () => {
   const handleConnectCalendar = async (provider: 'google' | 'icloud' | 'outlook') => {
     setLoading(true);
     try {
-      const response = await connectCalendar(provider);
-      if (response.success) {
-        // カレンダー状態を再読み込み
-        const statuses = await getCalendarSyncStatus();
-        if (statuses.success && statuses.data) {
-          setCalendarStatuses(statuses.data);
-        }
-      }
+      const integration: CalendarIntegration = {
+        provider,
+        connected: true,
+        accessToken: 'mock-token', // 実際の実装では認証フローから取得
+        refreshToken: 'mock-refresh-token',
+        syncFrequency: syncInterval as 'hourly' | 'daily' | 'weekly',
+        autoSync: true,
+      };
+      
+      await importService.connectCalendar(integration);
+      
+      // カレンダー接続状態を更新
+      setCalendarStatus({
+        provider,
+        connected: true,
+        isConnected: true,
+        lastSyncAt: new Date(),
+        nextSync: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        autoSync: true,
+        syncFrequency: syncInterval as 'hourly' | 'daily' | 'weekly',
+      });
     } catch (error) {
       console.error('Failed to connect calendar:', error);
     } finally {
@@ -459,7 +510,7 @@ const DataImportPage: React.FC = () => {
                         {fileInfo.fileName}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {fileInfo.fileSize}・{fileInfo.recordCount}件のレコード・最終更新: {fileInfo.lastModified.toLocaleDateString()}
+                        {fileInfo.fileSize}・{fileInfo.recordCount}件のレコード・アップロード: {fileInfo.uploadedAt.toLocaleDateString()}
                       </Typography>
                     </Box>
                   </Box>
@@ -764,8 +815,8 @@ const DataImportPage: React.FC = () => {
             </Box>
 
             <Grid container spacing={3}>
-              {calendarStatuses.map((status) => (
-                <Grid size={{ xs: 12, md: 6 }} key={status.provider}>
+              {calendarStatus && (
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Card variant="outlined">
                     <CardContent>
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -781,19 +832,19 @@ const DataImportPage: React.FC = () => {
                             mr: 2,
                           }}
                         >
-                          {status.provider === 'google' ? (
+                          {calendarStatus.provider === 'google' ? (
                             <CalendarToday sx={{ color: theme.palette.primary.main }} />
                           ) : (
                             <EventNote sx={{ color: theme.palette.primary.main }} />
                           )}
                         </Box>
                         <Typography variant="h6">
-                          {status.provider === 'google' ? 'Googleカレンダー' : 'iCloudカレンダー'}
+                          {calendarStatus.provider === 'google' ? 'Googleカレンダー' : 'iCloudカレンダー'}
                         </Typography>
                       </Box>
 
                       <Typography variant="body2" color="text.secondary" paragraph>
-                        {status.provider === 'google'
+                        {calendarStatus.provider === 'google'
                           ? 'Googleカレンダーからクライアントの予約情報をSalomoniに同期します。ホットペッパーなど外部予約システムもカレンダーに連携すれば一元管理できます。'
                           : 'Apple製品でご利用のiCloudカレンダーと予約情報を同期します。'}
                       </Typography>
@@ -802,7 +853,7 @@ const DataImportPage: React.FC = () => {
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <CheckCircle sx={{ fontSize: 16, color: theme.palette.success.main, mr: 1 }} />
                           <Typography variant="body2">
-                            {status.provider === 'google'
+                            {calendarStatus.provider === 'google'
                               ? '予約情報の取得（日時、クライアント名）'
                               : 'iCloudカレンダーからの予約情報取得'}
                           </Typography>
@@ -814,7 +865,7 @@ const DataImportPage: React.FC = () => {
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <CheckCircle sx={{ fontSize: 16, color: theme.palette.success.main, mr: 1 }} />
                           <Typography variant="body2">
-                            {status.provider === 'google'
+                            {calendarStatus.provider === 'google'
                               ? '予約変更の自動反映'
                               : 'カレンダーイベントの詳細情報取得'}
                           </Typography>
@@ -824,25 +875,25 @@ const DataImportPage: React.FC = () => {
                       <Button
                         variant="contained"
                         fullWidth
-                        startIcon={status.status === 'connected' ? <Sync /> : <Link />}
-                        onClick={() => handleConnectCalendar(status.provider)}
+                        startIcon={calendarStatus.isConnected ? <Sync /> : <Link />}
+                        onClick={() => handleConnectCalendar(calendarStatus.provider)}
                         disabled={loading}
                       >
-                        {status.status === 'connected' ? '再連携する' : '連携する'}
+                        {calendarStatus.isConnected ? '再連携する' : '連携する'}
                       </Button>
 
                       <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
                         <Chip
-                          icon={status.status === 'connected' ? <Link /> : <LinkOff />}
-                          label={status.status === 'connected' ? '連携済み' : '未連携'}
+                          icon={calendarStatus.isConnected ? <Link /> : <LinkOff />}
+                          label={calendarStatus.isConnected ? '連携済み' : '未連携'}
                           size="small"
-                          color={status.status === 'connected' ? 'success' : 'default'}
+                          color={calendarStatus.isConnected ? 'success' : 'default'}
                         />
                       </Box>
                     </CardContent>
                   </Card>
                 </Grid>
-              ))}
+              )}
             </Grid>
 
             {/* カレンダー連携の説明 */}

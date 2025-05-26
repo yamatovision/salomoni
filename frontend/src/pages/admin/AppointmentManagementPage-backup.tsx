@@ -530,13 +530,13 @@ const AppointmentManagementPage: React.FC = () => {
                 <Box display="flex" justifyContent="space-between">
                   <Typography variant="body2">クライアントマッチ成功:</Typography>
                   <Typography variant="body2" fontWeight={500} color="success.main">
-                    {mockCalendarSyncStatus.successfulClientMatches} ({Math.round(mockCalendarSyncStatus.successfulClientMatches / mockCalendarSyncStatus.totalAppointments * 100)}%)
+                    {mockCalendarSyncStatus.successfulClientMatches || 0} ({Math.round((mockCalendarSyncStatus.successfulClientMatches || 0) / (mockCalendarSyncStatus.totalAppointments || 1) * 100)}%)
                   </Typography>
                 </Box>
                 <Box display="flex" justifyContent="space-between">
                   <Typography variant="body2">スタイリストマッチ成功:</Typography>
                   <Typography variant="body2" fontWeight={500} color="success.main">
-                    {mockCalendarSyncStatus.successfulStylistMatches} ({Math.round(mockCalendarSyncStatus.successfulStylistMatches / mockCalendarSyncStatus.totalAppointments * 100)}%)
+                    {mockCalendarSyncStatus.successfulStylistMatches || 0} ({Math.round((mockCalendarSyncStatus.successfulStylistMatches || 0) / (mockCalendarSyncStatus.totalAppointments || 1) * 100)}%)
                   </Typography>
                 </Box>
                 <Box display="flex" justifyContent="space-between">

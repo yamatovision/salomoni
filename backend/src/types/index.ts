@@ -1382,15 +1382,22 @@ export interface CalendarSyncSettings {
   enableMachineLearning: boolean;
 }
 
-// カレンダー同期状態
+// カレンダー同期ステータス
 export interface CalendarSyncStatus {
   provider: 'google' | 'icloud' | 'outlook';
-  lastSyncTime: Date;
-  status: 'connected' | 'disconnected' | 'error';
-  totalAppointments: number;
-  successfulClientMatches: number;
-  successfulStylistMatches: number;
-  pendingMatches: number;
+  connected: boolean;
+  isConnected?: boolean; // connectedのエイリアス
+  lastSyncAt?: Date;
+  lastSyncTime?: Date; // lastSyncAtのエイリアス
+  syncError?: string;
+  nextSync?: Date;
+  autoSync?: boolean;
+  syncFrequency?: 'hourly' | 'daily' | 'weekly';
+  status?: 'connected' | 'disconnected' | 'error';
+  pendingMatches?: number;
+  totalAppointments?: number;
+  successfulClientMatches?: number;
+  successfulStylistMatches?: number;
 }
 
 // 予約割り当て推奨
@@ -1750,8 +1757,13 @@ export enum ImportStatus {
 // インポート設定
 export interface ImportSettings {
   method: ImportMethod;
+  defaultMethod?: ImportMethod;
   apiKey?: string;
   autoCreateClients?: boolean;
+  autoMapFields?: boolean;
+  updateExisting?: boolean;
+  skipDuplicates?: boolean;
+  validateData?: boolean;
   matchingRules: {
     byName: boolean;
     byPhone: boolean;
@@ -1781,6 +1793,7 @@ export interface FieldMapping {
   sourceField: string;
   targetField: string;
   isEnabled: boolean;
+  isRequired?: boolean;
   priority: 'standard' | 'recommended' | 'optional';
 }
 
@@ -1837,6 +1850,56 @@ export interface ImportExecuteResponse {
   importErrors?: string[];
 }
 
+// インポートマッピング
+export interface ImportMapping {
+  id: ID;
+  organizationId: ID;
+  name: string;
+  mapping: FieldMapping[];
+  fields?: Record<string, string>;
+  isDefault?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// シンプルなフィールドマッピング
+export interface SimpleImportMapping {
+  fields: Record<string, string>;
+}
+
+// インポートファイル
+export interface ImportFile {
+  id: string;
+  fileName: string;
+  fileSize: number;
+  recordCount: number;
+  totalRows?: number;
+  headers: string[];
+  uploadedAt: Date;
+  lastModified?: Date;
+}
+
+// インポート結果
+export interface ImportResult {
+  success: boolean;
+  totalRecords: number;
+  successCount: number;
+  failureCount: number;
+  errors?: string[];
+}
+
+// カレンダー統合
+export interface CalendarIntegration {
+  provider: 'google' | 'icloud' | 'outlook';
+  connected: boolean;
+  calendarId?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  expiresAt?: Date;
+  syncFrequency?: number | 'hourly' | 'daily' | 'weekly';
+  autoSync?: boolean;
+}
+
 // インポート履歴フィルター
 export interface ImportHistoryFilter {
   method?: ImportMethod;
@@ -1850,6 +1913,24 @@ export interface CalendarConnectionRequest {
   provider: 'google' | 'icloud' | 'outlook';
   authCode: string;
   syncFrequency: number; // 分単位
+}
+
+// カレンダー同期ステータス
+export interface CalendarSyncStatus {
+  provider: 'google' | 'icloud' | 'outlook';
+  connected: boolean;
+  isConnected?: boolean; // connectedのエイリアス
+  lastSyncAt?: Date;
+  lastSyncTime?: Date; // lastSyncAtのエイリアス
+  syncError?: string;
+  nextSync?: Date;
+  autoSync?: boolean;
+  syncFrequency?: 'hourly' | 'daily' | 'weekly';
+  status?: 'connected' | 'disconnected' | 'error';
+  pendingMatches?: number;
+  totalAppointments?: number;
+  successfulClientMatches?: number;
+  successfulStylistMatches?: number;
 }
 
 // カレンダー同期設定

@@ -149,19 +149,13 @@ export const mockFieldMappings: FieldMapping[] = [
 export const mockCalendarSyncStatuses: CalendarSyncStatus[] = [
   {
     provider: 'google',
-    lastSyncTime: new Date('2025-04-26T14:30:00'),
-    status: 'disconnected',
-    totalAppointments: 0,
-    successfulClientMatches: 0,
-    successfulStylistMatches: 0,
-    pendingMatches: 0,
+    connected: false,
+    lastSyncAt: new Date('2025-04-26T14:30:00'),
   },
   {
     provider: 'icloud',
-    lastSyncTime: new Date('2025-04-26T14:30:00'),
-    status: 'disconnected',
-    totalAppointments: 0,
-    successfulClientMatches: 0,
+    connected: false,
+    lastSyncAt: new Date('2025-04-26T14:30:00'),
     successfulStylistMatches: 0,
     pendingMatches: 0,
   },

@@ -10,6 +10,7 @@ import { AICharacterService } from './api/aiCharacter';
 import { AppointmentService } from './api/appointments';
 import { FortuneService } from './api/fortune';
 import { BillingService } from './api/billing';
+import { importService } from './api/import';
 import { MockAuthService } from './mock/handlers/auth';
 import { MockUserService } from './mock/handlers/users';
 import { MockStylistService } from './mock/handlers/stylistService';
@@ -48,6 +49,9 @@ export const organizationService = new OrganizationService();
 
 // サポート関連サービス
 export const supportService = USE_MOCK ? supportMock : supportAPI;
+
+// インポートサービス（実APIのみ）
+export { importService };
 
 // モック使用状態のエクスポート
 export const isMockMode = USE_MOCK;

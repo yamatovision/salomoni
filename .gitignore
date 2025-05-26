@@ -52,4 +52,4 @@ firebase-debug.log
 
 # その他
 *.tmp
-*.temp
+*.tempbackend/uploads/imports/*.csv

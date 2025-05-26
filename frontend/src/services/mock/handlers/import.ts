@@ -108,12 +108,8 @@ export const connectCalendar = async (
   
   const updatedStatus: CalendarSyncStatus = {
     provider,
-    lastSyncTime: new Date(),
-    status: 'connected',
-    totalAppointments: 0,
-    successfulClientMatches: 0,
-    successfulStylistMatches: 0,
-    pendingMatches: 0,
+    connected: true,
+    lastSyncAt: new Date(),
   };
   
   return {
@@ -178,7 +174,9 @@ export const syncCalendar = async (
   
   const syncedStatus: CalendarSyncStatus = {
     provider,
+    connected: true,
     lastSyncTime: new Date(),
+    lastSyncAt: new Date(),
     status: 'connected',
     totalAppointments: 15,
     successfulClientMatches: 12,

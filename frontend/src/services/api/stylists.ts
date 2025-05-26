@@ -34,8 +34,15 @@ export class StylistService {
   }
 
   // スタイリストレポート取得
-  async getStylistReport(stylistId: string): Promise<ApiResponse<StylistReport>> {
-    const response = await apiClient.get(`${API_PATHS.ADMIN.STYLISTS}/${stylistId}/report`);
+  async getStylistReport(stylistId: string, startDate?: string, endDate?: string): Promise<ApiResponse<StylistReport>> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    
+    const queryString = params.toString();
+    const url = `/api/admin/stylists/${stylistId}/report${queryString ? `?${queryString}` : ''}`;
+    
+    const response = await apiClient.get(url);
     return response.data;
   }
 

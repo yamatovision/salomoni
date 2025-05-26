@@ -15,7 +15,7 @@ export const rateLimiter = rateLimit({
     return userId ? `${req.ip}-${userId}` : req.ip || 'unknown';
   },
   handler: (_req, _res, next) => {
-    next(new AppError(429, 'Too many requests', 'RATE_LIMIT_EXCEEDED'));
+    next(new AppError('Too many requests', 429, 'RATE_LIMIT_EXCEEDED'));
   },
 });
 
@@ -33,8 +33,6 @@ export const authRateLimiter = rateLimit({
     return email || req.ip || 'unknown';
   },
   handler: (_req, _res, next) => {
-    next(new AppError(429, 'Too many failed attempts', 'AUTH_RATE_LIMIT_EXCEEDED', {
-      retryAfter: '15 minutes',
-    }));
+    next(new AppError('Too many failed attempts', 429, 'AUTH_RATE_LIMIT_EXCEEDED'));
   },
 });

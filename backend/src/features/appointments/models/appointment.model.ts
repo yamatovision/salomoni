@@ -61,6 +61,10 @@ const appointmentSchema = new Schema<IAppointment>(
     canceledAt: {
       type: Date,
     },
+    amount: {
+      type: Number,
+      min: 0,
+    },
   },
   {
     timestamps: true,

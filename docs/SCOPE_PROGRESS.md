@@ -155,11 +155,11 @@
 | **9.2** | `/api/admin/import/execute` | POST | インポート実行 | 必要 | A-005: データインポート | [x] | [x] | [x] |
 | **9.3** | `/api/admin/import/history` | GET | インポート履歴取得 | 必要 | A-005: データインポート | [x] | [x] | [x] |
 | **9.4** | `/api/admin/calendar/connect` | POST | カレンダー連携設定 | 必要 | A-005: データインポート | [x] | [x] | [x] |
-| **10.1** | `/api/admin/dashboard` | GET | ダッシュボードデータ取得 | 必要 | A-001: 管理者ダッシュボード | [x] | [x] | [ ] |
-| **10.2** | `/api/admin/stylists/:id/report` | GET | スタイリストレポート生成 | 必要 | A-003: スタイリスト管理 | [ ] | [ ] | [ ] |
-| **11.1** | `/api/admin/support/tickets` | POST | サポートチケット作成 | 必要 | A-006, S-003 | [ ] | [ ] | [ ] |
-| **11.2** | `/api/admin/support/tickets` | GET | チケット一覧取得 | 必要 | A-006, S-003 | [ ] | [ ] | [ ] |
-| **11.3** | `/api/admin/support/tickets/:id/reply` | POST | チケット返信 | 必要 | A-006, S-003 | [ ] | [ ] | [ ] |
+| **10.1** | `/api/admin/dashboard` | GET | ダッシュボードデータ取得 | 必要 | A-001: 管理者ダッシュボード | [x] | [x] | [x] |
+| **10.2** | `/api/admin/stylists/:id/report` | GET | スタイリストレポート生成 | 必要 | A-003: スタイリスト管理 | [x] | [x] | [x] |
+| **11.1** | `/api/admin/support/tickets` | POST | サポートチケット作成 | 必要 | A-006, S-003 | [x] | [x] | [ ] |
+| **11.2** | `/api/admin/support/tickets` | GET | チケット一覧取得 | 必要 | A-006, S-003 | [x] | [x] | [ ] |
+| **11.3** | `/api/admin/support/tickets/:id/reply` | POST | チケット返信 | 必要 | A-006, S-003 | [x] | [x] | [ ] |
 | **11.4** | `/api/billing/webhook` | POST | 決済Webhook受信 | 不要 | システム内部処理 | [ ] | [ ] | [ ] |
 
 このタスクリストは、バックエンド実装、テスト通過、フロントエンド実装の進捗を追跡するために使用します。
@@ -224,19 +224,40 @@ VITE_API_BASE_URL=http://localhost:3001  # APIベースURL
 
 ### 開発サーバー起動
 ```bash
+# バックエンドサーバー起動
+cd backend
+npm install
+npm run dev
+# http://localhost:3001 でAPIサーバーが起動
+
+# フロントエンドサーバー起動（別ターミナルで）
 cd frontend
 npm install
 npm run dev
 # http://localhost:5173 でアクセス
 ```
 
-### モックユーザー情報
-| メールアドレス | パスワード | ロール | 説明 | ログイン後の遷移先 |
-|--------------|-----------|--------|------|-------------------|
-| superadmin@salomoni.jp | superadmin123 | SUPER_ADMIN | システム管理者 | /superadmin/organizations |
-| owner@salon.com | owner123 | OWNER | サロンオーナー | /admin/dashboard |
-| admin@salon.com | admin123 | ADMIN | 管理者 | /admin/dashboard |
-| stylist1@salon.com | stylist123 | USER | スタイリスト | /stylist/dashboard |
+### モックユーザー情報（本番MongoDB対応済み）
+| メールアドレス | パスワード | ロール | 説明 | ログイン後の遷移先 | 本番DB |
+|--------------|-----------|--------|------|-------------------|---------|
+| superadmin@salomoni.jp | superadmin123 | SUPER_ADMIN | システム管理者 | /superadmin/organizations | ✅ |
+| owner@salon.com | owner123 | OWNER | サロンオーナー | /admin/dashboard | ✅ |
+| admin@salon.com | admin123 | ADMIN | 管理者 | /admin/dashboard | ✅ |
+| stylist1@salon.com | stylist123 | USER | スタイリスト | /stylist/dashboard | ✅ |
+
+**注意**: これらのユーザーは本番MongoDBに登録済みです。`backend/scripts/seed-mock-users.ts`で作成されました。
+- 組織名: Salomoni Beauty Salon
+- 組織ID: 6833f92f3ef6c8c9f393a324（実行時により異なる）
+
+### 実際のバックエンドAPIでのテスト
+```bash
+# モックユーザーを本番MongoDBに作成
+cd backend
+npx ts-node scripts/seed-mock-users.ts
+
+# APIログインテストを実行
+npx ts-node scripts/test-login-api.ts
+```
 
 ### 認証フロー
 1. ログイン成功後、`/`へ遷移
@@ -269,4 +290,59 @@ npm run dev
 | A-006 | サポート管理 | `/admin/support` | 要管理者権限 | ✅実装済み |
 | A-007 | 請求・支払い管理 | `/admin/billing` | 要管理者権限 | ✅実装済み |
 | S-001 | 組織管理画面 | `/superadmin/organizations` | 要SuperAdmin権限 | ✅実装済み |
+| S-002 | 課金・プラン管理画面 | `/superadmin/plans` | 要SuperAdmin権限 | ✅実装済み |
+| S-003 | サポートチケット管理画面 | `/superadmin/support` | 要SuperAdmin権限 | ✅実装済み |
+
+## 3. 直近の引き継ぎ
+
+### ★9統合テスト成功請負人からの完了報告（2025-05-26更新）
+
+**最新テスト完了項目**
+- サポートチケット機能API（/api/admin/support/* および /api/superadmin/support/*）- 21個のテストケースすべて成功
+- 実行時間: 約28秒
+- 各エンドポイントの統合テスト100%成功
+
+**サポートチケット機能テスト成功内容**
+1. チケット作成機能（POST /api/admin/support/tickets）
+   - ユーザーが新規チケットを作成できる
+   - 必須フィールドが不足している場合はエラーを返す
+2. チケット一覧取得（GET /api/admin/support/tickets）
+   - 通常ユーザーは自分のチケットのみ取得できる
+   - 管理者は組織内の全チケットを取得できる
+   - スーパー管理者は全組織のチケットを取得できる
+   - フィルタリング機能が正しく動作する
+3. チケット詳細取得（GET /api/admin/support/tickets/:ticketId）
+   - チケット作成者は自分のチケット詳細を取得できる
+   - 他のユーザーは他人のチケットにアクセスできない
+4. チケットへの返信（POST /api/admin/support/tickets/:ticketId/reply）
+   - チケット作成者が返信を追加できる
+   - 管理者が内部メッセージを追加できる
+5. ステータス更新（PATCH /api/admin/support/tickets/:ticketId/status）
+   - 管理者がチケットのステータスを更新できる
+   - 通常ユーザーはステータスを更新できない
+   - 無効なステータスは拒否される
+6. 統計情報取得（GET /api/admin/support/stats）
+   - 管理者が組織の統計情報を取得できる
+   - スーパー管理者が全組織の統計情報を取得できる
+   - 通常ユーザーは統計情報にアクセスできない
+7. エラー処理と境界値テスト
+   - 存在しないチケットIDでエラーを返す
+   - 無効なチケットIDフォーマットでエラーを返す
+   - 長すぎるタイトルや説明でエラーを返す
+8. ページネーションテスト
+   - ページネーションが正しく動作する
+   - ソート機能が正しく動作する
+
+**修正内容**
+- 権限チェックロジックの改善（populateされたオブジェクトへの対応）
+- 統計情報取得時のMongoDBのObjectId型変換対応
+- 返信APIのレスポンスコード修正（201→200）
+- テストファイルのエンドポイントパス修正（API_PATHSの正しい使用）
+
+**注意事項**
+- Mongooseの重複インデックス警告が表示されるが、パフォーマンスには影響なし
+- 四柱推命計算時の警告は機能に影響なし
+
+**次のステップ**
+- 決済Webhook（11.4）の実装が残っているが、これは別のタスクとして扱う
 

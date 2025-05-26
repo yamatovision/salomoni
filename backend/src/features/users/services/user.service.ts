@@ -30,7 +30,7 @@ export class UserService {
   async getUser(id: string): Promise<UserProfile> {
     const user = await this.userRepository.findById(id);
     if (!user) {
-      throw new AppError(404, 'ユーザーが見つかりません', 'USER_NOT_FOUND');
+      throw new AppError('ユーザーが見つかりません', 404, 'USER_NOT_FOUND');
     }
     return user;
   }
@@ -41,7 +41,7 @@ export class UserService {
   async getCurrentUser(userId: string): Promise<UserProfile> {
     const user = await this.userRepository.findById(userId);
     if (!user) {
-      throw new AppError(404, 'ユーザーが見つかりません', 'USER_NOT_FOUND');
+      throw new AppError('ユーザーが見つかりません', 404, 'USER_NOT_FOUND');
     }
     return user;
   }
@@ -96,26 +96,26 @@ export class UserService {
   ): Promise<UserProfile> {
     const user = await this.userRepository.findById(id);
     if (!user) {
-      throw new AppError(404, 'ユーザーが見つかりません', 'USER_NOT_FOUND');
+      throw new AppError('ユーザーが見つかりません', 404, 'USER_NOT_FOUND');
     }
 
     // 自分自身または管理者権限があるかチェック
     if (id !== currentUserId) {
       const currentUser = await this.userRepository.findById(currentUserId);
       if (!currentUser || !this.hasManagementRole(currentUser)) {
-        throw new AppError(403, '権限がありません', 'FORBIDDEN');
+        throw new AppError('権限がありません', 403, 'FORBIDDEN');
       }
 
       // 組織境界チェック（SuperAdmin以外）
       if (currentUser.role !== UserRole.SUPER_ADMIN && 
           currentUser.organizationId !== user.organizationId) {
-        throw new AppError(403, '他組織のユーザーは編集できません', 'CROSS_ORG_ACCESS');
+        throw new AppError('他組織のユーザーは編集できません', 403, 'CROSS_ORG_ACCESS');
       }
     }
 
     const updatedUser = await this.userRepository.update(id, data);
     if (!updatedUser) {
-      throw new AppError(500, 'ユーザーの更新に失敗しました', 'UPDATE_FAILED');
+      throw new AppError('ユーザーの更新に失敗しました', 500, 'UPDATE_FAILED');
     }
 
     logger.info('User updated', { userId: id, updatedBy: currentUserId });
@@ -133,20 +133,20 @@ export class UserService {
     // メールアドレスの重複チェック
     const existingUser = await this.userRepository.findByEmail(request.email);
     if (existingUser) {
-      throw new AppError(409, '既に登録されているメールアドレスです', 'DUPLICATE_EMAIL');
+      throw new AppError('既に登録されているメールアドレスです', 409, 'DUPLICATE_EMAIL');
     }
 
     // 組織の存在確認
     const organization = await this.organizationRepository.findById(organizationId);
     if (!organization) {
-      throw new AppError(404, '組織が見つかりません', 'ORG_NOT_FOUND');
+      throw new AppError('組織が見つかりません', 404, 'ORG_NOT_FOUND');
     }
 
     // 組織のユーザー数上限チェック
     const activeUsers = await this.userRepository.countActiveByOrganization(organizationId);
     const maxUsers = organization.settings?.maxUsers || 10;
     if (activeUsers >= maxUsers) {
-      throw new AppError(400, 'ユーザー数の上限に達しています', 'USER_LIMIT_EXCEEDED');
+      throw new AppError('ユーザー数の上限に達しています', 400, 'USER_LIMIT_EXCEEDED');
     }
 
     // 招待トークンを生成
@@ -193,19 +193,19 @@ export class UserService {
   ): Promise<void> {
     const user = await this.userRepository.findById(userId, true);
     if (!user) {
-      throw new AppError(404, 'ユーザーが見つかりません', 'USER_NOT_FOUND');
+      throw new AppError('ユーザーが見つかりません', 404, 'USER_NOT_FOUND');
     }
 
     // UserModelを直接使用してパスワードを検証・更新
     const userDoc = await UserModel.findById(userId).select('+password');
     if (!userDoc) {
-      throw new AppError(404, 'ユーザーが見つかりません', 'USER_NOT_FOUND');
+      throw new AppError('ユーザーが見つかりません', 404, 'USER_NOT_FOUND');
     }
 
     // 現在のパスワードを検証
     const isValid = await userDoc.comparePassword(currentPassword);
     if (!isValid) {
-      throw new AppError(401, '現在のパスワードが正しくありません', 'INVALID_PASSWORD');
+      throw new AppError('現在のパスワードが正しくありません', 401, 'INVALID_PASSWORD');
     }
 
     // 新しいパスワードを設定
@@ -226,29 +226,29 @@ export class UserService {
   ): Promise<UserProfile> {
     const user = await this.userRepository.findById(id);
     if (!user) {
-      throw new AppError(404, 'ユーザーが見つかりません', 'USER_NOT_FOUND');
+      throw new AppError('ユーザーが見つかりません', 404, 'USER_NOT_FOUND');
     }
 
     // 権限チェック
     const currentUser = await this.userRepository.findById(changedBy);
     if (!currentUser || !this.hasManagementRole(currentUser)) {
-      throw new AppError(403, '権限がありません', 'FORBIDDEN');
+      throw new AppError('権限がありません', 403, 'FORBIDDEN');
     }
 
     // 組織境界チェック
     if (currentUser.role !== UserRole.SUPER_ADMIN && 
         currentUser.organizationId !== user.organizationId) {
-      throw new AppError(403, '他組織のユーザーは変更できません', 'CROSS_ORG_ACCESS');
+      throw new AppError('他組織のユーザーは変更できません', 403, 'CROSS_ORG_ACCESS');
     }
 
     // 自分自身を無効化できないようにする
     if (id === changedBy && status !== UserStatus.ACTIVE) {
-      throw new AppError(400, '自分自身を無効化することはできません', 'SELF_DEACTIVATION');
+      throw new AppError('自分自身を無効化することはできません', 400, 'SELF_DEACTIVATION');
     }
 
     const updatedUser = await this.userRepository.changeStatus(id, status);
     if (!updatedUser) {
-      throw new AppError(500, 'ステータス変更に失敗しました', 'STATUS_CHANGE_FAILED');
+      throw new AppError('ステータス変更に失敗しました', 500, 'STATUS_CHANGE_FAILED');
     }
 
     logger.info('User status changed', {
@@ -273,30 +273,30 @@ export class UserService {
     // 単一のroleシステムの場合、配列の最後の要素を使用（上位のロールを優先）
     const newRole = roles[roles.length - 1];
     if (!newRole) {
-      throw new AppError(400, 'ロールを指定してください', 'ROLE_REQUIRED');
+      throw new AppError('ロールを指定してください', 400, 'ROLE_REQUIRED');
     }
     const user = await this.userRepository.findById(id);
     if (!user) {
-      throw new AppError(404, 'ユーザーが見つかりません', 'USER_NOT_FOUND');
+      throw new AppError('ユーザーが見つかりません', 404, 'USER_NOT_FOUND');
     }
 
     // 権限チェック
     const currentUser = await this.userRepository.findById(changedBy);
     if (!currentUser) {
-      throw new AppError(403, '権限がありません', 'FORBIDDEN');
+      throw new AppError('権限がありません', 403, 'FORBIDDEN');
     }
 
     // SuperAdminロールの付与はSuperAdminのみ
     if (newRole === UserRole.SUPER_ADMIN && 
         currentUser.role !== UserRole.SUPER_ADMIN) {
-      throw new AppError(403, 'SuperAdminロールを付与する権限がありません', 'FORBIDDEN');
+      throw new AppError('SuperAdminロールを付与する権限がありません', 403, 'FORBIDDEN');
     }
 
     // Ownerロールの変更制限（SuperAdminも含めて適用）
     if (user.role === UserRole.OWNER && newRole !== UserRole.OWNER) {
       // 組織に他のOwnerがいるか確認
       if (!user.organizationId) {
-        throw new AppError(400, '組織に所属していないユーザーです', 'NO_ORGANIZATION');
+        throw new AppError('組織に所属していないユーザーです', 400, 'NO_ORGANIZATION');
       }
       const orgUsers = await this.userRepository.findAll({
         pagination: { page: 1, limit: 100 },
@@ -308,7 +308,7 @@ export class UserService {
       });
       
       if (orgUsers.users.length <= 1) {
-        throw new AppError(400, '組織には最低1人のOwnerが必要です', 'LAST_OWNER');
+        throw new AppError('組織には最低1人のOwnerが必要です', 400, 'LAST_OWNER');
       }
     }
 
@@ -316,7 +316,7 @@ export class UserService {
     // UserModelを直接使用してロールを更新
     const userDoc = await UserModel.findById(id);
     if (!userDoc) {
-      throw new AppError(404, 'ユーザーが見つかりません', 'USER_NOT_FOUND');
+      throw new AppError('ユーザーが見つかりません', 404, 'USER_NOT_FOUND');
     }
     userDoc.role = newRole;
     const savedUser = await userDoc.save();
@@ -339,25 +339,25 @@ export class UserService {
   async deleteUser(id: string, deletedBy: string): Promise<void> {
     const user = await this.userRepository.findById(id);
     if (!user) {
-      throw new AppError(404, 'ユーザーが見つかりません', 'USER_NOT_FOUND');
+      throw new AppError('ユーザーが見つかりません', 404, 'USER_NOT_FOUND');
     }
 
     // 権限チェック
     const currentUser = await this.userRepository.findById(deletedBy);
     if (!currentUser || !this.hasManagementRole(currentUser)) {
-      throw new AppError(403, '権限がありません', 'FORBIDDEN');
+      throw new AppError('権限がありません', 403, 'FORBIDDEN');
     }
 
     // 組織境界チェック
     if (currentUser.role !== UserRole.SUPER_ADMIN && 
         currentUser.organizationId !== user.organizationId) {
-      throw new AppError(403, '他組織のユーザーは削除できません', 'CROSS_ORG_ACCESS');
+      throw new AppError('他組織のユーザーは削除できません', 403, 'CROSS_ORG_ACCESS');
     }
 
     // Ownerの削除制限
     if (user.role === UserRole.OWNER) {
       if (!user.organizationId) {
-        throw new AppError(400, '組織に所属していないユーザーです', 'NO_ORGANIZATION');
+        throw new AppError('組織に所属していないユーザーです', 400, 'NO_ORGANIZATION');
       }
       const orgUsers = await this.userRepository.findAll({
         pagination: { page: 1, limit: 100 },
@@ -369,13 +369,13 @@ export class UserService {
       });
       
       if (orgUsers.users.length <= 1) {
-        throw new AppError(400, '組織の最後のOwnerは削除できません', 'LAST_OWNER');
+        throw new AppError('組織の最後のOwnerは削除できません', 400, 'LAST_OWNER');
       }
     }
 
     const success = await this.userRepository.delete(id);
     if (!success) {
-      throw new AppError(500, 'ユーザーの削除に失敗しました', 'DELETE_FAILED');
+      throw new AppError('ユーザーの削除に失敗しました', 500, 'DELETE_FAILED');
     }
 
     logger.info('User deleted', { userId: id, deletedBy });

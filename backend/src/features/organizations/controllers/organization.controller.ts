@@ -66,7 +66,7 @@ export class OrganizationController {
     try {
       const { id } = req.params;
       if (!id) {
-        throw new AppError(400, '組織IDが必須です', 'VALIDATION_ERROR');
+        throw new AppError('組織IDが必須です', 400, 'VALIDATION_ERROR');
       }
       const organization = await this.organizationService.getOrganization(id);
 
@@ -93,7 +93,7 @@ export class OrganizationController {
     try {
       const { id } = req.params;
       if (!id) {
-        throw new AppError(400, '組織IDが必須です', 'VALIDATION_ERROR');
+        throw new AppError('組織IDが必須です', 400, 'VALIDATION_ERROR');
       }
       const organization = await this.organizationService.updateOrganization(id, req.body);
 
@@ -120,7 +120,7 @@ export class OrganizationController {
     try {
       const { id } = req.params;
       if (!id) {
-        throw new AppError(400, '組織IDが必須です', 'VALIDATION_ERROR');
+        throw new AppError('組織IDが必須です', 400, 'VALIDATION_ERROR');
       }
       await this.organizationService.deleteOrganization(id);
 
@@ -147,7 +147,7 @@ export class OrganizationController {
     try {
       const { id } = req.params;
       if (!id) {
-        throw new AppError(400, '組織IDが必須です', 'VALIDATION_ERROR');
+        throw new AppError('組織IDが必須です', 400, 'VALIDATION_ERROR');
       }
       const stats = await this.organizationService.getOrganizationStats(id);
 
@@ -176,11 +176,11 @@ export class OrganizationController {
       const { status, reason } = req.body;
 
       if (!status) {
-        throw new AppError(400, 'ステータスは必須です', 'VALIDATION_ERROR');
+        throw new AppError('ステータスは必須です', 400, 'VALIDATION_ERROR');
       }
 
       if (!id) {
-        throw new AppError(400, '組織IDが必須です', 'VALIDATION_ERROR');
+        throw new AppError('組織IDが必須です', 400, 'VALIDATION_ERROR');
       }
 
       const organization = await this.organizationService.changeOrganizationStatus(
@@ -214,11 +214,11 @@ export class OrganizationController {
       const { plan, immediate } = req.body;
 
       if (!plan) {
-        throw new AppError(400, 'プランは必須です', 'VALIDATION_ERROR');
+        throw new AppError('プランは必須です', 400, 'VALIDATION_ERROR');
       }
 
       if (!id) {
-        throw new AppError(400, '組織IDが必須です', 'VALIDATION_ERROR');
+        throw new AppError('組織IDが必須です', 400, 'VALIDATION_ERROR');
       }
 
       const organization = await this.organizationService.changeOrganizationPlan(

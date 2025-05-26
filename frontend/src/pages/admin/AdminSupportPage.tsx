@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -19,6 +19,9 @@ import {
   Avatar,
   IconButton,
   Divider,
+  CircularProgress,
+  Alert,
+  Snackbar,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -27,15 +30,21 @@ import {
   Close as CloseIcon,
 } from '@mui/icons-material';
 import { AdminLayout } from '../../layouts/AdminLayout';
+import { useAuth } from '../../hooks/useAuth';
+import { supportService } from '../../services';
 import type {
   SupportTicket,
   SupportMessage,
+  SupportTicketCreateInput,
+  SupportTicketReplyInput,
+  SupportTicketMessage,
 } from '../../types';
 import {
   TicketStatus,
 } from '../../types';
 
-// モックデータ
+// モックデータは削除
+/*
 const mockTickets: SupportTicket[] = [
   {
     id: '1',
@@ -106,7 +115,10 @@ const mockTickets: SupportTicket[] = [
     updatedAt: new Date('2025-04-21T14:00:00'),
   },
 ];
+*/
 
+// モックメッセージデータも削除
+/*
 const mockMessages: Record<string, SupportMessage[]> = {
   '1': [
     {
@@ -153,6 +165,7 @@ const mockMessages: Record<string, SupportMessage[]> = {
     },
   ],
 };
+*/
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -177,19 +190,51 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const AdminSupportPage: React.FC = () => {
+  const { user } = useAuth();
   const [tabValue, setTabValue] = useState(0);
-  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(mockTickets[0]);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [newTicketOpen, setNewTicketOpen] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [newTicketData, setNewTicketData] = useState({
     title: '',
     description: '',
+    category: 'general',
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [submitting, setSubmitting] = useState(false);
+
+  // チケット一覧の取得
+  const fetchTickets = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await supportService.getSupportTickets();
+      setTickets(response.tickets);
+      
+      // 最初のチケットを選択
+      if (response.tickets.length > 0 && !selectedTicket) {
+        setSelectedTicket(response.tickets[0]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch tickets:', err);
+      setError('チケットの取得に失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTickets();
+  }, []);
 
   // タブ別のチケットをフィルタリング
-  const allTickets = mockTickets;
-  const pendingTickets = mockTickets.filter(t => t.status === TicketStatus.PENDING);
-  const answeredTickets = mockTickets.filter(t => t.status === TicketStatus.ANSWERED);
+  const allTickets = tickets;
+  const pendingTickets = tickets.filter(t => t.status === TicketStatus.PENDING || t.status === TicketStatus.OPEN);
+  const answeredTickets = tickets.filter(t => t.status === TicketStatus.ANSWERED);
 
   const getTicketsByTab = () => {
     switch (tabValue) {
@@ -218,20 +263,82 @@ const AdminSupportPage: React.FC = () => {
 
   const handleNewTicketClose = () => {
     setNewTicketOpen(false);
-    setNewTicketData({ title: '', description: '' });
+    setNewTicketData({ 
+      title: '', 
+      description: '',
+      category: 'general',
+      priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
+    });
   };
 
-  const handleNewTicketSubmit = () => {
-    // 実際にはAPIを呼び出してチケットを作成
-    console.log('新規チケット作成:', newTicketData);
-    handleNewTicketClose();
+  const handleNewTicketSubmit = async () => {
+    if (!user || !newTicketData.title.trim() || !newTicketData.description.trim()) return;
+    
+    setSubmitting(true);
+    try {
+      const ticketData: SupportTicketCreateInput = {
+        title: newTicketData.title.trim(),
+        description: newTicketData.description.trim(),
+        category: newTicketData.category,
+        priority: newTicketData.priority,
+        userId: user.id,
+        organizationId: user.organizationId || '',
+      };
+      
+      await supportService.createSupportTicket(ticketData);
+      
+      setSnackbar({
+        open: true,
+        message: 'チケットを作成しました',
+        severity: 'success'
+      });
+      
+      handleNewTicketClose();
+      fetchTickets();
+    } catch (err) {
+      console.error('Failed to create ticket:', err);
+      setSnackbar({
+        open: true,
+        message: 'チケットの作成に失敗しました',
+        severity: 'error'
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleReplySubmit = () => {
-    if (replyText.trim() && selectedTicket) {
-      // 実際にはAPIを呼び出して返信を送信
-      console.log('返信送信:', { ticketId: selectedTicket.id, message: replyText });
+  const handleReplySubmit = async () => {
+    if (!replyText.trim() || !selectedTicket || !user) return;
+    
+    setSubmitting(true);
+    try {
+      const replyData: SupportTicketReplyInput = {
+        senderId: user.id,
+        message: replyText.trim(),
+        isStaff: false,
+      };
+      
+      await supportService.replySupportTicket(selectedTicket.id, replyData);
+      
+      setSnackbar({
+        open: true,
+        message: '返信を送信しました',
+        severity: 'success'
+      });
+      
       setReplyText('');
+      
+      // チケットを再取得してメッセージを更新
+      fetchTickets();
+    } catch (err) {
+      console.error('Failed to send reply:', err);
+      setSnackbar({
+        open: true,
+        message: '返信の送信に失敗しました',
+        severity: 'error'
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -357,7 +464,7 @@ const AdminSupportPage: React.FC = () => {
 
                 {/* メッセージ一覧 */}
                 <Box sx={{ p: 3 }}>
-                  {mockMessages[selectedTicket.id]?.map((message) => (
+                  {selectedTicket.messages?.map((message) => (
                     <Box key={message.id} sx={{ mb: 3 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

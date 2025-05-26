@@ -67,7 +67,7 @@ export class ImportService {
       
       // 空ファイルチェック
       if (!csvContent || csvContent.trim() === '') {
-        throw new AppError(400, 'CSVファイルにデータが含まれていません');
+        throw new AppError('CSVファイルにデータが含まれていません', 400);
       }
       
       const records = parse(csvContent, {
@@ -77,7 +77,7 @@ export class ImportService {
       });
 
       if (records.length === 0) {
-        throw new AppError(400, 'CSVファイルにデータが含まれていません');
+        throw new AppError('CSVファイルにデータが含まれていません', 400);
       }
 
       // ヘッダーを取得
@@ -146,7 +146,7 @@ export class ImportService {
       // ファイル情報を取得
       const importFile = await this.importRepository.getImportFile(request.fileId);
       if (!importFile || importFile.organizationId !== organizationId) {
-        throw new AppError(404, 'インポートファイルが見つかりません');
+        throw new AppError('インポートファイルが見つかりません', 404);
       }
 
       // インポート履歴を作成

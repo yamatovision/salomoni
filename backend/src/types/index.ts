@@ -228,6 +228,8 @@ export const API_PATHS = {
     SUPPORT_TICKETS: '/api/admin/support/tickets',
     SUPPORT_TICKET_DETAIL: (ticketId: string) => `/api/admin/support/tickets/${ticketId}`,
     SUPPORT_TICKET_REPLY: (ticketId: string) => `/api/admin/support/tickets/${ticketId}/reply`,
+    SUPPORT_TICKET_STATUS: (ticketId: string) => `/api/admin/support/tickets/${ticketId}/status`,
+    SUPPORT_STATS: '/api/admin/support/stats',
     // インポート関連
     IMPORT_UPLOAD: '/api/admin/import/upload',
     IMPORT_EXECUTE: '/api/admin/import/execute',
@@ -257,6 +259,7 @@ export const API_PATHS = {
     SUPPORT_TICKET_DETAIL: (ticketId: string) => `/api/superadmin/support/tickets/${ticketId}`,
     SUPPORT_TICKET_REPLY: (ticketId: string) => `/api/superadmin/support/tickets/${ticketId}/reply`,
     SUPPORT_TICKET_STATUS: (ticketId: string) => `/api/superadmin/support/tickets/${ticketId}/status`,
+    SUPPORT_STATS: '/api/superadmin/support/stats',
   },
 } as const;
 
@@ -1382,23 +1385,7 @@ export interface CalendarSyncSettings {
   enableMachineLearning: boolean;
 }
 
-// カレンダー同期ステータス
-export interface CalendarSyncStatus {
-  provider: 'google' | 'icloud' | 'outlook';
-  connected: boolean;
-  isConnected?: boolean; // connectedのエイリアス
-  lastSyncAt?: Date;
-  lastSyncTime?: Date; // lastSyncAtのエイリアス
-  syncError?: string;
-  nextSync?: Date;
-  autoSync?: boolean;
-  syncFrequency?: 'hourly' | 'daily' | 'weekly';
-  status?: 'connected' | 'disconnected' | 'error';
-  pendingMatches?: number;
-  totalAppointments?: number;
-  successfulClientMatches?: number;
-  successfulStylistMatches?: number;
-}
+// 削除済み - CalendarSyncStatusは下の方で定義されています
 
 // 予約割り当て推奨
 export interface AppointmentAssignmentRecommendation {

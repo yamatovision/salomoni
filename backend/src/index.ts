@@ -12,6 +12,7 @@ import { requestLogger } from './common/middleware/requestLogger';
 import { rateLimiter } from './common/middleware/rateLimiter';
 import authRoutes from './features/auth/routes/auth.routes';
 import userRoutes from './features/users/routes/user.routes';
+import adminStylistRoutes from './features/users/routes/admin-stylist.routes';
 import organizationRoutes from './features/organizations/routes/organization.routes';
 import sajuRoutes from './features/saju/routes/saju.routes';
 import { clientRoutes } from './features/clients/routes/client.routes';
@@ -22,6 +23,7 @@ import { fortuneRoutes } from './features/fortune/routes/fortune.routes';
 import billingRoutes from './features/billing/routes/billing.routes';
 import importRoutes, { calendarRouter } from './features/import/routes/import.routes';
 import dashboardRoutes from './features/dashboard/routes/dashboard.routes';
+import supportRoutes, { superAdminSupportRouter } from './features/support/routes/support.routes';
 import { univapayService } from './features/billing/services/univapay.service';
 import { logger } from './common/utils/logger';
 
@@ -63,6 +65,9 @@ app.use('/api/owner/billing', billingRoutes); // オーナー向け決済管理�
 app.use('/api/admin/import', importRoutes); // データインポート管理ルート
 app.use('/api/admin/calendar', calendarRouter); // カレンダー連携管理ルート
 app.use('/api/admin/dashboard', dashboardRoutes); // ダッシュボード管理ルート
+app.use('/api/admin/stylists', adminStylistRoutes); // 管理者用スタイリスト管理ルート
+app.use('/api/admin/support', supportRoutes); // サポート管理ルート
+app.use('/api/superadmin/support', superAdminSupportRouter); // SuperAdmin用サポート管理ルート
 
 // エラーハンドリング
 app.use(errorHandler);

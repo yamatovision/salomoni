@@ -20,22 +20,22 @@ export const getSupportTickets = async (params?: {
   organizationId?: string;
   userId?: string;
 }): Promise<{ tickets: SupportTicket[]; total: number }> => {
-  const response = await apiClient.get(API_PATHS.SUPPORT.TICKETS, { params });
-  return response.data;
+  const response = await apiClient.get(API_PATHS.ADMIN.SUPPORT_TICKETS, { params });
+  return response.data.data;
 };
 
 // チケット詳細取得
 export const getSupportTicket = async (ticketId: string): Promise<SupportTicket> => {
-  const response = await apiClient.get(API_PATHS.SUPPORT.TICKET_DETAIL(ticketId));
-  return response.data;
+  const response = await apiClient.get(API_PATHS.ADMIN.SUPPORT_TICKET_DETAIL(ticketId));
+  return response.data.data;
 };
 
 // チケット作成
 export const createSupportTicket = async (
   data: SupportTicketCreateInput
 ): Promise<SupportTicket> => {
-  const response = await apiClient.post(API_PATHS.SUPPORT.CREATE, data);
-  return response.data;
+  const response = await apiClient.post(API_PATHS.ADMIN.SUPPORT_TICKETS, data);
+  return response.data.data;
 };
 
 // チケットへの返信
@@ -43,8 +43,8 @@ export const replySupportTicket = async (
   ticketId: string,
   data: SupportTicketReplyInput
 ): Promise<SupportTicketMessage> => {
-  const response = await apiClient.post(API_PATHS.SUPPORT.REPLY(ticketId), data);
-  return response.data;
+  const response = await apiClient.post(API_PATHS.ADMIN.SUPPORT_TICKET_REPLY(ticketId), data);
+  return response.data.data;
 };
 
 // チケット更新
@@ -52,13 +52,13 @@ export const updateSupportTicket = async (
   ticketId: string,
   data: SupportTicketUpdateInput
 ): Promise<SupportTicket> => {
-  const response = await apiClient.patch(API_PATHS.SUPPORT.UPDATE_STATUS(ticketId), data);
-  return response.data;
+  const response = await apiClient.patch(API_PATHS.ADMIN.SUPPORT_TICKET_STATUS(ticketId), data);
+  return response.data.data;
 };
 
 // チケット削除
 export const deleteSupportTicket = async (ticketId: string): Promise<void> => {
-  await apiClient.delete(API_PATHS.SUPPORT.TICKET_DETAIL(ticketId));
+  await apiClient.delete(API_PATHS.ADMIN.SUPPORT_TICKET_DETAIL(ticketId));
 };
 
 // 統計情報取得
@@ -67,6 +67,6 @@ export const getSupportTicketStats = async (params?: {
   startDate?: string;
   endDate?: string;
 }): Promise<SupportTicketStats> => {
-  const response = await apiClient.get(`${API_PATHS.SUPPORT.BASE}/stats`, { params });
-  return response.data;
+  const response = await apiClient.get(API_PATHS.ADMIN.SUPPORT_STATS, { params });
+  return response.data.data;
 };

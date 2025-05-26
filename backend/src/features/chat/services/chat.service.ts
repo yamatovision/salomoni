@@ -39,24 +39,24 @@ export class ChatService {
     try {
       // コンテキストの整合性チェックを先に行う
       if (data.context === 'personal' && !data.userId) {
-        throw new AppError(400, 'personalコンテキストの場合、userIdは必須です', 'INVALID_CONTEXT');
+        throw new AppError('personalコンテキストの場合、userIdは必須です', 400, 'INVALID_CONTEXT');
       }
       if (data.context === 'client_direct' && !data.clientId) {
-        throw new AppError(400, 'client_directコンテキストの場合、clientIdは必須です', 'INVALID_CONTEXT');
+        throw new AppError('client_directコンテキストの場合、clientIdは必須です', 400, 'INVALID_CONTEXT');
       }
 
       // userIdとclientIdの排他チェック
       if (!data.userId && !data.clientId) {
-        throw new AppError(400, 'userIdまたはclientIdのいずれかは必須です', 'MISSING_USER_OR_CLIENT');
+        throw new AppError('userIdまたはclientIdのいずれかは必須です', 400, 'MISSING_USER_OR_CLIENT');
       }
       if (data.userId && data.clientId) {
-        throw new AppError(400, 'userIdとclientIdは同時に設定できません', 'BOTH_USER_AND_CLIENT');
+        throw new AppError('userIdとclientIdは同時に設定できません', 400, 'BOTH_USER_AND_CLIENT');
       }
 
       // AIキャラクターの存在確認
       const aiCharacter = await this.aiCharacterService.getAICharacterById(data.aiCharacterId);
       if (!aiCharacter) {
-        throw new AppError(400, '指定されたAIキャラクターが存在しません', 'AI_CHARACTER_NOT_FOUND');
+        throw new AppError('指定されたAIキャラクターが存在しません', 400, 'AI_CHARACTER_NOT_FOUND');
       }
 
       // アクティブな会話がある場合は終了する
@@ -120,17 +120,17 @@ export class ChatService {
       // 会話の存在確認
       const conversation = await this.conversationRepository.findById(conversationId);
       if (!conversation) {
-        throw new AppError(400, '指定された会話が存在しません', 'CONVERSATION_NOT_FOUND');
+        throw new AppError('指定された会話が存在しません', 400, 'CONVERSATION_NOT_FOUND');
       }
 
       if (conversation.endedAt) {
-        throw new AppError(400, 'この会話は既に終了しています', 'CONVERSATION_ENDED');
+        throw new AppError('この会話は既に終了しています', 400, 'CONVERSATION_ENDED');
       }
 
       // AIキャラクターの取得
       const aiCharacter = await this.aiCharacterService.getAICharacterById(conversation.aiCharacterId);
       if (!aiCharacter) {
-        throw new AppError(400, 'AIキャラクターが見つかりません', 'AI_CHARACTER_NOT_FOUND');
+        throw new AppError('AIキャラクターが見つかりません', 400, 'AI_CHARACTER_NOT_FOUND');
       }
 
       // ユーザーメッセージを保存

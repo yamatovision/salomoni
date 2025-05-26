@@ -11,6 +11,7 @@ import { AppointmentService } from './api/appointments';
 import { FortuneService } from './api/fortune';
 import { BillingService } from './api/billing';
 import { importService } from './api/import';
+import { dashboardService } from './api/dashboard';
 import { MockAuthService } from './mock/handlers/auth';
 import { MockUserService } from './mock/handlers/users';
 import { MockStylistService } from './mock/handlers/stylistService';
@@ -52,6 +53,9 @@ export const supportService = USE_MOCK ? supportMock : supportAPI;
 
 // インポートサービス（実APIのみ）
 export { importService };
+
+// ダッシュボードサービス（実APIのみ）
+export { dashboardService };
 
 // モック使用状態のエクスポート
 export const isMockMode = USE_MOCK;

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { UserService } from '../services/user.service';
+import { StylistReportService } from '../services/stylist-report.service';
 import { AppError } from '../../../common/middleware/errorHandler';
 import type { 
   PaginationParams,
@@ -10,9 +11,11 @@ import type {
 
 export class UserController {
   private userService: UserService;
+  private stylistReportService: StylistReportService;
 
   constructor() {
     this.userService = new UserService();
+    this.stylistReportService = new StylistReportService();
   }
 
   /**
@@ -27,7 +30,7 @@ export class UserController {
     try {
       const userId = req.user?.userId;
       if (!userId) {
-        throw new AppError(401, '認証が必要です', 'AUTH001');
+        throw new AppError('認証が必要です', 401, 'AUTH001');
       }
 
       const user = await this.userService.getCurrentUser(userId);
@@ -104,7 +107,7 @@ export class UserController {
       // 組織境界チェック
       if (!req.user?.roles.includes('superadmin' as UserRole) && 
           user.organizationId !== req.user?.organizationId) {
-        throw new AppError(403, '他組織のユーザー情報は参照できません', 'CROSS_ORG_ACCESS');
+        throw new AppError('他組織のユーザー情報は参照できません', 403, 'CROSS_ORG_ACCESS');
       }
 
       const response: ApiResponse<typeof user> = {
@@ -132,7 +135,7 @@ export class UserController {
       const currentUserId = req.user?.userId;
       
       if (!currentUserId) {
-        throw new AppError(401, '認証が必要です', 'AUTH001');
+        throw new AppError('認証が必要です', 401, 'AUTH001');
       }
 
       const user = await this.userService.updateUser(id || '', req.body, currentUserId);
@@ -162,7 +165,7 @@ export class UserController {
       const deletedBy = req.user?.userId;
       
       if (!deletedBy) {
-        throw new AppError(401, '認証が必要です', 'AUTH001');
+        throw new AppError('認証が必要です', 401, 'AUTH001');
       }
 
       await this.userService.deleteUser(id || '', deletedBy);
@@ -192,7 +195,7 @@ export class UserController {
       const organizationId = req.user?.organizationId;
       
       if (!invitedBy || !organizationId) {
-        throw new AppError(401, '認証が必要です', 'AUTH001');
+        throw new AppError('認証が必要です', 401, 'AUTH001');
       }
 
       const result = await this.userService.inviteUser(
@@ -224,7 +227,7 @@ export class UserController {
     try {
       const userId = req.user?.userId;
       if (!userId) {
-        throw new AppError(401, '認証が必要です', 'AUTH001');
+        throw new AppError('認証が必要です', 401, 'AUTH001');
       }
 
       const { currentPassword, newPassword } = req.body;
@@ -256,7 +259,7 @@ export class UserController {
       const changedBy = req.user?.userId;
       
       if (!changedBy) {
-        throw new AppError(401, '認証が必要です', 'AUTH001');
+        throw new AppError('認証が必要です', 401, 'AUTH001');
       }
 
       const user = await this.userService.changeUserStatus(
@@ -292,11 +295,11 @@ export class UserController {
       const changedBy = req.user?.userId;
       
       if (!changedBy) {
-        throw new AppError(401, '認証が必要です', 'AUTH001');
+        throw new AppError('認証が必要です', 401, 'AUTH001');
       }
 
       if (!Array.isArray(roles) || roles.length === 0) {
-        throw new AppError(400, 'ロールの配列が必要です', 'VALIDATION_ERROR');
+        throw new AppError('ロールの配列が必要です', 400, 'VALIDATION_ERROR');
       }
 
       const user = await this.userService.changeUserRoles(id || '', roles, changedBy);
@@ -358,7 +361,7 @@ export class UserController {
       // 自分自身または管理者権限が必要
       if (id !== req.user?.userId && 
           !req.user?.roles.some(role => ['superadmin', 'owner', 'admin'].includes(role))) {
-        throw new AppError(403, '権限がありません', 'FORBIDDEN');
+        throw new AppError('権限がありません', 403, 'FORBIDDEN');
       }
 
       // TODO: トークン使用量の実装
@@ -373,6 +376,58 @@ export class UserController {
       const response: ApiResponse<typeof tokenUsage> = {
         success: true,
         data: tokenUsage,
+      };
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * スタイリストレポート生成
+   * GET /api/admin/stylists/:id/report
+   */
+  getStylistReport = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const { startDate, endDate } = req.query;
+      const organizationId = req.user?.organizationId;
+
+      if (!organizationId) {
+        throw new AppError('認証が必要です', 401, 'AUTH001');
+      }
+
+      if (!startDate || !endDate) {
+        throw new AppError('startDateとendDateパラメータが必要です', 400, 'VALIDATION_ERROR');
+      }
+
+      // 日付パラメータを解析
+      const start = new Date(startDate as string);
+      const end = new Date(endDate as string);
+
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        throw new AppError('無効な日付形式です', 400, 'VALIDATION_ERROR');
+      }
+
+      if (start > end) {
+        throw new AppError('開始日は終了日より前である必要があります', 400, 'VALIDATION_ERROR');
+      }
+
+      const report = await this.stylistReportService.generateReport(
+        id || '',
+        start,
+        end,
+        organizationId
+      );
+
+      const response: ApiResponse<typeof report> = {
+        success: true,
+        data: report,
       };
 
       res.json(response);

@@ -31,21 +31,21 @@ router.post(
     importController.uploadMiddleware(req, res, (err: any) => {
       if (err) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-          return next(new AppError(400, 'ファイルサイズが大きすぎます（最大10MB）'));
+          return next(new AppError('ファイルサイズが大きすぎます（最大10MB）', 400));
         }
         // multerのファイルフィルターエラー
         if (err.message && err.message.includes('CSVファイル')) {
-          return next(new AppError(400, err.message));
+          return next(new AppError(err.message, 400));
         }
         // その他のmulterエラー
         if (err.message) {
-          return next(new AppError(400, err.message));
+          return next(new AppError(err.message, 400));
         }
-        return next(new AppError(400, 'ファイルのアップロードに失敗しました'));
+        return next(new AppError('ファイルのアップロードに失敗しました', 400));
       }
       // ファイルがアップロードされたかチェック
       if (!req.file) {
-        return next(new AppError(400, 'ファイルがアップロードされていません'));
+        return next(new AppError('ファイルがアップロードされていません', 400));
       }
       next();
     });

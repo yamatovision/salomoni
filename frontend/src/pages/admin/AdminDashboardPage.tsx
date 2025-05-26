@@ -37,12 +37,31 @@ import { styled } from '@mui/material/styles';
 //   Legend,
 //   ChartOptions,
 // } from 'chart.js';
-import { 
-  mockDashboardSummary, 
-  mockUnassignedAppointments,
-  getElementColor,
-  getElementBgColor,
-} from '../../services/mock/data/mockDashboard';
+// 要素ごとの色を返す関数
+const getElementColor = (element: string): string => {
+  switch (element) {
+    case '木': return '#4caf50';
+    case '火': return '#f44336';
+    case '土': return '#ff9800';
+    case '金': return '#9e9e9e';
+    case '水': return '#2196f3';
+    default: return '#757575';
+  }
+};
+
+// 要素ごとの背景色を返す関数（薄い色）
+const getElementBgColor = (element: string): string => {
+  switch (element) {
+    case '木': return '#e8f5e9';
+    case '火': return '#ffebee';
+    case '土': return '#fff3e0';
+    case '金': return '#f5f5f5';
+    case '水': return '#e3f2fd';
+    default: return '#f5f5f5';
+  }
+};
+import { dashboardService } from '../../services';
+import type { DashboardSummary } from '../../types';
 
 // ページID: A-001
 
@@ -118,13 +137,26 @@ const AdminDashboardPage: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('今月');
   const [checkedTasks, setCheckedTasks] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState<DashboardSummary | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // データ読み込みのシミュレーション
-    setTimeout(() => {
-      setLoading(false);
-    }, 500);
+    fetchDashboardStats();
   }, []);
+
+  const fetchDashboardStats = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const stats = await dashboardService.getDashboardStats();
+      setDashboardStats(stats);
+    } catch (err) {
+      console.error('Failed to fetch dashboard stats:', err);
+      setError('ダッシュボードデータの取得に失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // チャートオプション（Chart.jsが必要）
   // const chartOptions: any = {
@@ -204,6 +236,18 @@ const AdminDashboardPage: React.FC = () => {
     );
   }
 
+  if (error) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+        <Typography color="error">{error}</Typography>
+      </Box>
+    );
+  }
+
+  if (!dashboardStats) {
+    return null;
+  }
+
   return (
       <Box sx={{ flexGrow: 1 }}>
         {/* ヘッダー */}
@@ -232,7 +276,7 @@ const AdminDashboardPage: React.FC = () => {
                       本日の予約数
                     </Typography>
                     <Typography variant="h4" component="div" fontWeight={600}>
-                      {mockDashboardSummary.todayAppointments}
+                      {dashboardStats.todayAppointments}
                     </Typography>
                   </Box>
                   <IconWrapper>
@@ -252,7 +296,7 @@ const AdminDashboardPage: React.FC = () => {
                       全クライアント数
                     </Typography>
                     <Typography variant="h4" component="div" fontWeight={600}>
-                      {mockDashboardSummary.totalClients}
+                      {dashboardStats.totalClients}
                     </Typography>
                   </Box>
                   <IconWrapper>
@@ -272,7 +316,7 @@ const AdminDashboardPage: React.FC = () => {
                       スタイリスト数
                     </Typography>
                     <Typography variant="h4" component="div" fontWeight={600}>
-                      {mockDashboardSummary.totalStylists}
+                      {dashboardStats.totalStylists}
                     </Typography>
                   </Box>
                   <IconWrapper>
@@ -292,7 +336,7 @@ const AdminDashboardPage: React.FC = () => {
                       今週の施術完了数
                     </Typography>
                     <Typography variant="h4" component="div" fontWeight={600}>
-                      {mockDashboardSummary.weeklyCompletedAppointments}
+                      {dashboardStats.weeklyCompletedAppointments}
                     </Typography>
                   </Box>
                   <IconWrapper>
@@ -345,12 +389,12 @@ const AdminDashboardPage: React.FC = () => {
                         使用量
                       </Typography>
                       <Typography variant="body2" fontWeight={600}>
-                        {mockDashboardSummary.monthlyTokenUsage.used.toLocaleString()} / {mockDashboardSummary.monthlyTokenUsage.limit.toLocaleString()}
+                        {dashboardStats.monthlyTokenUsage.used.toLocaleString()} / {dashboardStats.monthlyTokenUsage.limit.toLocaleString()}
                       </Typography>
                     </Box>
                     <LinearProgress
                       variant="determinate"
-                      value={mockDashboardSummary.monthlyTokenUsage.percentage}
+                      value={dashboardStats.monthlyTokenUsage.percentage}
                       sx={{
                         height: 8,
                         borderRadius: 4,
@@ -362,7 +406,7 @@ const AdminDashboardPage: React.FC = () => {
                       }}
                     />
                     <Typography variant="caption" color="text.secondary" display="block" textAlign="right" mt={0.5}>
-                      残り {(mockDashboardSummary.monthlyTokenUsage.limit - mockDashboardSummary.monthlyTokenUsage.used).toLocaleString()} トークン
+                      残り {(dashboardStats.monthlyTokenUsage.limit - dashboardStats.monthlyTokenUsage.used).toLocaleString()} トークン
                     </Typography>
                   </Box>
 
@@ -372,7 +416,7 @@ const AdminDashboardPage: React.FC = () => {
                         プラン上限
                       </Typography>
                       <Typography variant="body2" fontWeight={500}>
-                        {mockDashboardSummary.monthlyTokenUsage.limit.toLocaleString()} トークン/月
+                        {dashboardStats.monthlyTokenUsage.limit.toLocaleString()} トークン/月
                       </Typography>
                     </Box>
                     <Box display="flex" justifyContent="space-between">
@@ -411,7 +455,7 @@ const AdminDashboardPage: React.FC = () => {
               <Box display="flex" alignItems="center" gap={1}>
                 <Typography variant="h6">本日の未担当予約</Typography>
                 <Chip
-                  label={mockDashboardSummary.unassignedAppointmentsCount}
+                  label={dashboardStats.unassignedAppointmentsCount}
                   color="error"
                   size="small"
                 />
@@ -426,7 +470,7 @@ const AdminDashboardPage: React.FC = () => {
             </Box>
 
             <Stack spacing={0} divider={<Divider />}>
-              {mockUnassignedAppointments.map((appointment) => (
+              {(dashboardStats.unassignedAppointments || []).map((appointment) => (
                 <Box
                   key={appointment.id}
                   display="flex"

@@ -228,6 +228,8 @@ export const API_PATHS = {
     SUPPORT_TICKETS: '/api/admin/support/tickets',
     SUPPORT_TICKET_DETAIL: (ticketId: string) => `/api/admin/support/tickets/${ticketId}`,
     SUPPORT_TICKET_REPLY: (ticketId: string) => `/api/admin/support/tickets/${ticketId}/reply`,
+    SUPPORT_TICKET_STATUS: (ticketId: string) => `/api/admin/support/tickets/${ticketId}/status`,
+    SUPPORT_STATS: '/api/admin/support/stats',
     // インポート関連
     IMPORT_UPLOAD: '/api/admin/import/upload',
     IMPORT_EXECUTE: '/api/admin/import/execute',
@@ -257,6 +259,7 @@ export const API_PATHS = {
     SUPPORT_TICKET_DETAIL: (ticketId: string) => `/api/superadmin/support/tickets/${ticketId}`,
     SUPPORT_TICKET_REPLY: (ticketId: string) => `/api/superadmin/support/tickets/${ticketId}/reply`,
     SUPPORT_TICKET_STATUS: (ticketId: string) => `/api/superadmin/support/tickets/${ticketId}/status`,
+    SUPPORT_STATS: '/api/superadmin/support/stats',
   },
 } as const;
 

@@ -285,14 +285,54 @@ const StylistManagementPage: React.FC = () => {
   // レポートダウンロード
   const handleDownloadReport = async (stylist: StylistDetail) => {
     try {
-      const response = await stylistService.getStylistReport(stylist.id);
-      if (response.success) {
-        alert(`${stylist.name}のレポートをダウンロードしています...\n\n含まれる内容:\n• 基本情報\n• 四柱推命分析\n• 今月の実績\n• 離職リスク分析`);
+      // 現在の月の開始日と終了日を設定
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      
+      const startDate = startOfMonth.toISOString().split('T')[0];
+      const endDate = endOfMonth.toISOString().split('T')[0];
+      
+      const response = await stylistService.getStylistReport(stylist.id, startDate, endDate);
+      if (response.success && response.data) {
+        const report = response.data;
         
-        // ダミーでダウンロード処理をシミュレート
-        setTimeout(() => {
-          alert('レポートのダウンロードが完了しました。');
-        }, 1500);
+        // レポートデータをJSON形式でダウンロード
+        const reportContent = {
+          スタイリスト情報: {
+            名前: stylist.name,
+            役職: stylist.position,
+            勤続年数: stylist.yearsOfService + '年',
+            専門分野: stylist.specialties.join(', ')
+          },
+          期間: {
+            開始: startDate,
+            終了: endDate
+          },
+          実績: {
+            予約総数: report.totalAppointments || 0,
+            売上: report.revenueGenerated ? `¥${report.revenueGenerated.toLocaleString()}` : '---',
+            顧客満足度: report.clientSatisfactionScore ? `${report.clientSatisfactionScore}/5.0` : '---'
+          },
+          離職リスク: {
+            レベル: getRiskLabel(stylist.turnoverRiskLevel),
+            月間予約数: stylist.monthlyAppointments
+          },
+          四柱推命分析: report.fourPillarsAnalysis ? '含まれています' : '含まれていません'
+        };
+        
+        // JSONをBlobとしてダウンロード
+        const blob = new Blob([JSON.stringify(reportContent, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `stylist_report_${stylist.name}_${startDate}_${endDate}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        alert(`${stylist.name}さんのレポートがダウンロードされました。`);
       }
     } catch (error) {
       console.error('レポートダウンロードエラー:', error);

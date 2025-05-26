@@ -44,7 +44,7 @@ export const authenticate = async (
       : req.cookies?.accessToken;
 
     if (!token) {
-      throw new AppError(401, 'No token provided', 'AUTH001');
+      throw new AppError('No token provided', 401, 'AUTH001');
     }
 
     // トークンの検証
@@ -57,7 +57,7 @@ export const authenticate = async (
     
     // ペイロードの検証
     if (!payload.userId || !payload.roles || !payload.currentRole) {
-      throw new AppError(401, 'Invalid token payload', 'AUTH002');
+      throw new AppError('Invalid token payload', 401, 'AUTH002');
     }
 
     // リクエストにユーザー情報を追加
@@ -72,13 +72,13 @@ export const authenticate = async (
     next();
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      next(new AppError(401, 'Token expired', 'AUTH003'));
+      next(new AppError('Token expired', 401, 'AUTH003'));
     } else if (error instanceof jwt.JsonWebTokenError) {
-      next(new AppError(401, 'Invalid token', 'AUTH002'));
+      next(new AppError('Invalid token', 401, 'AUTH002'));
     } else if (error instanceof AppError) {
       next(error);
     } else {
-      next(new AppError(500, 'Authentication error', 'AUTH_ERROR'));
+      next(new AppError('Authentication error', 500, 'AUTH_ERROR'));
     }
   }
 };
@@ -87,7 +87,7 @@ export const authenticate = async (
 export const authorize = (...allowedRoles: UserRole[]) => {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {
-      next(new AppError(401, 'Not authenticated', 'AUTH001'));
+      next(new AppError('Not authenticated', 401, 'AUTH001'));
       return;
     }
 
@@ -111,10 +111,7 @@ export const authorize = (...allowedRoles: UserRole[]) => {
         path: req.path,
       });
       
-      next(new AppError(403, '権限がありません', 'AUTH004', {
-        requiredRoles: allowedRoles,
-        userRoles: req.user.roles,
-      }));
+      next(new AppError('権限がありません', 403, 'AUTH004'));
       return;
     }
 
@@ -129,7 +126,7 @@ export const checkOrganizationAccess = (
   next: NextFunction
 ): void => {
   if (!req.user) {
-    next(new AppError(401, 'Not authenticated', 'AUTH001'));
+    next(new AppError('Not authenticated', 401, 'AUTH001'));
     return;
   }
 
@@ -152,7 +149,7 @@ export const checkOrganizationAccess = (
       requestedOrgId,
     });
     
-    next(new AppError(403, 'Access denied to this organization', 'AUTH005'));
+    next(new AppError('Access denied to this organization', 403, 'AUTH005'));
     return;
   }
 
@@ -166,7 +163,7 @@ export const checkClientAccess = async (
   next: NextFunction
 ): Promise<void> => {
   if (!req.user) {
-    next(new AppError(401, 'Not authenticated', 'AUTH001'));
+    next(new AppError('Not authenticated', 401, 'AUTH001'));
     return;
   }
 

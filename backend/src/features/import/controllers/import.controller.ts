@@ -59,11 +59,11 @@ export class ImportController {
       });
 
       if (!req.file) {
-        throw new AppError(400, 'ファイルがアップロードされていません');
+        throw new AppError('ファイルがアップロードされていません', 400);
       }
 
       if (!req.user?.organizationId) {
-        throw new AppError(400, '組織IDが取得できません');
+        throw new AppError('組織IDが取得できません', 400);
       }
 
       const result = await this.importService.uploadImportFile(
@@ -106,7 +106,7 @@ export class ImportController {
       });
 
       if (!req.user?.organizationId) {
-        throw new AppError(400, '組織IDが取得できません');
+        throw new AppError('組織IDが取得できません', 400);
       }
 
       const importRequest: ImportExecuteRequest = req.body;
@@ -153,7 +153,7 @@ export class ImportController {
       });
 
       if (!req.user?.organizationId) {
-        throw new AppError(400, '組織IDが取得できません');
+        throw new AppError('組織IDが取得できません', 400);
       }
 
       // フィルター条件の構築
@@ -239,7 +239,7 @@ export class ImportController {
       });
 
       if (!req.user?.organizationId) {
-        throw new AppError(400, '組織IDが取得できません');
+        throw new AppError('組織IDが取得できません', 400);
       }
 
       const connectionRequest: CalendarConnectionRequest = req.body;

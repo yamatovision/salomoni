@@ -27,7 +27,7 @@ export class OrganizationService {
   async getOrganization(id: string): Promise<Organization> {
     const organization = await this.organizationRepository.findById(id);
     if (!organization) {
-      throw new AppError(404, '組織が見つかりません', 'ORG_NOT_FOUND');
+      throw new AppError('組織が見つかりません', 404, 'ORG_NOT_FOUND');
     }
     return organization;
   }
@@ -80,20 +80,20 @@ export class OrganizationService {
   ): Promise<Organization> {
     const organization = await this.organizationRepository.findById(id);
     if (!organization) {
-      throw new AppError(404, '組織が見つかりません', 'ORG_NOT_FOUND');
+      throw new AppError('組織が見つかりません', 404, 'ORG_NOT_FOUND');
     }
 
     // メールアドレスの重複チェック（変更された場合）
     if (data.email && data.email !== organization.email) {
       const existingOrg = await this.organizationRepository.findByEmail(data.email);
       if (existingOrg) {
-        throw new AppError(409, '既に使用されているメールアドレスです', 'DUPLICATE_EMAIL');
+        throw new AppError('既に使用されているメールアドレスです', 409, 'DUPLICATE_EMAIL');
       }
     }
 
     const updatedOrg = await this.organizationRepository.update(id, data);
     if (!updatedOrg) {
-      throw new AppError(500, '組織の更新に失敗しました', 'UPDATE_FAILED');
+      throw new AppError('組織の更新に失敗しました', 500, 'UPDATE_FAILED');
     }
 
     logger.info('Organization updated', { organizationId: id });
@@ -110,17 +110,17 @@ export class OrganizationService {
   ): Promise<Organization> {
     const organization = await this.organizationRepository.findById(id);
     if (!organization) {
-      throw new AppError(404, '組織が見つかりません', 'ORG_NOT_FOUND');
+      throw new AppError('組織が見つかりません', 404, 'ORG_NOT_FOUND');
     }
 
     // ステータス変更の妥当性チェック
     if (organization.status === status) {
-      throw new AppError(400, '既に同じステータスです', 'SAME_STATUS');
+      throw new AppError('既に同じステータスです', 400, 'SAME_STATUS');
     }
 
     const updatedOrg = await this.organizationRepository.changeStatus(id, status, reason);
     if (!updatedOrg) {
-      throw new AppError(500, 'ステータス変更に失敗しました', 'STATUS_CHANGE_FAILED');
+      throw new AppError('ステータス変更に失敗しました', 500, 'STATUS_CHANGE_FAILED');
     }
 
     // 組織が無効化された場合、所属ユーザーも無効化する必要があるか検討
@@ -146,11 +146,11 @@ export class OrganizationService {
   ): Promise<Organization> {
     const organization = await this.organizationRepository.findById(id);
     if (!organization) {
-      throw new AppError(404, '組織が見つかりません', 'ORG_NOT_FOUND');
+      throw new AppError('組織が見つかりません', 404, 'ORG_NOT_FOUND');
     }
 
     if (organization.plan === plan) {
-      throw new AppError(400, '既に同じプランです', 'SAME_PLAN');
+      throw new AppError('既に同じプランです', 400, 'SAME_PLAN');
     }
 
     // プラン変更の妥当性チェック（ダウングレード時の制限など）
@@ -158,7 +158,7 @@ export class OrganizationService {
 
     const updatedOrg = await this.organizationRepository.changePlan(id, plan);
     if (!updatedOrg) {
-      throw new AppError(500, 'プラン変更に失敗しました', 'PLAN_CHANGE_FAILED');
+      throw new AppError('プラン変更に失敗しました', 500, 'PLAN_CHANGE_FAILED');
     }
 
     logger.info('Organization plan changed', {
@@ -182,7 +182,7 @@ export class OrganizationService {
   async getOrganizationStats(id: string): Promise<OrganizationStats> {
     const organization = await this.organizationRepository.findById(id);
     if (!organization) {
-      throw new AppError(404, '組織が見つかりません', 'ORG_NOT_FOUND');
+      throw new AppError('組織が見つかりません', 404, 'ORG_NOT_FOUND');
     }
 
     // ユーザー数を取得
@@ -214,12 +214,12 @@ export class OrganizationService {
   async deleteOrganization(id: string): Promise<void> {
     const organization = await this.organizationRepository.findById(id);
     if (!organization) {
-      throw new AppError(404, '組織が見つかりません', 'ORG_NOT_FOUND');
+      throw new AppError('組織が見つかりません', 404, 'ORG_NOT_FOUND');
     }
 
     const success = await this.organizationRepository.delete(id);
     if (!success) {
-      throw new AppError(500, '組織の削除に失敗しました', 'DELETE_FAILED');
+      throw new AppError('組織の削除に失敗しました', 500, 'DELETE_FAILED');
     }
 
     logger.info('Organization deleted', { organizationId: id });
@@ -255,8 +255,8 @@ export class OrganizationService {
 
       if (activeUsers > userLimits[newPlan]) {
         throw new AppError(
-          400, 
-          `プラン${newPlan}の最大ユーザー数（${userLimits[newPlan]}人）を超えています`, 
+          `プラン${newPlan}の最大ユーザー数（${userLimits[newPlan]}人）を超えています`,
+          400,
           'PLAN_USER_LIMIT_EXCEEDED'
         );
       }

@@ -40,23 +40,23 @@ export class AppointmentService {
     // クライアントの存在確認と組織チェック
     const client = await this.clientRepository.findById(appointmentData.clientId, organizationId);
     if (!client) {
-      throw new AppError(404, '指定されたクライアントが見つかりません');
+      throw new AppError('指定されたクライアントが見つかりません', 404);
     }
     if (client.organizationId !== organizationId) {
-      throw new AppError(403, '他の組織のクライアントにアクセスすることはできません');
+      throw new AppError('他の組織のクライアントにアクセスすることはできません', 403);
     }
 
     // スタイリストの存在確認と組織チェック（指定された場合）
     if (appointmentData.stylistId) {
       const stylist = await this.userRepository.findById(appointmentData.stylistId);
       if (!stylist) {
-        throw new AppError(404, '指定されたスタイリストが見つかりません');
+        throw new AppError('指定されたスタイリストが見つかりません', 404);
       }
       if (stylist.organizationId !== organizationId) {
-        throw new AppError(403, '他の組織のスタイリストを指定することはできません');
+        throw new AppError('他の組織のスタイリストを指定することはできません', 403);
       }
       if (stylist.role !== UserRole.USER) {
-        throw new AppError(400, '指定されたユーザーはスタイリストではありません');
+        throw new AppError('指定されたユーザーはスタイリストではありません', 400);
       }
     }
 
@@ -152,16 +152,16 @@ export class AppointmentService {
 
     const appointment = await this.appointmentRepository.findById(appointmentId);
     if (!appointment) {
-      throw new AppError(404, '予約が見つかりません');
+      throw new AppError('予約が見つかりません', 404);
     }
 
     if (appointment.organizationId !== organizationId) {
-      throw new AppError(403, '他の組織の予約にアクセスすることはできません');
+      throw new AppError('他の組織の予約にアクセスすることはできません', 403);
     }
 
     // スタイリストの場合は自分の予約のみアクセス可能
     if (userRole === UserRole.USER && appointment.stylistId !== userId) {
-      throw new AppError(403, '他のスタイリストの予約にアクセスすることはできません');
+      throw new AppError('他のスタイリストの予約にアクセスすることはできません', 403);
     }
 
     return appointment;
@@ -196,19 +196,19 @@ export class AppointmentService {
       appointment.status === AppointmentStatus.CANCELED ||
       appointment.status === AppointmentStatus.NO_SHOW
     ) {
-      throw new AppError(400, 'キャンセル済みまたはノーショーの予約は変更できません');
+      throw new AppError('キャンセル済みまたはノーショーの予約は変更できません', 400);
     }
 
     // スタイリストの存在確認と組織チェック
     const stylist = await this.userRepository.findById(stylistId);
     if (!stylist) {
-      throw new AppError(404, '指定されたスタイリストが見つかりません');
+      throw new AppError('指定されたスタイリストが見つかりません', 404);
     }
     if (stylist.organizationId !== organizationId) {
-      throw new AppError(403, '他の組織のスタイリストを指定することはできません');
+      throw new AppError('他の組織のスタイリストを指定することはできません', 403);
     }
     if (stylist.role !== UserRole.USER) {
-      throw new AppError(400, '指定されたユーザーはスタイリストではありません');
+      throw new AppError('指定されたユーザーはスタイリストではありません', 400);
     }
 
     // 重複チェック
@@ -221,7 +221,7 @@ export class AppointmentService {
     );
 
     if (hasOverlap) {
-      throw new AppError(409, '指定された時間帯は既に予約が入っています', 'APPOINTMENT_OVERLAP');
+      throw new AppError('指定された時間帯は既に予約が入っています', 409, 'APPOINTMENT_OVERLAP');
     }
 
     const updatedAppointment = await this.appointmentRepository.update(appointmentId, {
@@ -229,7 +229,7 @@ export class AppointmentService {
     });
 
     if (!updatedAppointment) {
-      throw new AppError(500, '予約の更新に失敗しました', 'UPDATE_FAILED');
+      throw new AppError('予約の更新に失敗しました', 500, 'UPDATE_FAILED');
     }
 
     logger.info('[AppointmentService] Stylist assigned successfully', {
@@ -271,7 +271,7 @@ export class AppointmentService {
       appointment.status === AppointmentStatus.CANCELED ||
       appointment.status === AppointmentStatus.NO_SHOW
     ) {
-      throw new AppError(400, 'キャンセル済みまたはノーショーの予約は変更できません');
+      throw new AppError('キャンセル済みまたはノーショーの予約は変更できません', 400);
     }
 
     const newScheduledAt = new Date(scheduledAt);
@@ -288,7 +288,7 @@ export class AppointmentService {
       );
 
       if (hasOverlap) {
-        throw new AppError(409, '指定された時間帯は既に予約が入っています', 'APPOINTMENT_OVERLAP');
+        throw new AppError('指定された時間帯は既に予約が入っています', 409, 'APPOINTMENT_OVERLAP');
       }
     }
 
@@ -305,7 +305,7 @@ export class AppointmentService {
     );
 
     if (!updatedAppointment) {
-      throw new AppError(500, '予約の更新に失敗しました', 'UPDATE_FAILED');
+      throw new AppError('予約の更新に失敗しました', 500, 'UPDATE_FAILED');
     }
 
     logger.info('[AppointmentService] Appointment moved successfully', {

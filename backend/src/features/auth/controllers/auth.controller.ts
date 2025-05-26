@@ -93,7 +93,7 @@ export class AuthController {
       const { code, state } = req.body;
       
       if (!code) {
-        throw new AppError(400, 'LINE認証コードが必要です', 'AUTH001');
+        throw new AppError('LINE認証コードが必要です', 400, 'AUTH001');
       }
 
       const result = await this.authService.lineCallback(code, state);
@@ -185,7 +185,7 @@ export class AuthController {
       const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
       
       if (!refreshToken) {
-        throw new AppError(401, 'リフレッシュトークンが提供されていません', 'AUTH001');
+        throw new AppError('リフレッシュトークンが提供されていません', 401, 'AUTH001');
       }
 
       const result = await this.authService.refreshToken({ refreshToken });
@@ -213,7 +213,7 @@ export class AuthController {
     try {
       const userId = req.user?.userId;
       if (!userId) {
-        throw new AppError(401, '認証が必要です', 'AUTH001');
+        throw new AppError('認証が必要です', 401, 'AUTH001');
       }
 
       const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
@@ -241,7 +241,7 @@ export class AuthController {
       const { token } = req.query;
       
       if (!token || typeof token !== 'string') {
-        throw new AppError(400, '招待トークンが必要です', 'INVALID_TOKEN');
+        throw new AppError('招待トークンが必要です', 400, 'INVALID_TOKEN');
       }
 
       // TODO: 招待トークンの検証処理

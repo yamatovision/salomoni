@@ -27,23 +27,23 @@ export class AICharacterService {
     try {
       // userIdとclientIdの排他チェック
       if (!data.userId && !data.clientId) {
-        throw new AppError(400, 'userIdまたはclientIdのいずれかは必須です', 'MISSING_USER_OR_CLIENT');
+        throw new AppError('userIdまたはclientIdのいずれかは必須です', 400, 'MISSING_USER_OR_CLIENT');
       }
       if (data.userId && data.clientId) {
-        throw new AppError(400, 'userIdとclientIdは同時に設定できません', 'BOTH_USER_AND_CLIENT');
+        throw new AppError('userIdとclientIdは同時に設定できません', 400, 'BOTH_USER_AND_CLIENT');
       }
 
       // 既存のAIキャラクターチェック
       if (data.userId) {
         const existing = await this.aiCharacterRepository.findByUserId(data.userId);
         if (existing) {
-          throw new AppError(400, 'このユーザーのAIキャラクターは既に存在します', 'AI_CHARACTER_EXISTS');
+          throw new AppError('このユーザーのAIキャラクターは既に存在します', 400, 'AI_CHARACTER_EXISTS');
         }
       }
       if (data.clientId) {
         const existing = await this.aiCharacterRepository.findByClientId(data.clientId);
         if (existing) {
-          throw new AppError(400, 'このクライアントのAIキャラクターは既に存在します', 'AI_CHARACTER_EXISTS');
+          throw new AppError('このクライアントのAIキャラクターは既に存在します', 400, 'AI_CHARACTER_EXISTS');
         }
       }
 

@@ -15,7 +15,7 @@ import { OrganizationRepository } from '../../organizations/repositories/organiz
 import { InviteTokenModel } from '../models/invite-token.model';
 import { jwtService } from '../../../common/utils/jwt';
 import { logger } from '../../../common/utils/logger';
-import { AppError } from '../../../common/middleware/errorHandler';
+import { AppError } from '../../../common/utils/errors';
 import axios from 'axios';
 
 export class AuthService {
@@ -37,7 +37,7 @@ export class AuthService {
       } else if (request.method === AuthMethod.LINE) {
         return await this.lineLogin(request);
       } else {
-        throw new AppError(400, '不正な認証方法です', 'AUTH001');
+        throw new AppError('不正な認証方法です', 400, 'AUTH001');
       }
     } catch (error) {
       logger.error('Login failed', { error, method: request.method });
@@ -52,25 +52,25 @@ export class AuthService {
     const { email, password, rememberMe } = request;
     
     if (!email || !password) {
-      throw new AppError(400, 'メールアドレスとパスワードは必須です', 'AUTH001');
+      throw new AppError('メールアドレスとパスワードは必須です', 400, 'AUTH001');
     }
 
     // ユーザー検証
     const user = await this.userRepository.verifyPassword(email, password);
     if (!user) {
-      throw new AppError(401, 'メールアドレスまたはパスワードが正しくありません', 'AUTH002');
+      throw new AppError('メールアドレスまたはパスワードが正しくありません', 401, 'AUTH002');
     }
 
     // ステータスチェック
     if (user.status !== UserStatus.ACTIVE) {
-      throw new AppError(403, 'アカウントが無効化されています', 'AUTH006');
+      throw new AppError('アカウントが無効化されています', 403, 'AUTH006');
     }
 
     // 組織ステータスチェック（SuperAdmin以外）
     if (user.role !== UserRole.SUPER_ADMIN && user.organizationId) {
       const organization = await this.organizationRepository.findById(user.organizationId);
       if (!organization || organization.status !== OrganizationStatus.ACTIVE) {
-        throw new AppError(403, '所属組織が無効化されています', 'AUTH007');
+        throw new AppError('所属組織が無効化されています', 403, 'AUTH007');
       }
     }
 
@@ -133,14 +133,14 @@ export class AuthService {
     const { token } = request;
     
     if (!token) {
-      throw new AppError(400, 'LINE認証トークンは必須です', 'AUTH001');
+      throw new AppError('LINE認証トークンは必須です', 400, 'AUTH001');
     }
 
 
     // LINE APIでトークンを検証
     const lineProfile = await this.verifyLineToken(token);
     if (!lineProfile) {
-      throw new AppError(401, 'LINE認証に失敗しました', 'AUTH002');
+      throw new AppError('LINE認証に失敗しました', 401, 'AUTH002');
     }
 
     // LINE UserIDでユーザーを検索
@@ -148,19 +148,19 @@ export class AuthService {
     
     if (!user) {
       // 新規ユーザーの場合はエラー（事前登録が必要）
-      throw new AppError(404, 'アカウントが見つかりません。管理者に登録を依頼してください', 'AUTH005');
+      throw new AppError('アカウントが見つかりません。管理者に登録を依頼してください', 404, 'AUTH005');
     }
 
     // ステータスチェック
     if (user.status !== UserStatus.ACTIVE) {
-      throw new AppError(403, 'アカウントが無効化されています', 'AUTH006');
+      throw new AppError('アカウントが無効化されています', 403, 'AUTH006');
     }
 
     // 組織ステータスチェック
     if (user.organizationId) {
       const organization = await this.organizationRepository.findById(user.organizationId);
       if (!organization || organization.status !== OrganizationStatus.ACTIVE) {
-        throw new AppError(403, '所属組織が無効化されています', 'AUTH007');
+        throw new AppError('所属組織が無効化されています', 403, 'AUTH007');
       }
     }
 
@@ -260,19 +260,19 @@ export class AuthService {
       logger.info('LINE callback processing', { code: code.substring(0, 10) + '...', state });
 
       if (!code) {
-        throw new AppError(400, 'LINE認証コードが必要です', 'AUTH001');
+        throw new AppError('LINE認証コードが必要です', 400, 'AUTH001');
       }
 
       // LINE認証コードをアクセストークンに交換
       const lineTokens = await this.exchangeLineCodeForToken(code);
       if (!lineTokens) {
-        throw new AppError(401, 'LINE認証に失敗しました', 'AUTH002');
+        throw new AppError('LINE認証に失敗しました', 401, 'AUTH002');
       }
 
       // IDトークンからユーザー情報を取得
       const lineProfile = await this.decodeLineIdToken(lineTokens.id_token);
       if (!lineProfile) {
-        throw new AppError(401, 'LINEユーザー情報の取得に失敗しました', 'AUTH002');
+        throw new AppError('LINEユーザー情報の取得に失敗しました', 401, 'AUTH002');
       }
 
       // LINE UserIDでユーザーを検索
@@ -280,19 +280,19 @@ export class AuthService {
       
       if (!user) {
         // 新規ユーザーの場合はエラー（事前登録が必要）
-        throw new AppError(404, 'アカウントが見つかりません。管理者に登録を依頼してください', 'AUTH005');
+        throw new AppError('アカウントが見つかりません。管理者に登録を依頼してください', 404, 'AUTH005');
       }
 
       // ステータスチェック
       if (user.status !== UserStatus.ACTIVE) {
-        throw new AppError(403, 'アカウントが無効化されています', 'AUTH006');
+        throw new AppError('アカウントが無効化されています', 403, 'AUTH006');
       }
 
       // 組織ステータスチェック
       if (user.organizationId) {
         const organization = await this.organizationRepository.findById(user.organizationId);
         if (!organization || organization.status !== OrganizationStatus.ACTIVE) {
-          throw new AppError(403, '所属組織が無効化されています', 'AUTH007');
+          throw new AppError('所属組織が無効化されています', 403, 'AUTH007');
         }
       }
 
@@ -426,13 +426,13 @@ export class AuthService {
       // メールアドレスの重複チェック
       const existingUser = await this.userRepository.findByEmail(request.ownerEmail);
       if (existingUser) {
-        throw new AppError(409, '既に登録されているメールアドレスです', 'DUPLICATE_EMAIL');
+        throw new AppError('既に登録されているメールアドレスです', 409, 'DUPLICATE_EMAIL');
       }
 
       const billingEmail = request.billingEmail || request.ownerEmail;
       const existingOrg = await this.organizationRepository.findByEmail(billingEmail);
       if (existingOrg) {
-        throw new AppError(409, '既に登録されている組織メールアドレスです', 'DUPLICATE_ORG_EMAIL');
+        throw new AppError('既に登録されている組織メールアドレスです', 409, 'DUPLICATE_ORG_EMAIL');
       }
 
       // オーナーユーザーを作成
@@ -535,12 +535,12 @@ export class AuthService {
       // ユーザー情報を取得
       const user = await this.userRepository.findById(payload.userId);
       if (!user) {
-        throw new AppError(401, 'ユーザーが見つかりません', 'AUTH002');
+        throw new AppError('ユーザーが見つかりません', 401, 'AUTH002');
       }
 
       // ステータスチェック
       if (user.status !== UserStatus.ACTIVE) {
-        throw new AppError(403, 'アカウントが無効化されています', 'AUTH006');
+        throw new AppError('アカウントが無効化されています', 403, 'AUTH006');
       }
 
       // 新しいアクセストークンを生成
@@ -570,7 +570,7 @@ export class AuthService {
         throw error;
       }
       // JWTエラーの場合は401を返す
-      throw new AppError(401, 'トークンの更新に失敗しました', 'AUTH003');
+      throw new AppError('トークンの更新に失敗しました', 401, 'AUTH003');
     }
   }
 
@@ -623,20 +623,20 @@ export class AuthService {
       // 招待トークンを検証
       const inviteToken = await InviteTokenModel.findValidToken(token);
       if (!inviteToken) {
-        throw new AppError(401, '招待トークンが無効または期限切れです', 'AUTH004');
+        throw new AppError('招待トークンが無効または期限切れです', 401, 'AUTH004');
       }
 
       // メールアドレスの重複チェック
       const existingUser = await this.userRepository.findByEmail(inviteToken.email);
       if (existingUser) {
-        throw new AppError(409, '既に登録されているメールアドレスです', 'DUPLICATE_EMAIL');
+        throw new AppError('既に登録されているメールアドレスです', 409, 'DUPLICATE_EMAIL');
       }
 
       // 組織の存在確認
       const organizationId = inviteToken.organizationId.toString();
       const organization = await this.organizationRepository.findById(organizationId);
       if (!organization || organization.status !== OrganizationStatus.ACTIVE) {
-        throw new AppError(403, '招待元の組織が無効化されています', 'AUTH007');
+        throw new AppError('招待元の組織が無効化されています', 403, 'AUTH007');
       }
 
       // ユーザーを作成

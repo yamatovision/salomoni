@@ -116,7 +116,7 @@ export class AppointmentController {
       const { id } = req.params;
 
       if (!id) {
-        throw new AppError(400, '予約IDが指定されていません');
+        throw new AppError('予約IDが指定されていません', 400);
       }
 
       logger.info('[AppointmentController] Get appointment detail request', {
@@ -156,7 +156,7 @@ export class AppointmentController {
       const { stylistId } = req.body;
 
       if (!id) {
-        throw new AppError(400, '予約IDが指定されていません');
+        throw new AppError('予約IDが指定されていません', 400);
       }
 
       logger.info('[AppointmentController] Assign stylist request', {
@@ -197,7 +197,7 @@ export class AppointmentController {
       const { scheduledAt, duration } = req.body;
 
       if (!id) {
-        throw new AppError(400, '予約IDが指定されていません');
+        throw new AppError('予約IDが指定されていません', 400);
       }
 
       logger.info('[AppointmentController] Move appointment request', {

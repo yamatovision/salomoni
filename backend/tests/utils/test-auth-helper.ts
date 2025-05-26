@@ -239,9 +239,12 @@ export class TestAuthHelper {
     stylist: { user: UserProfile; token: string };
     client: { user: UserProfile; token: string };
   }> {
+    const timestamp = Date.now();
+    const randomId = uuidv4().substring(0, 8);
+    
     // SuperAdmin（組織に属さない）
     const superAdmin = await this.createTestUser({
-      email: 'superadmin@example.com',
+      email: `superadmin-${timestamp}-${randomId}@example.com`,
       name: 'Super Admin',
       role: 'superadmin' as UserRole,
     });
@@ -255,7 +258,7 @@ export class TestAuthHelper {
 
     // Owner
     const owner = await this.createTestUser({
-      email: 'owner@example.com',
+      email: `owner-${timestamp}-${randomId}@example.com`,
       name: 'Owner User',
       role: 'owner' as UserRole,
       organizationId,
@@ -271,7 +274,7 @@ export class TestAuthHelper {
 
     // Admin
     const admin = await this.createTestUser({
-      email: 'admin@example.com',
+      email: `admin-${timestamp}-${randomId}@example.com`,
       name: 'Admin User',
       role: 'admin' as UserRole,
       organizationId,
@@ -287,7 +290,7 @@ export class TestAuthHelper {
 
     // Stylist (User)
     const stylist = await this.createTestUser({
-      email: 'stylist@example.com',
+      email: `stylist-${timestamp}-${randomId}@example.com`,
       name: 'Stylist User',
       role: 'user' as UserRole,
       organizationId,
@@ -303,7 +306,7 @@ export class TestAuthHelper {
 
     // Client
     const client = await this.createTestUser({
-      email: 'client@example.com',
+      email: `client-${timestamp}-${randomId}@example.com`,
       name: 'Client User',
       role: 'client' as UserRole,
       organizationId,

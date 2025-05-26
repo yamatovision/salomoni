@@ -1,32 +1,9 @@
 import type { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
+import { AppError } from '../utils/errors';
 import type { ApiError } from '../../types';
 
-export class AppError extends Error {
-  public statusCode: number;
-  public override message: string;
-  public code?: string;
-  public details?: Record<string, unknown>;
-
-  constructor(
-    statusCode: number,
-    message: string,
-    code?: string,
-    details?: Record<string, unknown>
-  ) {
-    super(message);
-    this.statusCode = statusCode;
-    this.message = message;
-    if (code !== undefined) {
-      this.code = code;
-    }
-    if (details !== undefined) {
-      this.details = details;
-    }
-    this.name = 'AppError';
-    Error.captureStackTrace(this, this.constructor);
-  }
-}
+export { AppError };
 
 export const errorHandler = (
   error: Error | AppError,

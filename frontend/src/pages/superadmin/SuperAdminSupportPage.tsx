@@ -27,7 +27,13 @@ import {
   HelpOutline as HelpIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
-import { supportService } from '../../services';
+import { 
+  getSuperAdminSupportTickets,
+  getSuperAdminSupportTicket,
+  replySuperAdminSupportTicket,
+  updateSuperAdminSupportTicket,
+  getSuperAdminSupportTicketStats
+} from '../../services/api/superadmin-support';
 import type { 
   SupportTicket, 
   SupportTicketReplyInput,
@@ -58,7 +64,7 @@ const SuperAdminSupportPage: React.FC = () => {
         params.search = searchQuery;
       }
       
-      const response = await supportService.getSupportTickets(params);
+      const response = await getSuperAdminSupportTickets(params);
       setTickets(response.tickets);
       
       // 最初のチケットを選択
@@ -93,7 +99,7 @@ const SuperAdminSupportPage: React.FC = () => {
         isStaff: true
       };
 
-      await supportService.replySupportTicket(selectedTicket.id, replyData);
+      await replySuperAdminSupportTicket(selectedTicket.id, replyData);
       
       // ローカルの状態を更新
       const updatedTicket: SupportTicket = {
@@ -136,7 +142,7 @@ const SuperAdminSupportPage: React.FC = () => {
         status: newStatus
       };
 
-      const updatedTicket = await supportService.updateSupportTicket(selectedTicket.id, updateData);
+      const updatedTicket = await updateSuperAdminSupportTicket(selectedTicket.id, updateData);
       
       setSelectedTicket(updatedTicket);
       setTickets(tickets.map(t => 

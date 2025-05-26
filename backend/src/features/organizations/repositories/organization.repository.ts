@@ -30,7 +30,7 @@ export class OrganizationRepository {
       logger.error('Failed to create organization', { error, data });
       
       if ((error as any).code === 11000) {
-        throw new AppError(409, '既に登録されているメールアドレスです', 'DUPLICATE_EMAIL');
+        throw new AppError('既に登録されているメールアドレスです', 409, 'DUPLICATE_EMAIL');
       }
       
       throw error;

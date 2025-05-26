@@ -111,7 +111,7 @@ export const authorize = (...allowedRoles: UserRole[]) => {
         path: req.path,
       });
       
-      next(new AppError(403, 'Insufficient permissions', 'AUTH004', {
+      next(new AppError(403, '権限がありません', 'AUTH004', {
         requiredRoles: allowedRoles,
         userRoles: req.user.roles,
       }));

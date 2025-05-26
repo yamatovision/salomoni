@@ -62,7 +62,7 @@ app.use('/api/billing', billingRoutes); // 決済・課金管理ルート
 app.use('/api/owner/billing', billingRoutes); // オーナー向け決済管理ルート
 app.use('/api/admin/import', importRoutes); // データインポート管理ルート
 app.use('/api/admin/calendar', calendarRouter); // カレンダー連携管理ルート
-app.use('/api/admin', dashboardRoutes); // ダッシュボード管理ルート
+app.use('/api/admin/dashboard', dashboardRoutes); // ダッシュボード管理ルート
 
 // エラーハンドリング
 app.use(errorHandler);

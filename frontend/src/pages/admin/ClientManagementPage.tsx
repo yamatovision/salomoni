@@ -172,7 +172,7 @@ export const ClientManagementPage: React.FC = () => {
 
       const createRequest: ClientCreateRequest = {
         name: newClientForm.name,
-        phoneNumber: newClientForm.phoneNumber || undefined,
+        phoneNumber: newClientForm.phoneNumber || '',
         email: newClientForm.email || undefined,
         gender: newClientForm.gender as 'male' | 'female' | 'other' | undefined,
         birthDate,
@@ -421,8 +421,7 @@ export const ClientManagementPage: React.FC = () => {
                 </CardContent>
               </Card>
             ))}
-          </Box>
-        )
+        </Box>
 
         {/* ページネーション */}
         {!loading && totalPages > 1 && (

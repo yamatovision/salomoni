@@ -103,6 +103,7 @@ describe('クライアント管理 統合テスト', () => {
     it('一般ユーザーはクライアントを作成できない', async () => {
       const clientData: ClientCreateRequest = {
         name: '田中次郎',
+        phoneNumber: '080-1234-5678',
       };
 
       const response = await request(app)
@@ -129,6 +130,7 @@ describe('クライアント管理 統合テスト', () => {
       const clientData: ClientCreateRequest = {
         name: '重複テスト1',
         email: 'duplicate@example.com',
+        phoneNumber: '080-2345-6789',
       };
 
       // 最初のクライアント作成
@@ -144,6 +146,7 @@ describe('クライアント管理 統合テスト', () => {
         .send({
           name: '重複テスト2',
           email: 'duplicate@example.com',
+          phoneNumber: '080-3456-7890',
         });
 
       expect(response.status).toBe(409);
@@ -155,6 +158,7 @@ describe('クライアント管理 統合テスト', () => {
         name: '四柱推命テスト',
         birthDate: '1985-03-20',
         gender: 'male',
+        phoneNumber: '080-4567-8901',
       };
 
       const response = await request(app)

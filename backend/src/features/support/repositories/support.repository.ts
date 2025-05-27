@@ -116,7 +116,7 @@ export class SupportRepository {
       const tickets = await SupportTicketModel
         .find(query)
         .populate('userId', 'name email')
-        .populate('organizationId', 'name displayName')
+        .populate('organizationId', 'name')
         .sort(sortOptions)
         .skip(skip)
         .limit(limit);
@@ -167,7 +167,7 @@ export class SupportRepository {
       const ticket = await SupportTicketModel
         .findById(ticketId)
         .populate('userId', 'name email profileImage')
-        .populate('organizationId', 'name displayName')
+        .populate('organizationId', 'name')
         .populate('assignedTo', 'name email');
 
       if (!ticket) {
@@ -217,7 +217,7 @@ export class SupportRepository {
           { new: true, runValidators: true }
         )
         .populate('userId', 'name email')
-        .populate('organizationId', 'name displayName')
+        .populate('organizationId', 'name')
         .populate('assignedTo', 'name email');
 
       if (!ticket) {

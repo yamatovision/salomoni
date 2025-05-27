@@ -47,12 +47,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<AuthResponse> => {
     const response = await authService.login(email, password);
-    localStorage.setItem('accessToken', response.accessToken);
-    localStorage.setItem('refreshToken', response.refreshToken);
-    setUser(response.user);
-    return response;
+    
+    if (!response.data) {
+      throw new Error('認証に失敗しました');
+    }
+    
+    // accessTokenのみlocalStorageに保存（refreshTokenはHttpOnly Cookieで管理）
+    localStorage.setItem('accessToken', response.data.accessToken);
+    setUser(response.data.user);
+    
+    // refreshTokenプロパティを追加して完全なAuthResponseを返す
+    return {
+      ...response.data,
+      refreshToken: '', // refreshTokenはCookieで管理されているため空文字列
+    };
   };
 
   const logout = async () => {
@@ -62,7 +72,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.error('Logout error:', error);
     } finally {
       localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      // refreshTokenはHttpOnly Cookieで管理されているため、削除不要
       setUser(null);
     }
   };
@@ -76,9 +86,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // LINE認証コールバック処理
     try {
       const response = await authService.lineCallback(code, state);
-      localStorage.setItem('accessToken', response.accessToken);
-      localStorage.setItem('refreshToken', response.refreshToken);
-      setUser(response.user);
+      // accessTokenのみlocalStorageに保存（refreshTokenはHttpOnly Cookieで管理）
+      if (response.data && response.data.accessToken) {
+        localStorage.setItem('accessToken', response.data.accessToken);
+        setUser(response.data.user);
+      }
     } catch (error) {
       console.error('LINE callback error:', error);
       throw error;
@@ -89,9 +101,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // 組織登録処理
     try {
       const response = await authService.registerOrganization(data);
-      localStorage.setItem('accessToken', response.accessToken);
-      localStorage.setItem('refreshToken', response.refreshToken);
-      setUser(response.user);
+      // accessTokenのみlocalStorageに保存（refreshTokenはHttpOnly Cookieで管理）
+      if (response.data && response.data.accessToken) {
+        localStorage.setItem('accessToken', response.data.accessToken);
+        setUser(response.data.user);
+      }
     } catch (error) {
       console.error('Organization registration error:', error);
       throw error;

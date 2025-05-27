@@ -52,8 +52,7 @@ const paymentMethodSchema = new Schema<IPaymentMethod>({
   },
   univapayTokenId: {
     type: String,
-    sparse: true,
-    index: true
+    sparse: true
   },
   metadata: {
     type: mongoose.Schema.Types.Mixed,

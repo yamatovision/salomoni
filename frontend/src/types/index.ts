@@ -223,6 +223,7 @@ export const API_PATHS = {
     DASHBOARD: '/api/admin/dashboard',
     CLIENTS: '/api/admin/clients',
     STYLISTS: '/api/admin/stylists',
+    STYLISTS_RISK_SUMMARY: '/api/admin/stylists/risk-summary',
     APPOINTMENTS: '/api/admin/appointments',
     BULK_IMPORT: '/api/admin/import/bulk',
     SUPPORT_TICKETS: '/api/admin/support/tickets',
@@ -254,12 +255,24 @@ export const API_PATHS = {
     PLANS: '/api/superadmin/plans',
     PLAN_DETAIL: (planId: string) => `/api/superadmin/plans/${planId}`,
     REVENUE_SIMULATE: '/api/superadmin/revenue/simulate',
+    REVENUE_SIMULATION_DATA: '/api/superadmin/revenue/simulation-data',
     INVOICES: '/api/superadmin/invoices',
     SUPPORT_TICKETS: '/api/superadmin/support/tickets',
     SUPPORT_TICKET_DETAIL: (ticketId: string) => `/api/superadmin/support/tickets/${ticketId}`,
     SUPPORT_TICKET_REPLY: (ticketId: string) => `/api/superadmin/support/tickets/${ticketId}/reply`,
     SUPPORT_TICKET_STATUS: (ticketId: string) => `/api/superadmin/support/tickets/${ticketId}/status`,
     SUPPORT_STATS: '/api/superadmin/support/stats',
+    // 請求管理関連
+    BILLING_SUMMARY: '/api/superadmin/billing/summary',
+    BILLING_REVENUE_TRENDS: '/api/superadmin/billing/revenue-trends',
+    BILLING_INVOICES: '/api/superadmin/billing/invoices',
+    BILLING_INVOICE_DETAIL: (invoiceId: string) => `/api/superadmin/billing/invoices/${invoiceId}`,
+    BILLING_INVOICE_RESEND: (invoiceId: string) => `/api/superadmin/billing/invoices/${invoiceId}/resend`,
+    BILLING_PAYMENT_METHODS: '/api/superadmin/billing/payment-methods',
+    BILLING_PAYMENT_HISTORY: '/api/superadmin/billing/payment-history',
+    BILLING_REFUNDS: '/api/superadmin/billing/refunds',
+    BILLING_REPORTS_MONTHLY: '/api/superadmin/billing/reports/monthly',
+    BILLING_REPORTS_EXPORT: '/api/superadmin/billing/reports/export',
   },
 } as const;
 
@@ -354,7 +367,6 @@ export interface TokenRefreshResponse {
 // 組織登録リクエスト
 export interface OrganizationRegisterRequest {
   organizationName: string;
-  organizationDisplayName?: string;
   organizationPhone?: string;
   organizationAddress?: string;
   ownerName: string;
@@ -370,6 +382,9 @@ export interface StaffInviteRequest {
   email: string;
   role: UserRole.ADMIN | UserRole.USER;
   name?: string;
+  birthDate?: Date | string;
+  phone?: string;
+  position?: string;
 }
 
 // 招待完了リクエスト
@@ -396,6 +411,12 @@ export interface UserBase {
 // ユーザープロフィール
 export interface UserProfile extends UserBase, Timestamps {
   birthDate?: Date;
+  birthTime?: string; // 出生時刻（HH:mm形式）
+  birthLocation?: {
+    name?: string; // 都市名
+    longitude?: number; // 経度
+    latitude?: number; // 緯度
+  };
   gender?: 'male' | 'female' | 'other';
   phone?: string;
   profileImage?: string;
@@ -424,6 +445,12 @@ export interface UserCreateRequest {
   role: UserRole;
   organizationId?: ID;
   birthDate?: string;
+  birthTime?: string; // 出生時刻（HH:mm形式）
+  birthLocation?: {
+    name?: string; // 都市名
+    longitude?: number; // 経度
+    latitude?: number; // 緯度
+  };
   gender?: 'male' | 'female' | 'other';
   phone?: string;
   password?: string; // メール認証時のみ
@@ -434,6 +461,12 @@ export interface UserCreateRequest {
 export interface UserUpdateRequest {
   name?: string;
   birthDate?: string;
+  birthTime?: string; // 出生時刻（HH:mm形式）
+  birthLocation?: {
+    name?: string; // 都市名
+    longitude?: number; // 経度
+    latitude?: number; // 緯度
+  };
   gender?: 'male' | 'female' | 'other';
   phone?: string;
   profileImage?: string;
@@ -463,8 +496,7 @@ export enum OrganizationPlan {
 export interface Organization extends Timestamps {
   id: ID;
   name: string;
-  displayName?: string;
-  ownerId: ID;
+  ownerId: ID | User; // populateされた場合はUser型
   status: OrganizationStatus;
   plan: OrganizationPlan;
   email: string;
@@ -483,16 +515,22 @@ export interface Organization extends Timestamps {
 // 組織作成リクエスト
 export interface OrganizationCreateRequest {
   name: string;
-  ownerName: string;
-  ownerEmail: string;
-  plan: OrganizationPlan;
-  billingEmail?: string;
+  email: string;
+  phone: string;
+  address: string;
+  ownerId: string;
+  plan?: OrganizationPlan;
+  status?: OrganizationStatus;
+  tokenLimit?: number;
+  metadata?: {
+    employeeCount?: number;
+    businessType?: 'salon' | 'individual' | 'franchise' | 'other';
+  };
 }
 
 // 組織更新リクエスト
 export interface OrganizationUpdateRequest {
   name?: string;
-  displayName?: string;
   email?: string;
   phone?: string;
   address?: string;
@@ -522,6 +560,12 @@ export interface Client extends Timestamps {
   organizationId: ID;
   name: string;
   birthDate?: Date;
+  birthTime?: string; // 出生時刻（HH:mm形式）
+  birthLocation?: {
+    name?: string; // 都市名
+    longitude?: number; // 経度
+    latitude?: number; // 緯度
+  };
   gender?: 'male' | 'female' | 'other';
   email?: string;
   phoneNumber?: string;
@@ -533,17 +577,31 @@ export interface Client extends Timestamps {
 // クライアント作成リクエスト
 export interface ClientCreateRequest {
   name: string;
+  phoneNumber: string; // 必須：電話番号
   birthDate?: string;
+  birthTime?: string; // 出生時刻（HH:mm形式）
+  birthLocation?: {
+    name?: string; // 都市名
+    longitude?: number; // 経度
+    latitude?: number; // 緯度
+  };
   gender?: 'male' | 'female' | 'other';
   email?: string;
-  phoneNumber?: string;
   memo?: string;
+  notes?: string; // バックエンドのnotesフィールドに対応
+  tags?: string[]; // タグ
 }
 
 // クライアント更新リクエスト
 export interface ClientUpdateRequest {
   name?: string;
   birthDate?: string;
+  birthTime?: string; // 出生時刻（HH:mm形式）
+  birthLocation?: {
+    name?: string; // 都市名
+    longitude?: number; // 経度
+    latitude?: number; // 緯度
+  };
   gender?: 'male' | 'female' | 'other';
   email?: string;
   phoneNumber?: string;
@@ -1260,6 +1318,11 @@ export interface DashboardSummary {
   unassignedAppointments?: UnassignedAppointment[];
   attendedClients?: number;
   cancelledAppointments?: number;
+  tokenUsageChart?: {
+    labels: string[];
+    dailyUsage: number[];
+    cumulativeUsage: number[];
+  };
 }
 
 // トークン使用状況の詳細データ
@@ -1406,7 +1469,6 @@ export interface AppointmentAssignmentRecommendation {
 export interface PlanDetail {
   id: ID;
   name: string;
-  displayName: string;
   plan: OrganizationPlan;
   price: number;
   billingCycle: 'monthly' | 'yearly';
@@ -1432,7 +1494,6 @@ export interface PlanDetail {
 
 // プラン更新リクエスト
 export interface PlanUpdateRequest {
-  displayName?: string;
   price?: number;
   features?: Partial<PlanDetail['features']>;
   description?: string;
@@ -1445,7 +1506,6 @@ export interface PlanUpdateRequest {
 export interface TokenPlan {
   id: ID;
   name: string;
-  displayName: string;
   tokenAmount: number;
   price: number;
   pricePerToken: number;
@@ -1459,7 +1519,6 @@ export interface TokenPlan {
 
 // トークンプラン更新リクエスト
 export interface TokenPlanUpdateRequest {
-  displayName?: string;
   tokenAmount?: number;
   price?: number;
   description?: string;
@@ -1552,8 +1611,9 @@ export interface CreateTokenResponse {
 }
 
 export interface ChargeTokensRequest {
-  packageId: string;
-  paymentToken: string;
+  tokenPackage: 'standard' | 'premium';
+  paymentMethodId?: string;
+  organizationId: string;
 }
 
 export interface ChargeTokensResponse {
@@ -2298,5 +2358,374 @@ export interface DailyClientDisplay {
     date: Date;
     summary: string;
   };
+}
+
+// ==========================================
+// 収益シミュレーション関連
+// ==========================================
+
+// プラン型定義
+export interface Plan {
+  _id: string;
+  id: string;
+  name: string;
+  type: 'subscription' | 'token_pack';
+  price: number;
+  billingCycle: 'monthly' | 'yearly' | 'one_time';
+  features: string[];
+  limits?: {
+    stylists?: number;
+    clients?: number;
+    tokensPerMonth?: number;
+    maxStylists?: number; // エイリアス
+    maxClients?: number; // エイリアス
+    monthlyTokens?: number; // エイリアス
+  };
+  tokenAmount?: number;
+  isActive: boolean;
+  isPopular?: boolean;
+  displayOrder: number;
+  metadata?: Record<string, any>;
+  description?: string;
+  savingsPercentage?: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// シミュレーションパラメータ
+export interface SimulationParams {
+  newOrganizationsPerMonth: number;
+  growthRatePercent: number;
+  churnRate: number;
+  averageTokenPurchase: number;
+  planUpgradeRate?: number;
+  simulationMonths?: number;
+}
+
+// 収益シミュレーション基礎データ
+export interface RevenueSimulationData {
+  // 現在の組織統計
+  currentStats: {
+    totalOrganizations: number;
+    activeOrganizations: number;
+    planDistribution: {
+      basic: number;
+      standard: number;
+      premium: number;
+    };
+  };
+  
+  // 過去の実績データ（6ヶ月分）
+  historicalData: {
+    month: string; // YYYY-MM
+    revenue: {
+      subscription: number;
+      tokenSales: number;
+      total: number;
+    };
+    newOrganizations: number;
+    churnedOrganizations: number;
+    churnRate: number;
+  }[];
+  
+  // 平均値データ
+  averages: {
+    monthlyNewOrganizations: number;
+    monthlyChurnRate: number;
+    tokenPurchasePerOrg: {
+      basic: number;
+      standard: number;
+      premium: number;
+    };
+  };
+  
+  // 現在のプラン設定
+  currentPlans: {
+    subscription: SubscriptionPlan[];
+    tokenPackages: TokenPackageDetail[];
+  };
+  
+  // 追加プロパティ（UI表示用）
+  revenueHistory?: Array<{
+    month: string;
+    revenue: number;
+    subscriptionRevenue: number;
+    tokenRevenue: number;
+  }>;
+  
+  currentOrganizations?: {
+    active: number;
+    total: number;
+    byPlan: {
+      [key: string]: number;
+    };
+  };
+  
+  growthMetrics?: {
+    averageNewOrganizations: number;
+    monthlyGrowthRate: number;
+    churnRate: number;
+    averageChurnRate?: number; // 追加
+    newOrganizationsTrend?: number; // 追加
+  };
+  
+  tokenMetrics?: {
+    averagePurchase: number;
+    totalSales: number;
+    purchaseFrequency: number;
+    monthlyUsageStats?: { // 追加
+      month: string;
+      usage: number;
+      revenue: number;
+    }[];
+  };
+  
+  planPricing?: {
+    subscription: Array<{
+      name: string;
+      price: number;
+      features: string[];
+    }>;
+    tokenPackages: Array<{
+      name: string;
+      price: number;
+      tokens: number;
+    }>;
+  };
+}
+
+// プラン（サブスクリプション）
+export interface SubscriptionPlan {
+  id: ID;
+  name: string;
+  displayName: string;
+  description: string;
+  monthlyPrice: number;
+  features: string[];
+  maxUsers: number;
+  maxClients: number;
+  monthlyTokens: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// 収益シミュレーションパラメータ
+export interface RevenueSimulationParams {
+  monthlyNewOrganizations: number;
+  churnRate: number;
+  averageTokenPurchase: number;
+  planUpgradeRate?: number;
+  simulationMonths?: number; // デフォルト12ヶ月
+}
+
+// 収益シミュレーション結果
+export interface RevenueSimulationResult {
+  projections: {
+    month: string; // YYYY-MM
+    organizations: {
+      total: number;
+      new: number;
+      churned: number;
+      planDistribution: {
+        basic: number;
+        standard: number;
+        premium: number;
+      };
+    };
+    revenue: {
+      subscription: number;
+      tokenSales: number;
+      total: number;
+    };
+  }[];
+  
+  summary: {
+    totalRevenue: number;
+    averageMonthlyRevenue: number;
+    endingOrganizations: number;
+    growthRate: number;
+  };
+}
+
+// ==========================================
+// SuperAdmin請求管理関連
+// ==========================================
+
+// SuperAdmin請求サマリー
+export interface SuperAdminBillingSummary {
+  // 収益サマリー
+  revenue: {
+    total: number;
+    subscription: number;
+    tokenSales: number;
+    monthlyGrowth: number;
+    yearlyGrowth: number;
+  };
+  
+  // 支払い状況
+  paymentStatus: {
+    totalOutstanding: number;
+    totalOverdue: number;
+    successRate: number;
+    failureCount: number;
+  };
+  
+  // 組織別ランキング
+  topOrganizations: Array<{
+    organizationId: string;
+    organizationName: string;
+    totalRevenue: number;
+    lastPaymentDate: Date;
+    status: 'good' | 'warning' | 'critical';
+  }>;
+  
+  // 期間
+  period: {
+    start: Date;
+    end: Date;
+  };
+}
+
+// 収益トレンドデータ
+export interface RevenueTrendData {
+  period: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  trends: Array<{
+    date: string;
+    subscription: number;
+    tokenSales: number;
+    total: number;
+    organizationCount: number;
+    newOrganizations: number;
+    churnedOrganizations: number;
+  }>;
+  comparison: {
+    previousPeriod: {
+      total: number;
+      growth: number;
+    };
+    yearOverYear: {
+      total: number;
+      growth: number;
+    };
+  };
+}
+
+// SuperAdmin用請求書リストアイテム
+export interface SuperAdminInvoiceListItem {
+  id: string;
+  invoiceNumber: string;
+  organizationId: string;
+  organizationName: string;
+  type: 'subscription' | 'token' | 'adjustment';
+  status: InvoiceStatus;
+  amount: number;
+  issueDate: Date;
+  dueDate: Date;
+  paidAt?: Date;
+  overdueDays?: number;
+}
+
+// SuperAdmin用請求書詳細
+export interface SuperAdminInvoiceDetail extends Invoice {
+  organization: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+    plan: OrganizationPlan;
+    status: OrganizationStatus;
+  };
+  paymentHistory: Array<{
+    attemptDate: Date;
+    status: 'success' | 'failed';
+    amount: number;
+    paymentMethodId?: string;
+    failureReason?: string;
+  }>;
+  notes: Array<{
+    content: string;
+    createdAt: Date;
+    createdBy: string;
+  }>;
+}
+
+// 支払い分析データ
+export interface PaymentAnalytics {
+  organizationId: string;
+  organizationName: string;
+  paymentMethods: number;
+  activeSubscriptions: number;
+  totalSpent: number;
+  averageMonthlySpend: number;
+  lastPaymentDate?: Date;
+  paymentHealth: 'excellent' | 'good' | 'fair' | 'poor';
+  riskFactors: string[];
+}
+
+// 支払い履歴フィルター
+export interface PaymentHistoryFilter {
+  organizationId?: string;
+  status?: 'success' | 'failed' | 'pending';
+  dateFrom?: Date;
+  dateTo?: Date;
+  minAmount?: number;
+  maxAmount?: number;
+  paymentMethod?: string;
+}
+
+// 月次レポート
+export interface MonthlyBillingReport {
+  month: string;
+  revenue: {
+    subscription: number;
+    tokenSales: number;
+    adjustments: number;
+    total: number;
+  };
+  invoices: {
+    issued: number;
+    paid: number;
+    overdue: number;
+    cancelled: number;
+  };
+  collections: {
+    rate: number;
+    averageDaysToPayment: number;
+    outstandingAmount: number;
+  };
+  topPerformers: Array<{
+    organizationId: string;
+    organizationName: string;
+    revenue: number;
+  }>;
+  insights: string[];
+}
+
+// 請求書更新リクエスト
+export interface SuperAdminInvoiceUpdateRequest {
+  status?: InvoiceStatus;
+  notes?: string;
+  adjustment?: {
+    amount: number;
+    reason: string;
+  };
+}
+
+// 返金リクエスト
+export interface RefundRequest {
+  invoiceId: string;
+  amount: number;
+  reason: string;
+  notifyOrganization: boolean;
+}
+
+// 返金レスポンス
+export interface RefundResponse {
+  refundId: string;
+  status: 'pending' | 'completed' | 'failed';
+  amount: number;
+  processedAt?: Date;
+  failureReason?: string;
 }
 

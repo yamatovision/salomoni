@@ -63,8 +63,7 @@ const SupportTicketSchema = new Schema<ISupportTicket>({
   ticketNumber: {
     type: String,
     required: true,
-    unique: true,
-    index: true
+    unique: true
   },
   organizationId: {
     type: Schema.Types.ObjectId,
@@ -123,7 +122,6 @@ const SupportTicketSchema = new Schema<ISupportTicket>({
 // インデックスの設定
 SupportTicketSchema.index({ organizationId: 1, status: 1 });
 SupportTicketSchema.index({ userId: 1, createdAt: -1 });
-SupportTicketSchema.index({ ticketNumber: 1 });
 SupportTicketSchema.index({ status: 1, priority: -1, createdAt: -1 });
 
 // 仮想プロパティ: メッセージ数

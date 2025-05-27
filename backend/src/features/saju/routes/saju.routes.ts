@@ -56,4 +56,14 @@ router.post(
   sajuController.compatibility.bind(sajuController)
 );
 
+/**
+ * ユーザーの四柱推命プロフィール取得
+ * GET /api/saju/user/:userId
+ */
+router.get(
+  '/user/:userId',
+  authenticate,
+  sajuController.getUserFourPillars.bind(sajuController)
+);
+
 export default router;

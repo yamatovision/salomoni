@@ -114,6 +114,7 @@ async function seedTestData() {
       },
     ];
 
+    const createdStylists = [];
     for (const stylistData of stylists) {
       const stylist = new UserModel({
         ...stylistData,
@@ -124,6 +125,7 @@ async function seedTestData() {
         authMethods: ['email'],
       });
       await stylist.save();
+      createdStylists.push(stylist);
     }
     logger.info(`Created ${stylists.length} stylists for organization 1`);
 
@@ -183,6 +185,12 @@ async function seedTestData() {
     console.log('  Owner - Email: owner2@athome-salon.jp, Password: Owner123!');
     console.log('========================\n');
 
+    // 作成したデータを返す
+    return {
+      users: [superAdmin, owner1, admin1, ...createdStylists, owner2],
+      organizations: [org1, org2]
+    };
+
   } catch (error) {
     logger.error('Failed to seed test data', error);
     throw error;
@@ -191,8 +199,13 @@ async function seedTestData() {
   }
 }
 
+// エクスポート
+export { seedTestData };
+
 // mongoose import
 import mongoose from 'mongoose';
 
-// スクリプト実行
-seedTestData().catch(console.error);
+// スクリプトとして直接実行された場合のみ実行
+if (require.main === module) {
+  seedTestData().catch(console.error);
+}

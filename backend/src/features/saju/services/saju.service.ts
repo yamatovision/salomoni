@@ -8,6 +8,7 @@ import {
   CompatibilityCalculateRequest
 } from '../../../types';
 import mongoose from 'mongoose';
+import { UserModel } from '../../users/models/user.model';
 
 export class SajuService {
   private sajuEngine: SajuEngine;
@@ -196,7 +197,7 @@ export class SajuService {
 
         advice: this.generateAdvancedCompatibilityAdvice(compatibilityDetails),
         challenges: this.generateChallenges(compatibilityDetails),
-        strengths: this.generateStrengths(compatibilityDetails),
+        strengths: this.generateCompatibilityStrengths(compatibilityDetails),
         
         calculatedAt: new Date()
       };
@@ -819,6 +820,200 @@ export class SajuService {
   }
   
   /**
+   * ユーザーの四柱推命プロフィール取得
+   */
+  async getUserFourPillars(userId: string): Promise<any> {
+    try {
+      logger.info('[SajuService] ユーザー四柱推命プロフィール取得開始', { userId });
+
+      // データベースからユーザー情報を取得
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        throw new Error('ユーザーが見つかりません');
+      }
+
+      // 生年月日がない場合はエラー
+      if (!user.birthDate) {
+        throw new Error('ユーザーの生年月日が登録されていません');
+      }
+
+      // デフォルト値の設定
+      const birthDate = new Date(user.birthDate);
+      const birthTime = user.birthTime || '00:00'; // デフォルトは午前0時
+      const timeParts = birthTime.split(':');
+      const hour = parseInt(timeParts[0] || '0', 10);
+      const minute = parseInt(timeParts[1] || '0', 10);
+      const birthHour = hour + (minute / 60); // 小数点以下で分を表現
+      
+      // 出生地の設定（デフォルトは東京）
+      const location = user.birthLocation?.longitude && user.birthLocation?.latitude ? {
+        longitude: user.birthLocation.longitude,
+        latitude: user.birthLocation.latitude
+      } : {
+        longitude: 139.6917,
+        latitude: 35.6895
+      };
+
+      // SajuEngineで四柱推命を計算
+      const sajuEngine = new SajuEngine({
+        useInternationalMode: true,
+        useLocalTime: true,
+        useDST: true
+      });
+
+      const sajuResult = sajuEngine.calculate(
+        birthDate,
+        Math.floor(birthHour), // 整数部分のみ使用
+        user.gender === 'male' ? 'M' : 'F',
+        location
+      );
+
+      // レスポンス形式に変換
+      const profile = {
+        userId,
+        birthDate: birthDate.toISOString(),
+        birthTime,
+        location: user.birthLocation?.name || '東京',
+        fourPillars: {
+          yearPillar: {
+            heavenlyStem: sajuResult.fourPillars.yearPillar.stem,
+            earthlyBranch: sajuResult.fourPillars.yearPillar.branch,
+            element: this.getElementFromStem(sajuResult.fourPillars.yearPillar.stem),
+            yinYang: this.getYinYangFromStem(sajuResult.fourPillars.yearPillar.stem)
+          },
+          monthPillar: {
+            heavenlyStem: sajuResult.fourPillars.monthPillar.stem,
+            earthlyBranch: sajuResult.fourPillars.monthPillar.branch,
+            element: this.getElementFromStem(sajuResult.fourPillars.monthPillar.stem),
+            yinYang: this.getYinYangFromStem(sajuResult.fourPillars.monthPillar.stem)
+          },
+          dayPillar: {
+            heavenlyStem: sajuResult.fourPillars.dayPillar.stem,
+            earthlyBranch: sajuResult.fourPillars.dayPillar.branch,
+            element: this.getElementFromStem(sajuResult.fourPillars.dayPillar.stem),
+            yinYang: this.getYinYangFromStem(sajuResult.fourPillars.dayPillar.stem)
+          },
+          hourPillar: {
+            heavenlyStem: sajuResult.fourPillars.hourPillar.stem,
+            earthlyBranch: sajuResult.fourPillars.hourPillar.branch,
+            element: this.getElementFromStem(sajuResult.fourPillars.hourPillar.stem),
+            yinYang: this.getYinYangFromStem(sajuResult.fourPillars.hourPillar.stem)
+          }
+        },
+        elementBalance: {
+          wood: sajuResult.elementProfile.wood,
+          fire: sajuResult.elementProfile.fire,
+          earth: sajuResult.elementProfile.earth,
+          metal: sajuResult.elementProfile.metal,
+          water: sajuResult.elementProfile.water
+        },
+        tenGods: sajuResult.tenGods,
+        personality: {
+          mainElement: sajuResult.elementProfile.mainElement,
+          traits: this.generatePersonalityTraits(sajuResult),
+          strengths: this.generateStrengths(sajuResult),
+          weaknesses: this.generateWeaknesses(sajuResult)
+        },
+        calculatedAt: new Date()
+      };
+
+      logger.info('[SajuService] ユーザー四柱推命プロフィール取得完了', { userId });
+      return profile;
+
+    } catch (error) {
+      logger.error('[SajuService] ユーザー四柱推命プロフィール取得エラー', { error, userId });
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('ユーザーの四柱推命プロフィール取得に失敗しました');
+    }
+  }
+
+  /**
+   * 性格特性を生成
+   */
+  private generatePersonalityTraits(sajuResult: any): string[] {
+    const traits: string[] = [];
+    const mainElement = sajuResult.elementProfile.mainElement;
+    
+    switch(mainElement) {
+      case '木':
+        traits.push('リーダーシップ', '創造性', '向上心');
+        break;
+      case '火':
+        traits.push('情熱的', '行動力', '社交的');
+        break;
+      case '土':
+        traits.push('安定志向', '信頼性', '実務能力');
+        break;
+      case '金':
+        traits.push('論理的', '正義感', '完璧主義');
+        break;
+      case '水':
+        traits.push('適応力', '知的', '直感的');
+        break;
+    }
+    
+    return traits;
+  }
+
+  /**
+   * 強みを生成
+   */
+  private generateStrengths(sajuResult: any): string[] {
+    const strengths: string[] = [];
+    const mainElement = sajuResult.elementProfile.mainElement;
+    
+    switch(mainElement) {
+      case '木':
+        strengths.push('決断力が高い', '目標達成力がある', '人を引っ張る力がある');
+        break;
+      case '火':
+        strengths.push('積極的に行動できる', 'コミュニケーション能力が高い', '周囲を明るくする');
+        break;
+      case '土':
+        strengths.push('責任感が強い', '計画的に物事を進められる', '忍耐力がある');
+        break;
+      case '金':
+        strengths.push('分析力が高い', '公平な判断ができる', '品質にこだわる');
+        break;
+      case '水':
+        strengths.push('柔軟性がある', '学習能力が高い', '洞察力に優れる');
+        break;
+    }
+    
+    return strengths;
+  }
+
+  /**
+   * 弱点を生成
+   */
+  private generateWeaknesses(sajuResult: any): string[] {
+    const weaknesses: string[] = [];
+    const mainElement = sajuResult.elementProfile.mainElement;
+    
+    switch(mainElement) {
+      case '木':
+        weaknesses.push('頑固な面がある', '協調性に欠ける場合がある');
+        break;
+      case '火':
+        weaknesses.push('衝動的になりやすい', '飽きっぽい面がある');
+        break;
+      case '土':
+        weaknesses.push('変化を嫌う傾向がある', '融通が利かない場合がある');
+        break;
+      case '金':
+        weaknesses.push('批判的になりやすい', '完璧を求めすぎる');
+        break;
+      case '水':
+        weaknesses.push('優柔不断になりやすい', '感情に流されやすい');
+        break;
+    }
+    
+    return weaknesses;
+  }
+
+  /**
    * 課題を生成
    */
   private generateChallenges(details: any): string[] {
@@ -844,9 +1039,9 @@ export class SajuService {
   }
   
   /**
-   * 強みを生成
+   * 相性の強みを生成
    */
-  private generateStrengths(details: any): string[] {
+  private generateCompatibilityStrengths(details: any): string[] {
     const strengths: string[] = [];
     
     if (details.details.yinYangBalance >= 80) {

@@ -69,7 +69,7 @@ export class AuthService {
     // 組織ステータスチェック（SuperAdmin以外）
     if (user.role !== UserRole.SUPER_ADMIN && user.organizationId) {
       const organization = await this.organizationRepository.findById(user.organizationId);
-      if (!organization || organization.status !== OrganizationStatus.ACTIVE) {
+      if (!organization || (organization.status !== OrganizationStatus.ACTIVE && organization.status !== OrganizationStatus.TRIAL)) {
         throw new AppError('所属組織が無効化されています', 403, 'AUTH007');
       }
     }
@@ -243,7 +243,7 @@ export class AuthService {
 
       return {
         userId: profileResponse.data.userId,
-        displayName: profileResponse.data.displayName,
+        displayName: profileResponse.data.name,
         pictureUrl: profileResponse.data.pictureUrl,
       };
     } catch (error) {
@@ -454,7 +454,6 @@ export class AuthService {
       // 組織を作成
       const organizationData: any = {
         name: request.organizationName,
-        displayName: request.organizationDisplayName || request.organizationName,
         email: billingEmail,
         phone: request.organizationPhone || '',
         address: request.organizationAddress || '',
@@ -642,7 +641,7 @@ export class AuthService {
       // ユーザーを作成
       const userData: any = {
         email: inviteToken.email,
-        name,
+        name: name || inviteToken.name, // リクエストのnameがない場合は招待トークンのnameを使用
         password,
         role: inviteToken.role,
         organizationId: organizationId,
@@ -650,11 +649,23 @@ export class AuthService {
         authMethods: [AuthMethod.EMAIL],
       };
 
+      // リクエストまたは招待トークンから追加フィールドを設定
       if (birthDate) {
         userData.birthDate = new Date(birthDate);
+      } else if (inviteToken.birthDate) {
+        userData.birthDate = new Date(inviteToken.birthDate);
       }
+      
       if (gender) {
         userData.gender = gender;
+      }
+      
+      if (inviteToken.phone) {
+        userData.phone = inviteToken.phone;
+      }
+      
+      if (inviteToken.position) {
+        userData.position = inviteToken.position;
       }
 
       const user = await this.userRepository.create(userData);

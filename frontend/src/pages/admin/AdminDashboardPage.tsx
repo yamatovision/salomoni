@@ -24,19 +24,8 @@ import {
   Assignment as AssignmentIcon,
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
-// import { Line, Bar } from 'react-chartjs-2';
-// import {
-//   Chart as ChartJS,
-//   CategoryScale,
-//   LinearScale,
-//   PointElement,
-//   LineElement,
-//   BarElement,
-//   Title,
-//   Tooltip,
-//   Legend,
-//   ChartOptions,
-// } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+import { commonChartOptions, chartColors } from '../../utils/chartConfig';
 // 要素ごとの色を返す関数
 const getElementColor = (element: string): string => {
   switch (element) {
@@ -65,17 +54,6 @@ import type { DashboardSummary } from '../../types';
 
 // ページID: A-001
 
-// Chart.js の設定
-// ChartJS.register(
-//   CategoryScale,
-//   LinearScale,
-//   PointElement,
-//   LineElement,
-//   BarElement,
-//   Title,
-//   Tooltip,
-//   Legend
-// );
 
 // スタイル付きコンポーネント
 const StatsCard = styled(Card)(({ theme }) => ({
@@ -158,56 +136,53 @@ const AdminDashboardPage: React.FC = () => {
     }
   };
 
-  // チャートオプション（Chart.jsが必要）
-  // const chartOptions: any = {
-  //   responsive: true,
-  //   maintainAspectRatio: false,
-  //   plugins: {
-  //     legend: {
-  //       position: 'top' as const,
-  //     },
-  //     tooltip: {
-  //       callbacks: {
-  //         label: (context: any) => {
-  //           return `${context.dataset.label}: ${context.raw?.toLocaleString()} トークン`;
-  //         },
-  //       },
-  //     },
-  //   },
-  //   scales: {
-  //     y: {
-  //       beginAtZero: true,
-  //       title: {
-  //         display: true,
-  //         text: 'トークン数',
-  //       },
-  //     },
-  //   },
-  // };
+  // チャートオプション
+  const chartOptions: any = {
+    ...commonChartOptions,
+    plugins: {
+      ...commonChartOptions.plugins,
+      legend: {
+        ...commonChartOptions.plugins.legend,
+        position: 'top' as const,
+      },
+      tooltip: {
+        ...commonChartOptions.plugins.tooltip,
+        callbacks: {
+          label: (context: any) => {
+            return `${context.dataset.label}: ${context.raw?.toLocaleString()} トークン`;
+          },
+        },
+      },
+    },
+    scales: {
+      ...commonChartOptions.scales,
+      y: {
+        ...commonChartOptions.scales.y,
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: 'トークン数',
+        },
+      },
+    },
+  };
 
-  // チャートデータ（Chart.jsが必要）
-  // const chartData = {
-  //   labels: mockTokenUsageChartData[0].data.map(d => d.label),
-  //   datasets: [
-  //     {
-  //       type: 'bar' as const,
-  //       label: mockTokenUsageChartData[0].label,
-  //       data: mockTokenUsageChartData[0].data.map(d => d.value),
-  //       backgroundColor: mockTokenUsageChartData[0].backgroundColor,
-  //       borderColor: mockTokenUsageChartData[0].borderColor,
-  //       borderWidth: 1,
-  //     },
-  //     {
-  //       type: 'line' as const,
-  //       label: mockTokenUsageChartData[1].label,
-  //       data: mockTokenUsageChartData[1].data.map(d => d.value),
-  //       backgroundColor: mockTokenUsageChartData[1].backgroundColor,
-  //       borderColor: mockTokenUsageChartData[1].borderColor,
-  //       borderWidth: 2,
-  //       pointRadius: 2,
-  //     },
-  //   ],
-  // };
+  // チャートデータ
+  const chartData = dashboardStats && dashboardStats.tokenUsageChart ? {
+    labels: dashboardStats.tokenUsageChart.labels,
+    datasets: [
+      {
+        label: '日別使用量',
+        data: dashboardStats.tokenUsageChart.dailyUsage,
+        backgroundColor: chartColors.primaryAlpha,
+        borderColor: chartColors.primary,
+        borderWidth: 1,
+      },
+    ],
+  } : {
+    labels: [],
+    datasets: [],
+  };
 
   const handleTaskCheck = (taskId: string) => {
     setCheckedTasks(prev =>
@@ -367,10 +342,13 @@ const AdminDashboardPage: React.FC = () => {
                   </FormControl>
                 </Box>
                 <Box height={250}>
-                  {/* <Bar data={chartData} options={chartOptions} /> */}
-                  <Typography color="text.secondary" align="center" sx={{ mt: 10 }}>
-                    チャート表示にはchart.jsのインストールが必要です
-                  </Typography>
+                  {dashboardStats && dashboardStats.tokenUsageChart ? (
+                    <Bar data={chartData} options={chartOptions} />
+                  ) : (
+                    <Typography color="text.secondary" align="center" sx={{ mt: 10 }}>
+                      チャートデータが利用できません
+                    </Typography>
+                  )}
                 </Box>
               </CardContent>
             </ChartCard>

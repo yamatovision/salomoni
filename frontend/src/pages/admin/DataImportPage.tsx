@@ -120,7 +120,8 @@ const DataImportPage: React.FC = () => {
     try {
       // インポート履歴を取得
       const historyResponse = await importService.getHistory({ page: historyPage, limit: 10 });
-      setImportHistories(historyResponse.history);
+      console.log('Import history response:', historyResponse); // デバッグログ
+      setImportHistories(historyResponse.history || []);
 
       // デフォルト設定を適用（モックから移行中）
       const defaultSettings: ImportSettings = {
@@ -1021,7 +1022,7 @@ const DataImportPage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {importHistories.slice((historyPage - 1) * 5, historyPage * 5).map((history) => (
+                  {(importHistories || []).slice((historyPage - 1) * 5, historyPage * 5).map((history) => (
                     <TableRow key={history.id}>
                       <TableCell>{new Date(history.createdAt).toLocaleString()}</TableCell>
                       <TableCell>

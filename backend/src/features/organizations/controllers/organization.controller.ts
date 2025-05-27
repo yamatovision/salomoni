@@ -1,11 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { OrganizationService } from '../services/organization.service';
 import { AppError } from '../../../common/middleware/errorHandler';
-import type { 
+import { 
   PaginationParams,
   OrganizationStatus,
   OrganizationPlan,
-  ApiResponse
+  ApiResponse,
+  UserRole,
+  AuthMethod
 } from '../../../types';
 
 export class OrganizationController {
@@ -14,6 +16,67 @@ export class OrganizationController {
   constructor() {
     this.organizationService = new OrganizationService();
   }
+
+  /**
+   * 組織とオーナーを同時に作成（SuperAdmin用）
+   * POST /api/organizations/create-with-owner
+   */
+  createOrganizationWithOwner = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const {
+        name,
+        ownerName,
+        ownerEmail,
+        ownerPassword,
+        phone,
+        address,
+        plan,
+        status,
+        tokenLimit
+      } = req.body;
+
+      // パスワードの検証
+      if (!ownerPassword || ownerPassword.length < 8) {
+        throw new AppError('パスワードは8文字以上で設定してください', 400, 'VALIDATION_ERROR');
+      }
+
+      const result = await this.organizationService.createOrganizationWithOwner({
+        organization: {
+          name,
+          email: ownerEmail, // billing用のメールはオーナーと同じ
+          phone: phone || '',
+          address: address || '',
+          plan,
+          tokenLimit
+        },
+        owner: {
+          name: ownerName,
+          email: ownerEmail,
+          password: ownerPassword,
+          role: UserRole.OWNER,
+          authMethods: [AuthMethod.EMAIL]
+        }
+      });
+
+      // statusを組織作成後に設定する場合
+      if (status && status !== OrganizationStatus.ACTIVE) {
+        await this.organizationService.updateOrganization(result.organization.id, { status });
+      }
+
+      const response: ApiResponse<typeof result> = {
+        success: true,
+        data: result,
+      };
+
+      res.status(201).json(response);
+    } catch (error) {
+      next(error);
+    }
+  };
 
   /**
    * 組織一覧取得

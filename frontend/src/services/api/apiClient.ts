@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 // Axios インスタンスの作成
 export const apiClient: AxiosInstance = axios.create({
@@ -36,21 +36,18 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (refreshToken) {
-          const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
-            refreshToken,
-          });
+        // refreshTokenはHttpOnly Cookieで送信されるため、明示的な送信不要
+        const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {}, {
+          withCredentials: true, // Cookieを含めてリクエスト
+        });
 
-          const { accessToken } = response.data.data;
-          localStorage.setItem('accessToken', accessToken);
+        const { accessToken } = response.data.data;
+        localStorage.setItem('accessToken', accessToken);
 
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          return apiClient(originalRequest);
-        }
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        return apiClient(originalRequest);
       } catch (refreshError) {
         localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
         window.location.href = '/login';
       }
     }

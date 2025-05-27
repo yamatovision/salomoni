@@ -7,7 +7,6 @@ import {
   Avatar,
   Collapse,
   Stack,
-  Chip,
   Fade,
   Zoom
 } from '@mui/material';
@@ -19,7 +18,7 @@ import type {
   DailyAdviceData
 } from '../../types';
 import { FortuneCardCategory } from '../../types';
-import { mockDailyAdviceData } from '../../services/mock/data/mockDailyAdvice';
+import { fortuneService } from '../../services';
 
 // ページID: M-002
 
@@ -93,18 +92,19 @@ const ExpandIcon = styled(ExpandMoreIcon)<{ expanded: boolean }>(({ expanded }) 
 }));
 
 const DailyAdvicePage: React.FC = () => {
-  const { } = useAuth();
+  const { user } = useAuth();
   const [adviceData, setAdviceData] = useState<DailyAdviceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    // モックデータを取得
+    // APIからデータを取得
     const loadAdviceData = async () => {
       try {
-        // 実際のAPIコールをシミュレート
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setAdviceData(mockDailyAdviceData);
+        if (!user?.id) return;
+        
+        const advice = await fortuneService.getDailyAdvice(user.id);
+        setAdviceData(advice);
       } catch (error) {
         console.error('Failed to load advice data:', error);
       } finally {
@@ -113,7 +113,7 @@ const DailyAdvicePage: React.FC = () => {
     };
 
     loadAdviceData();
-  }, []);
+  }, [user?.id]);
 
   const handleCardClick = (cardId: string) => {
     setExpandedCards(prev => {
@@ -271,17 +271,6 @@ const DailyAdvicePage: React.FC = () => {
             )}
           </Stack>
           
-          {/* モックデータ表示 */}
-          {(adviceData as any)._isMockData && (
-            <Box sx={{ mt: 4, textAlign: 'center' }}>
-              <Chip 
-                label="モックデータ使用中" 
-                color="warning" 
-                size="small"
-                sx={{ opacity: 0.7 }}
-              />
-            </Box>
-          )}
         </Container>
       </Box>
   );

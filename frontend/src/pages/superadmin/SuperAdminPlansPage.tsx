@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -6,7 +6,6 @@ import {
   Tabs,
   Tab,
   Paper,
-  Grid,
   Card,
   CardContent,
   CardActions,
@@ -33,7 +32,10 @@ import {
   ListItemText,
   ListItemIcon,
   Alert,
+  CircularProgress,
+  Snackbar,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   Edit as EditIcon,
   Visibility as VisibilityIcon,
@@ -51,18 +53,12 @@ import {
 import type { 
   PlanDetail, 
   TokenPlan,
+  RevenueSimulationData,
 } from '../../types';
 import {
   OrganizationPlan,
   InvoiceStatus,
 } from '../../types';
-import { 
-  mockPlans, 
-  mockTokenPlans, 
-  mockRevenueSimulation,
-  mockInvoices,
-  mockBillingSummary,
-} from '../../services/mock/data/mockPlans';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -75,6 +71,9 @@ import {
   Legend,
 } from 'chart.js';
 import type { ChartOptions } from 'chart.js';
+import { planService, type Plan } from '../../services/api/plans';
+import { BillingService } from '../../services/api/billing';
+import { RevenueSimulator, defaultSimulationParams } from '../../utils/revenueSimulation';
 
 // Chart.js設定
 ChartJS.register(
@@ -116,6 +115,48 @@ export default function SuperAdminPlansPage() {
   const [selectedPlan, setSelectedPlan] = useState<PlanDetail | null>(null);
   const [selectedTokenPlan, setSelectedTokenPlan] = useState<TokenPlan | null>(null);
   const [simulationPeriod, setSimulationPeriod] = useState<'monthly' | 'quarterly' | 'yearly'>('monthly');
+  
+  // API データ管理
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [tokenPlans, setTokenPlans] = useState<Plan[]>([]);
+  const [simulationData, setSimulationData] = useState<RevenueSimulationData | null>(null);
+  const [simulator, setSimulator] = useState<RevenueSimulator | null>(null);
+  const [simulationParams, setSimulationParams] = useState(defaultSimulationParams);
+  
+  const billingService = new BillingService();
+  
+  // データ取得
+  useEffect(() => {
+    loadData();
+  }, []);
+  
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // プラン一覧を取得
+      const [subscriptionPlans, tokenPackPlans, simData] = await Promise.all([
+        planService.getPlans({ type: 'subscription', isActive: true }),
+        planService.getPlans({ type: 'token_pack', isActive: true }),
+        billingService.getSimulationData(),
+      ]);
+      
+      setPlans(subscriptionPlans.plans);
+      setTokenPlans(tokenPackPlans.plans);
+      setSimulationData(simData);
+      setSimulator(new RevenueSimulator(simData));
+    } catch (err) {
+      console.error('データ取得エラー:', err);
+      setError('データの取得に失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -131,36 +172,59 @@ export default function SuperAdminPlansPage() {
     setEditTokenDialog(true);
   };
 
+  const handleTogglePlanStatus = async (planId: string, currentStatus: boolean) => {
+    try {
+      await planService.updatePlan(planId, { isActive: !currentStatus });
+      setSuccessMessage(`プランのステータスを${!currentStatus ? '有効' : '無効'}にしました`);
+      loadData();
+    } catch (err) {
+      console.error('プランステータス更新エラー:', err);
+      setError('プランのステータス更新に失敗しました');
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(amount);
   };
 
-  // 収益シミュレーショングラフのデータ
-  const chartData = {
-    labels: mockRevenueSimulation.breakdown.map(item => item.month),
-    datasets: [
-      {
-        label: 'サブスクリプション収益',
-        data: mockRevenueSimulation.breakdown.map(item => item.subscriptionRevenue),
-        borderColor: '#F26A8D',
-        backgroundColor: 'rgba(242, 106, 141, 0.1)',
-        tension: 0.4,
-      },
-      {
-        label: 'トークン販売収益',
-        data: mockRevenueSimulation.breakdown.map(item => item.tokenRevenue),
-        borderColor: '#90caf9',
-        backgroundColor: 'rgba(144, 202, 249, 0.1)',
-        tension: 0.4,
-      },
-      {
-        label: '合計収益',
-        data: mockRevenueSimulation.breakdown.map(item => item.totalRevenue),
-        borderColor: '#66bb6a',
-        backgroundColor: 'rgba(102, 187, 106, 0.1)',
-        tension: 0.4,
-      },
-    ],
+  // 収益シミュレーショングラフのデータを生成
+  const getChartData = () => {
+    if (!simulationData || !simulator) {
+      return {
+        labels: [],
+        datasets: [],
+      };
+    }
+
+    // シミュレーション結果を取得
+    const result = simulator.simulate(simulationParams);
+    
+    return {
+      labels: result.projectedRevenue.map(item => item.month),
+      datasets: [
+        {
+          label: 'サブスクリプション収益',
+          data: result.projectedRevenue.map(item => item.subscriptionRevenue),
+          borderColor: '#F26A8D',
+          backgroundColor: 'rgba(242, 106, 141, 0.1)',
+          tension: 0.4,
+        },
+        {
+          label: 'トークン販売収益',
+          data: result.projectedRevenue.map(item => item.tokenRevenue),
+          borderColor: '#90caf9',
+          backgroundColor: 'rgba(144, 202, 249, 0.1)',
+          tension: 0.4,
+        },
+        {
+          label: '合計収益',
+          data: result.projectedRevenue.map(item => item.revenue),
+          borderColor: '#66bb6a',
+          backgroundColor: 'rgba(102, 187, 106, 0.1)',
+          tension: 0.4,
+        },
+      ],
+    };
   };
 
   const chartOptions: ChartOptions<'line'> = {
@@ -218,84 +282,99 @@ export default function SuperAdminPlansPage() {
 
         {/* 収益シミュレーション */}
         <TabPanel value={tabValue} index={0}>
-          <Grid container spacing={3}>
-            {/* サマリーカード */}
-            <Grid size={{ xs: 12 }}>
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12, md: 3 }}>
-                  <Card sx={{ bgcolor: '#fce4ec' }}>
-                    <CardContent>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <AttachMoneyIcon sx={{ color: '#F26A8D', mr: 1 }} />
-                        <Typography color="text.secondary" variant="body2">
-                          月間収益予測
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : error ? (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          ) : simulationData && simulator ? (
+            <Grid container spacing={3}>
+              {/* サマリーカード */}
+              <Grid size={{ xs: 12 }}>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, md: 3 }}>
+                    <Card sx={{ bgcolor: '#fce4ec' }}>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <AttachMoneyIcon sx={{ color: '#F26A8D', mr: 1 }} />
+                          <Typography color="text.secondary" variant="body2">
+                            月間収益実績
+                          </Typography>
+                        </Box>
+                        <Typography variant="h4" sx={{ color: '#F26A8D', fontWeight: 'bold' }}>
+                          {formatCurrency(
+                            simulationData.revenueHistory?.[simulationData.revenueHistory.length - 1]?.revenue || 0
+                          )}
                         </Typography>
-                      </Box>
-                      <Typography variant="h4" sx={{ color: '#F26A8D', fontWeight: 'bold' }}>
-                        {formatCurrency(mockRevenueSimulation.projectedRevenue.total / 12)}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        前月比 +{mockRevenueSimulation.projectedGrowth.growthRate}%
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid size={{ xs: 12, md: 3 }}>
-                  <Card sx={{ bgcolor: '#e3f2fd' }}>
-                    <CardContent>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <GroupIcon sx={{ color: '#2196f3', mr: 1 }} />
-                        <Typography color="text.secondary" variant="body2">
-                          アクティブ組織数
+                        <Typography variant="body2" color="text.secondary">
+                          サブスク: {formatCurrency(
+                            simulationData.revenueHistory?.[simulationData.revenueHistory.length - 1]?.subscriptionRevenue || 0
+                          )}
                         </Typography>
-                      </Box>
-                      <Typography variant="h4" sx={{ color: '#2196f3', fontWeight: 'bold' }}>
-                        {mockRevenueSimulation.projectedGrowth.organizations}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        新規: +{mockRevenueSimulation.assumptions.newOrganizationsPerMonth}/月
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid size={{ xs: 12, md: 3 }}>
-                  <Card sx={{ bgcolor: '#e8f5e9' }}>
-                    <CardContent>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <TokenIcon sx={{ color: '#4caf50', mr: 1 }} />
-                        <Typography color="text.secondary" variant="body2">
-                          トークン売上
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 3 }}>
+                    <Card sx={{ bgcolor: '#e3f2fd' }}>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <GroupIcon sx={{ color: '#2196f3', mr: 1 }} />
+                          <Typography color="text.secondary" variant="body2">
+                            アクティブ組織数
+                          </Typography>
+                        </Box>
+                        <Typography variant="h4" sx={{ color: '#2196f3', fontWeight: 'bold' }}>
+                          {simulationData.currentOrganizations?.active || 0}
                         </Typography>
-                      </Box>
-                      <Typography variant="h4" sx={{ color: '#4caf50', fontWeight: 'bold' }}>
-                        {formatCurrency(mockRevenueSimulation.projectedRevenue.tokenSales / 12)}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        平均購入額: {formatCurrency(mockRevenueSimulation.assumptions.averageTokenPurchase)}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid size={{ xs: 12, md: 3 }}>
-                  <Card sx={{ bgcolor: '#fff3e0' }}>
-                    <CardContent>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <AssessmentIcon sx={{ color: '#ff9800', mr: 1 }} />
-                        <Typography color="text.secondary" variant="body2">
-                          解約率
+                        <Typography variant="body2" color="text.secondary">
+                          新規: {simulationData.growthMetrics?.averageNewOrganizations || 0}/月平均
                         </Typography>
-                      </Box>
-                      <Typography variant="h4" sx={{ color: '#ff9800', fontWeight: 'bold' }}>
-                        {mockRevenueSimulation.assumptions.churnRate}%
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        業界平均: 5.0%
-                      </Typography>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 3 }}>
+                    <Card sx={{ bgcolor: '#e8f5e9' }}>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <TokenIcon sx={{ color: '#4caf50', mr: 1 }} />
+                          <Typography color="text.secondary" variant="body2">
+                            トークン売上
+                          </Typography>
+                        </Box>
+                        <Typography variant="h4" sx={{ color: '#4caf50', fontWeight: 'bold' }}>
+                          {formatCurrency(
+                            simulationData.revenueHistory?.[simulationData.revenueHistory.length - 1]?.tokenRevenue || 0
+                          )}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          月間使用量: {simulationData.tokenMetrics?.monthlyUsageStats?.[0]?.usage.toLocaleString() || '0'}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 3 }}>
+                    <Card sx={{ bgcolor: '#fff3e0' }}>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <AssessmentIcon sx={{ color: '#ff9800', mr: 1 }} />
+                          <Typography color="text.secondary" variant="body2">
+                            平均解約率
+                          </Typography>
+                        </Box>
+                        <Typography variant="h4" sx={{ color: '#ff9800', fontWeight: 'bold' }}>
+                          {simulationData.growthMetrics?.averageChurnRate || simulationData.growthMetrics?.churnRate || 0}%
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          業界平均: 5.0%
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
                 </Grid>
               </Grid>
-            </Grid>
 
             {/* 収益グラフ */}
             <Grid size={{ xs: 12 }}>
@@ -314,7 +393,7 @@ export default function SuperAdminPlansPage() {
                     <MenuItem value="yearly">年次</MenuItem>
                   </TextField>
                 </Box>
-                <Line data={chartData} options={chartOptions} />
+                <Line data={getChartData()} options={chartOptions} />
               </Paper>
             </Grid>
 
@@ -323,66 +402,35 @@ export default function SuperAdminPlansPage() {
               <Paper sx={{ p: 3 }}>
                 <Typography variant="h6" sx={{ mb: 2 }}>プラン分布</Typography>
                 <List>
-                  <ListItem>
-                    <ListItemText 
-                      primary="ベーシックプラン"
-                      secondary={`${mockRevenueSimulation.assumptions.planDistribution[OrganizationPlan.STANDARD]}%`}
-                    />
-                    <Box sx={{ width: 100, ml: 2 }}>
-                      <Box sx={{ 
-                        height: 8, 
-                        bgcolor: '#e0e0e0', 
-                        borderRadius: 4,
-                        overflow: 'hidden',
-                      }}>
+                  {Object.entries(simulationData.currentOrganizations?.byPlan || {}).map(([plan, percentage]) => (
+                    <ListItem key={plan}>
+                      <ListItemText 
+                        primary={
+                          plan === OrganizationPlan.STANDARD ? 'ベーシックプラン' :
+                          plan === OrganizationPlan.PROFESSIONAL ? 'スタンダードプラン' :
+                          plan === OrganizationPlan.ENTERPRISE ? 'プレミアムプラン' : plan
+                        }
+                        secondary={`${percentage}%`}
+                      />
+                      <Box sx={{ width: 100, ml: 2 }}>
                         <Box sx={{ 
-                          width: `${mockRevenueSimulation.assumptions.planDistribution[OrganizationPlan.STANDARD]}%`,
-                          height: '100%',
-                          bgcolor: '#F26A8D',
-                        }} />
+                          height: 8, 
+                          bgcolor: '#e0e0e0', 
+                          borderRadius: 4,
+                          overflow: 'hidden',
+                        }}>
+                          <Box sx={{ 
+                            width: `${percentage}%`,
+                            height: '100%',
+                            bgcolor: 
+                              plan === OrganizationPlan.STANDARD ? '#F26A8D' :
+                              plan === OrganizationPlan.PROFESSIONAL ? '#2196f3' :
+                              '#4caf50',
+                          }} />
+                        </Box>
                       </Box>
-                    </Box>
-                  </ListItem>
-                  <ListItem>
-                    <ListItemText 
-                      primary="スタンダードプラン"
-                      secondary={`${mockRevenueSimulation.assumptions.planDistribution[OrganizationPlan.PROFESSIONAL]}%`}
-                    />
-                    <Box sx={{ width: 100, ml: 2 }}>
-                      <Box sx={{ 
-                        height: 8, 
-                        bgcolor: '#e0e0e0', 
-                        borderRadius: 4,
-                        overflow: 'hidden',
-                      }}>
-                        <Box sx={{ 
-                          width: `${mockRevenueSimulation.assumptions.planDistribution[OrganizationPlan.PROFESSIONAL]}%`,
-                          height: '100%',
-                          bgcolor: '#2196f3',
-                        }} />
-                      </Box>
-                    </Box>
-                  </ListItem>
-                  <ListItem>
-                    <ListItemText 
-                      primary="プレミアムプラン"
-                      secondary={`${mockRevenueSimulation.assumptions.planDistribution[OrganizationPlan.ENTERPRISE]}%`}
-                    />
-                    <Box sx={{ width: 100, ml: 2 }}>
-                      <Box sx={{ 
-                        height: 8, 
-                        bgcolor: '#e0e0e0', 
-                        borderRadius: 4,
-                        overflow: 'hidden',
-                      }}>
-                        <Box sx={{ 
-                          width: `${mockRevenueSimulation.assumptions.planDistribution[OrganizationPlan.ENTERPRISE]}%`,
-                          height: '100%',
-                          bgcolor: '#4caf50',
-                        }} />
-                      </Box>
-                    </Box>
-                  </ListItem>
+                    </ListItem>
+                  ))}
                 </List>
               </Paper>
             </Grid>
@@ -397,7 +445,11 @@ export default function SuperAdminPlansPage() {
                       fullWidth
                       label="月間新規組織数"
                       type="number"
-                      defaultValue={mockRevenueSimulation.assumptions.newOrganizationsPerMonth}
+                      value={simulationParams.newOrganizationsPerMonth}
+                      onChange={(e) => setSimulationParams({
+                        ...simulationParams,
+                        newOrganizationsPerMonth: Number(e.target.value),
+                      })}
                       InputProps={{
                         endAdornment: <Typography variant="body2">組織/月</Typography>,
                       }}
@@ -408,7 +460,11 @@ export default function SuperAdminPlansPage() {
                       fullWidth
                       label="解約率"
                       type="number"
-                      defaultValue={mockRevenueSimulation.assumptions.churnRate}
+                      value={simulationParams.churnRate}
+                      onChange={(e) => setSimulationParams({
+                        ...simulationParams,
+                        churnRate: Number(e.target.value),
+                      })}
                       InputProps={{
                         endAdornment: <Typography variant="body2">%</Typography>,
                       }}
@@ -419,28 +475,26 @@ export default function SuperAdminPlansPage() {
                       fullWidth
                       label="平均トークン購入額"
                       type="number"
-                      defaultValue={mockRevenueSimulation.assumptions.averageTokenPurchase}
+                      value={simulationParams.averageTokenPurchase}
+                      onChange={(e) => setSimulationParams({
+                        ...simulationParams,
+                        averageTokenPurchase: Number(e.target.value),
+                      })}
                       InputProps={{
                         endAdornment: <Typography variant="body2">円/組織</Typography>,
                       }}
                     />
                   </Grid>
                   <Grid size={{ xs: 12 }}>
-                    <Button 
-                      variant="contained" 
-                      fullWidth
-                      sx={{ 
-                        bgcolor: '#F26A8D',
-                        '&:hover': { bgcolor: '#E91E63' },
-                      }}
-                    >
-                      シミュレーション再計算
-                    </Button>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      成長率: {simulationParams.growthRatePercent}%/月
+                    </Typography>
                   </Grid>
                 </Grid>
               </Paper>
             </Grid>
           </Grid>
+          ) : null}
         </TabPanel>
 
         {/* プラン設定 */}
@@ -460,8 +514,8 @@ export default function SuperAdminPlansPage() {
           </Box>
 
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            {mockPlans.filter(plan => !plan.isHidden).map((plan) => (
-              <Grid size={{ xs: 12, md: 4 }} key={plan.id}>
+            {plans.map((plan) => (
+              <Grid size={{ xs: 12, md: 4 }} key={plan._id || plan.id}>
                 <Card sx={{ height: '100%', position: 'relative' }}>
                   {plan.isPopular && (
                     <Chip 
@@ -478,7 +532,7 @@ export default function SuperAdminPlansPage() {
                   )}
                   <CardContent>
                     <Typography variant="h5" sx={{ mb: 1 }}>
-                      {plan.displayName}
+                      {plan.name}
                     </Typography>
                     <Typography variant="h3" sx={{ color: '#F26A8D', mb: 2 }}>
                       {formatCurrency(plan.price)}
@@ -492,23 +546,23 @@ export default function SuperAdminPlansPage() {
                         <ListItemIcon sx={{ minWidth: 36 }}>
                           <GroupIcon fontSize="small" />
                         </ListItemIcon>
-                        <ListItemText primary={`最大${plan.features.maxStylists}名のスタイリスト`} />
+                        <ListItemText primary={`最大${plan.limits?.stylists || 0}名のスタイリスト`} />
                       </ListItem>
                       <ListItem>
                         <ListItemIcon sx={{ minWidth: 36 }}>
                           <GroupIcon fontSize="small" />
                         </ListItemIcon>
-                        <ListItemText primary={`最大${plan.features.maxClients}名のクライアント`} />
+                        <ListItemText primary={`最大${plan.limits?.clients || 0}名のクライアント`} />
                       </ListItem>
                       <ListItem>
                         <ListItemIcon sx={{ minWidth: 36 }}>
                           <TokenIcon fontSize="small" />
                         </ListItemIcon>
-                        <ListItemText primary={`月間${plan.features.monthlyTokens.toLocaleString()}トークン`} />
+                        <ListItemText primary={`月間${(plan.limits?.tokensPerMonth || 0).toLocaleString()}トークン`} />
                       </ListItem>
                       <ListItem>
                         <ListItemIcon sx={{ minWidth: 36 }}>
-                          {plan.features.customBranding ? (
+                          {Array.isArray(plan.features) && plan.features.includes('customBranding') ? (
                             <CheckCircleIcon fontSize="small" color="success" />
                           ) : (
                             <CancelIcon fontSize="small" color="disabled" />
@@ -517,13 +571,13 @@ export default function SuperAdminPlansPage() {
                         <ListItemText 
                           primary="カスタムブランディング"
                           primaryTypographyProps={{
-                            color: plan.features.customBranding ? 'text.primary' : 'text.disabled',
+                            color: Array.isArray(plan.features) && plan.features.includes('customBranding') ? 'text.primary' : 'text.disabled',
                           }}
                         />
                       </ListItem>
                       <ListItem>
                         <ListItemIcon sx={{ minWidth: 36 }}>
-                          {plan.features.apiAccess ? (
+                          {Array.isArray(plan.features) && plan.features.includes('apiAccess') ? (
                             <CheckCircleIcon fontSize="small" color="success" />
                           ) : (
                             <CancelIcon fontSize="small" color="disabled" />
@@ -532,18 +586,18 @@ export default function SuperAdminPlansPage() {
                         <ListItemText 
                           primary="API連携"
                           primaryTypographyProps={{
-                            color: plan.features.apiAccess ? 'text.primary' : 'text.disabled',
+                            color: Array.isArray(plan.features) && plan.features.includes('apiAccess') ? 'text.primary' : 'text.disabled',
                           }}
                         />
                       </ListItem>
                     </List>
                   </CardContent>
                   <CardActions>
-                    <IconButton onClick={() => handleEditPlan(plan)}>
+                    <IconButton onClick={() => handleEditPlan(plan as any)}>
                       <EditIcon />
                     </IconButton>
-                    <IconButton>
-                      <VisibilityIcon />
+                    <IconButton onClick={() => handleTogglePlanStatus(plan._id || plan.id, plan.isActive)}>
+                      {plan.isActive ? <VisibilityIcon /> : <VisibilityIcon color="disabled" />}
                     </IconButton>
                   </CardActions>
                 </Card>
@@ -568,8 +622,8 @@ export default function SuperAdminPlansPage() {
           </Box>
 
           <Grid container spacing={3}>
-            {mockTokenPlans.map((plan) => (
-              <Grid size={{ xs: 12, md: 4 }} key={plan.id}>
+            {tokenPlans.map((plan) => (
+              <Grid size={{ xs: 12, md: 4 }} key={plan._id || plan.id}>
                 <Card sx={{ height: '100%', position: 'relative' }}>
                   {plan.isPopular && (
                     <Chip 
@@ -586,13 +640,13 @@ export default function SuperAdminPlansPage() {
                   )}
                   <CardContent>
                     <Typography variant="h5" sx={{ mb: 1 }}>
-                      {plan.displayName}
+                      {plan.name}
                     </Typography>
                     <Typography variant="h3" sx={{ color: '#4caf50', mb: 2 }}>
                       {formatCurrency(plan.price)}
                     </Typography>
                     <Typography variant="body1" sx={{ mb: 2 }}>
-                      {plan.tokenAmount.toLocaleString()}トークン
+                      {(plan.tokenAmount || 0).toLocaleString()}トークン
                     </Typography>
                     {plan.savingsPercentage && plan.savingsPercentage > 0 && (
                       <Alert severity="success" sx={{ mb: 2 }}>
@@ -604,11 +658,11 @@ export default function SuperAdminPlansPage() {
                     </Typography>
                   </CardContent>
                   <CardActions>
-                    <IconButton onClick={() => handleEditTokenPlan(plan)}>
+                    <IconButton onClick={() => handleEditTokenPlan(plan as any)}>
                       <EditIcon />
                     </IconButton>
-                    <IconButton>
-                      <VisibilityIcon />
+                    <IconButton onClick={() => handleTogglePlanStatus(plan._id || plan.id, plan.isActive)}>
+                      {plan.isActive ? <VisibilityIcon /> : <VisibilityIcon color="disabled" />}
                     </IconButton>
                   </CardActions>
                 </Card>
@@ -619,130 +673,23 @@ export default function SuperAdminPlansPage() {
 
         {/* 請求管理 */}
         <TabPanel value={tabValue} index={2}>
-          <Box sx={{ mb: 3 }}>
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 3 }}>
-                <Card>
-                  <CardContent>
-                    <Typography color="text.secondary" variant="body2">
-                      今月の売上
-                    </Typography>
-                    <Typography variant="h4" sx={{ color: '#F26A8D', fontWeight: 'bold' }}>
-                      {formatCurrency(mockBillingSummary.totalRevenue)}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid size={{ xs: 12, md: 3 }}>
-                <Card>
-                  <CardContent>
-                    <Typography color="text.secondary" variant="body2">
-                      未払い金額
-                    </Typography>
-                    <Typography variant="h4" sx={{ color: '#ff9800', fontWeight: 'bold' }}>
-                      {formatCurrency(mockBillingSummary.outstandingAmount)}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid size={{ xs: 12, md: 3 }}>
-                <Card>
-                  <CardContent>
-                    <Typography color="text.secondary" variant="body2">
-                      延滞金額
-                    </Typography>
-                    <Typography variant="h4" sx={{ color: '#f44336', fontWeight: 'bold' }}>
-                      {formatCurrency(mockBillingSummary.overdueAmount)}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid size={{ xs: 12, md: 3 }}>
-                <Card>
-                  <CardContent>
-                    <Typography color="text.secondary" variant="body2">
-                      支払い成功率
-                    </Typography>
-                    <Typography variant="h4" sx={{ color: '#4caf50', fontWeight: 'bold' }}>
-                      {mockBillingSummary.paymentSuccessRate}%
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            minHeight: 400,
+            flexDirection: 'column',
+            gap: 2
+          }}>
+            <ReceiptIcon sx={{ fontSize: 64, color: 'text.secondary' }} />
+            <Typography variant="h6" color="text.secondary">
+              請求管理機能は現在開発中です
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', maxWidth: 500 }}>
+              SuperAdmin向けの請求管理APIはまだ実装されていません。
+              各組織の請求書は組織のOwner権限で確認できます。
+            </Typography>
           </Box>
-
-          <Paper sx={{ p: 2 }}>
-            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6">請求書一覧</Typography>
-              <TextField
-                select
-                size="small"
-                defaultValue="all"
-                sx={{ width: 200 }}
-              >
-                <MenuItem value="all">すべて</MenuItem>
-                <MenuItem value={InvoiceStatus.PAID}>支払済み</MenuItem>
-                <MenuItem value={InvoiceStatus.SENT}>送信済み</MenuItem>
-                <MenuItem value={InvoiceStatus.OVERDUE}>延滞</MenuItem>
-              </TextField>
-            </Box>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>請求書番号</TableCell>
-                    <TableCell>組織名</TableCell>
-                    <TableCell>種別</TableCell>
-                    <TableCell>金額</TableCell>
-                    <TableCell>発行日</TableCell>
-                    <TableCell>支払期限</TableCell>
-                    <TableCell>ステータス</TableCell>
-                    <TableCell>アクション</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {mockInvoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell>{invoice.invoiceNumber}</TableCell>
-                      <TableCell>
-                        {mockBillingSummary.topOrganizations[0]?.organizationName || '組織名'}
-                      </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={invoice.type === 'subscription' ? 'サブスク' : 'トークン'} 
-                          size="small"
-                          color={invoice.type === 'subscription' ? 'primary' : 'success'}
-                        />
-                      </TableCell>
-                      <TableCell>{formatCurrency(invoice.total)}</TableCell>
-                      <TableCell>{new Date(invoice.issueDate).toLocaleDateString('ja-JP')}</TableCell>
-                      <TableCell>{new Date(invoice.dueDate).toLocaleDateString('ja-JP')}</TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={
-                            invoice.status === InvoiceStatus.PAID ? '支払済み' :
-                            invoice.status === InvoiceStatus.SENT ? '送信済み' :
-                            invoice.status === InvoiceStatus.OVERDUE ? '延滞' : invoice.status
-                          }
-                          size="small"
-                          color={
-                            invoice.status === InvoiceStatus.PAID ? 'success' :
-                            invoice.status === InvoiceStatus.OVERDUE ? 'error' : 'default'
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <IconButton size="small">
-                          <VisibilityIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
         </TabPanel>
       </Paper>
 
@@ -759,7 +706,7 @@ export default function SuperAdminPlansPage() {
             <TextField
               fullWidth
               label="プラン名"
-              defaultValue={selectedPlan?.displayName}
+              defaultValue={selectedPlan?.name}
               sx={{ mb: 2 }}
             />
             <TextField
@@ -833,7 +780,7 @@ export default function SuperAdminPlansPage() {
             <TextField
               fullWidth
               label="プラン名"
-              defaultValue={selectedTokenPlan?.displayName}
+              defaultValue={selectedTokenPlan?.name}
               sx={{ mb: 2 }}
             />
             <TextField
@@ -884,6 +831,22 @@ export default function SuperAdminPlansPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* 成功メッセージ */}
+      <Snackbar
+        open={!!successMessage}
+        autoHideDuration={6000}
+        onClose={() => setSuccessMessage(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setSuccessMessage(null)} 
+          severity="success" 
+          sx={{ width: '100%' }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }

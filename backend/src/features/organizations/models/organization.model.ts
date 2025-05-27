@@ -10,12 +10,6 @@ const organizationSchema = new Schema<OrganizationDocument>({
     trim: true,
     maxlength: [100, '組織名は100文字以内で入力してください'],
   },
-  displayName: {
-    type: String,
-    required: [true, '表示名は必須です'],
-    trim: true,
-    maxlength: [100, '表示名は100文字以内で入力してください'],
-  },
   email: {
     type: String,
     required: [true, 'メールアドレスは必須です'],

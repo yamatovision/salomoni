@@ -48,8 +48,7 @@ const subscriptionSchema = new Schema<ISubscription>({
   },
   univapaySubscriptionId: {
     type: String,
-    sparse: true,
-    index: true
+    sparse: true
   },
   trialEndsAt: {
     type: Date

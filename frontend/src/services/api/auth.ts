@@ -1,12 +1,13 @@
 import { apiClient } from './apiClient';
 import { API_PATHS } from '../../types';
-import type { LoginRequest, LoginResponse, UserProfile, AuthResponse, OrganizationRegisterRequest } from '../../types';
+import type { LoginRequest, UserProfile, AuthResponse, OrganizationRegisterRequest, ApiResponse } from '../../types';
 
 export class AuthService {
-  async login(email: string, password: string): Promise<LoginResponse> {
-    const response = await apiClient.post<LoginResponse>(API_PATHS.AUTH.LOGIN, {
+  async login(email: string, password: string): Promise<ApiResponse<Omit<AuthResponse, 'refreshToken'>>> {
+    const response = await apiClient.post<ApiResponse<Omit<AuthResponse, 'refreshToken'>>>(API_PATHS.AUTH.LOGIN, {
       email,
       password,
+      method: 'email',
     } as LoginRequest);
     return response.data;
   }
@@ -16,26 +17,25 @@ export class AuthService {
   }
 
   async getCurrentUser(): Promise<UserProfile> {
-    const response = await apiClient.get<UserProfile>(API_PATHS.USERS.ME);
+    const response = await apiClient.get<ApiResponse<UserProfile>>(API_PATHS.USERS.ME);
+    return response.data.data!;
+  }
+
+  async refresh(): Promise<ApiResponse<Omit<AuthResponse, 'refreshToken'>>> {
+    const response = await apiClient.post<ApiResponse<Omit<AuthResponse, 'refreshToken'>>>(API_PATHS.AUTH.REFRESH, {});
     return response.data;
   }
 
-  async refresh(refreshToken: string): Promise<LoginResponse> {
-    const response = await apiClient.post<LoginResponse>(API_PATHS.AUTH.REFRESH, {
-      refreshToken,
+  async lineCallback(code: string, state?: string): Promise<ApiResponse<Omit<AuthResponse, 'refreshToken'>>> {
+    const response = await apiClient.post<ApiResponse<Omit<AuthResponse, 'refreshToken'>>>(API_PATHS.AUTH.LINE_CALLBACK, {
+      code,
+      state,
     });
     return response.data;
   }
 
-  async lineCallback(code: string, state?: string): Promise<AuthResponse> {
-    const response = await apiClient.get<AuthResponse>(API_PATHS.AUTH.LINE_CALLBACK, {
-      params: { code, state },
-    });
-    return response.data;
-  }
-
-  async registerOrganization(data: OrganizationRegisterRequest): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>(API_PATHS.AUTH.REGISTER_ORGANIZATION, data);
+  async registerOrganization(data: OrganizationRegisterRequest): Promise<ApiResponse<Omit<AuthResponse, 'refreshToken'>>> {
+    const response = await apiClient.post<ApiResponse<Omit<AuthResponse, 'refreshToken'>>>(API_PATHS.AUTH.REGISTER_ORGANIZATION, data);
     return response.data;
   }
 }

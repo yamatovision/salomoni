@@ -26,8 +26,7 @@ const paymentHistorySchema = new Schema<IPaymentHistory>({
   invoiceId: {
     type: mongoose.Schema.Types.ObjectId as any,
     ref: 'Invoice',
-    required: true,
-    index: true
+    required: true
   },
   amount: {
     type: Number,
@@ -50,8 +49,7 @@ const paymentHistorySchema = new Schema<IPaymentHistory>({
   },
   univapayChargeId: {
     type: String,
-    sparse: true,
-    index: true
+    sparse: true
   },
   univapayTransactionId: {
     type: String,

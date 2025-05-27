@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Container,
@@ -20,8 +20,6 @@ import {
   Chip,
   IconButton,
   InputAdornment,
-  Card,
-  CardContent,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -30,12 +28,11 @@ import {
   Collapse,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
-import { Grid } from '@mui/material';
 import {
   Add as AddIcon,
   Search as SearchIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
+  PauseCircleOutline as PauseCircleOutlineIcon,
   Business as BusinessIcon,
   // People as PeopleIcon,
   // TrendingUp as TrendingUpIcon,
@@ -46,13 +43,15 @@ import {
 import { useTheme } from '@mui/material/styles';
 import { OrganizationStatus, OrganizationPlan } from '../../types';
 import type { Organization } from '../../types';
-import { mockOrganizations, mockOrganizationOwners, mockOrganizationStats, mockSuperAdminStats } from '../../services/mock/data/mockOrganizations';
+import { organizationService } from '../../services';
 
 interface OrganizationFormData {
   name: string;
-  displayName: string;
   ownerName: string;
   ownerEmail: string;
+  ownerPassword: string;
+  phone?: string;
+  address?: string;
   plan: OrganizationPlan;
   status: OrganizationStatus;
   tokenLimit: number;
@@ -61,6 +60,8 @@ interface OrganizationFormData {
 const SuperAdminOrganizationsPage: React.FC = () => {
   const theme = useTheme();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,18 +74,55 @@ const SuperAdminOrganizationsPage: React.FC = () => {
   const [showStatusWarning, setShowStatusWarning] = useState(false);
   const [formData, setFormData] = useState<OrganizationFormData>({
     name: '',
-    displayName: '',
     ownerName: '',
     ownerEmail: '',
+    ownerPassword: '',
+    phone: '',
+    address: '',
     plan: OrganizationPlan.STANDARD,
     status: OrganizationStatus.TRIAL,
     tokenLimit: 0,
   });
 
-  useEffect(() => {
-    // モックデータを読み込み
-    setOrganizations(mockOrganizations);
+  // 組織一覧を取得
+  const fetchOrganizations = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // SuperAdmin用のエンドポイントを使用
+      const response = await organizationService.getOrganizations();
+      
+      if (response.success && response.data) {
+        // バックエンドからのレスポンス形式に対応
+        if ('organizations' in response.data && Array.isArray(response.data.organizations)) {
+          // ページネーション付きレスポンス
+          setOrganizations(response.data.organizations);
+        } else if (Array.isArray(response.data)) {
+          // 配列レスポンス
+          setOrganizations(response.data);
+        } else {
+          console.error('予期しないレスポンス形式:', response.data);
+          setOrganizations([]);
+        }
+        
+        // 各組織の統計情報とオーナー情報を取得（必要に応じて）
+        // TODO: バックエンドAPIが対応したら実装
+      } else {
+        setOrganizations([]);
+      }
+    } catch (err) {
+      console.error('組織一覧の取得に失敗しました:', err);
+      setError('組織一覧の取得に失敗しました');
+      setOrganizations([]); // エラー時は空配列をセット
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchOrganizations();
+  }, [fetchOrganizations]);
 
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
@@ -113,9 +151,11 @@ const SuperAdminOrganizationsPage: React.FC = () => {
   const handleOpenAddDialog = () => {
     setFormData({
       name: '',
-      displayName: '',
       ownerName: '',
       ownerEmail: '',
+      ownerPassword: '',
+      phone: '',
+      address: '',
       plan: OrganizationPlan.STANDARD,
       status: OrganizationStatus.TRIAL,
       tokenLimit: 0,
@@ -127,18 +167,24 @@ const SuperAdminOrganizationsPage: React.FC = () => {
     setOpenAddDialog(false);
   };
 
-  const handleOpenEditDialog = (organization: Organization) => {
-    const owner = mockOrganizationOwners[organization.ownerId];
-    const stats = mockOrganizationStats[organization.id];
+  const handleOpenEditDialog = async (organization: Organization) => {
     setSelectedOrganization(organization);
+    
+    // 組織情報からオーナー情報を取得
+    const ownerName = typeof organization.ownerId === 'object' && organization.ownerId?.name 
+      ? organization.ownerId.name 
+      : '';
+    
     setFormData({
       name: organization.name,
-      displayName: organization.displayName || '',
-      ownerName: owner?.name || '',
-      ownerEmail: owner?.email || '',
+      ownerName: ownerName,
+      ownerEmail: organization.email || '',
+      ownerPassword: '', // 編集時は不要
+      phone: organization.phone || '',
+      address: organization.address || '',
       plan: organization.plan,
       status: organization.status,
-      tokenLimit: stats?.tokenLimit || 0,
+      tokenLimit: 0, // TODO: APIから取得する必要がある
     });
     setShowStatusWarning(false);
     setOpenEditDialog(true);
@@ -150,22 +196,81 @@ const SuperAdminOrganizationsPage: React.FC = () => {
     setShowAdvancedSettings(false);
   };
 
-  const handleFormSubmit = (event: React.FormEvent) => {
+  const handleFormSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (openAddDialog) {
-      // 新規組織追加
-      alert('新規組織が作成されました！');
-      handleCloseAddDialog();
-    } else if (openEditDialog) {
-      // 組織情報更新
-      if (formData.status === OrganizationStatus.SUSPENDED) {
-        if (window.confirm('本当にこの組織を停止中にしますか？\n組織内のすべてのユーザーがアクセスできなくなります。')) {
+    
+    try {
+      if (openAddDialog) {
+        // 新規組織とオーナー同時作成
+        const createData = {
+          name: formData.name,
+          ownerName: formData.ownerName,
+          ownerEmail: formData.ownerEmail,
+          ownerPassword: formData.ownerPassword,
+          phone: formData.phone || '',
+          address: formData.address || '',
+          plan: formData.plan,
+          status: formData.status,
+          tokenLimit: formData.tokenLimit,
+        };
+        
+        const response = await organizationService.createOrganizationWithOwner(createData);
+        
+        if (response.success) {
+          alert('新規組織が作成されました！');
+          handleCloseAddDialog();
+          await fetchOrganizations();
+        } else {
+          alert('組織の作成に失敗しました');
+        }
+      } else if (openEditDialog && selectedOrganization) {
+        // 組織情報更新
+        if (formData.status === OrganizationStatus.SUSPENDED) {
+          if (!window.confirm('本当にこの組織を停止中にしますか？\n組織内のすべてのユーザーがアクセスできなくなります。')) {
+            return;
+          }
+        }
+        
+        const updateData = {
+          name: formData.name,
+          plan: formData.plan,
+          status: formData.status,
+        };
+        
+        const response = await organizationService.updateOrganization(selectedOrganization.id, updateData);
+        
+        if (response.success) {
           alert('組織情報が更新されました！');
           handleCloseEditDialog();
+          await fetchOrganizations();
+        } else {
+          alert('組織情報の更新に失敗しました');
         }
-      } else {
-        alert('組織情報が更新されました！');
-        handleCloseEditDialog();
+      }
+    } catch (error) {
+      console.error('フォーム送信エラー:', error);
+      alert('操作に失敗しました');
+    }
+  };
+
+  const handleSuspendOrganization = async (organization: Organization) => {
+    if (window.confirm(`本当に「${organization.name}」を停止しますか？\n組織内のすべてのユーザーがアクセスできなくなります。`)) {
+      try {
+        // APIを呼び出してステータスを停止中に変更
+        const response = await organizationService.updateOrganization(organization.id, {
+          status: OrganizationStatus.SUSPENDED
+        });
+        
+        if (response.success) {
+          alert(`組織「${organization.name}」を停止しました。`);
+          // 組織一覧を再取得
+          await fetchOrganizations();
+        } else {
+          alert('組織の停止に失敗しました');
+        }
+      } catch (error) {
+        console.error('組織停止エラー:', error);
+        alert('組織の停止に失敗しました');
       }
     }
   };
@@ -176,14 +281,15 @@ const SuperAdminOrganizationsPage: React.FC = () => {
     setShowStatusWarning(newStatus === OrganizationStatus.SUSPENDED);
   };
 
-  // フィルタリング
-  const filteredOrganizations = organizations.filter((org) => {
-    const matchesSearch = org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      org.displayName?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = !statusFilter || org.status === statusFilter;
-    const matchesPlan = !planFilter || org.plan === planFilter;
-    return matchesSearch && matchesStatus && matchesPlan;
-  });
+  // フィルタリング（organizationsが配列であることを確認）
+  const filteredOrganizations = Array.isArray(organizations) 
+    ? organizations.filter((org) => {
+        const matchesSearch = org.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = !statusFilter || org.status === statusFilter;
+        const matchesPlan = !planFilter || org.plan === planFilter;
+        return matchesSearch && matchesStatus && matchesPlan;
+      })
+    : [];
 
   // ページネーション
   const paginatedOrganizations = filteredOrganizations.slice(
@@ -234,11 +340,6 @@ const SuperAdminOrganizationsPage: React.FC = () => {
     }
   };
 
-  const formatTokenUsage = (usage: number, limit: number) => {
-    const usageK = Math.floor(usage / 1000);
-    const limitK = limit > 0 ? Math.floor(limit / 1000) : '∞';
-    return `${usageK}K / ${limitK}${limit > 0 ? 'K' : ''}`;
-  };
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -250,57 +351,13 @@ const SuperAdminOrganizationsPage: React.FC = () => {
         </Typography>
       </Box>
 
-      {/* 統計情報 */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card sx={{ borderLeft: `4px solid ${theme.palette.primary.main}` }}>
-            <CardContent>
-              <Typography variant="h3" component="div" color="primary" sx={{ fontWeight: 'bold' }}>
-                {mockSuperAdminStats.totalOrganizations}
-              </Typography>
-              <Typography color="text.secondary" variant="body2">
-                総組織数
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card sx={{ borderLeft: `4px solid ${theme.palette.primary.main}` }}>
-            <CardContent>
-              <Typography variant="h3" component="div" color="primary" sx={{ fontWeight: 'bold' }}>
-                {mockSuperAdminStats.activeOrganizations}
-              </Typography>
-              <Typography color="text.secondary" variant="body2">
-                アクティブ組織
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card sx={{ borderLeft: `4px solid ${theme.palette.primary.main}` }}>
-            <CardContent>
-              <Typography variant="h3" component="div" color="primary" sx={{ fontWeight: 'bold' }}>
-                {mockSuperAdminStats.trialOrganizations}
-              </Typography>
-              <Typography color="text.secondary" variant="body2">
-                トライアル中
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card sx={{ borderLeft: `4px solid ${theme.palette.primary.main}` }}>
-            <CardContent>
-              <Typography variant="h3" component="div" color="primary" sx={{ fontWeight: 'bold' }}>
-                ¥{mockSuperAdminStats.monthlyRevenue.toLocaleString()}
-              </Typography>
-              <Typography color="text.secondary" variant="body2">
-                今月の売上
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+
+      {/* エラー表示 */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       {/* 組織一覧 */}
       <Paper sx={{ width: '100%', mb: 2 }}>
@@ -328,54 +385,48 @@ const SuperAdminOrganizationsPage: React.FC = () => {
 
         {/* フィルター */}
         <Box sx={{ p: 2, bgcolor: 'background.default', borderBottom: 1, borderColor: 'divider' }}>
-          <Grid container spacing={2} alignItems="center">
-            <Grid size={{ xs: 12, sm: 3 }}>
-              <FormControl fullWidth size="small">
-                <InputLabel>ステータス</InputLabel>
-                <Select
-                  value={statusFilter}
-                  onChange={handleStatusFilterChange}
-                  label="ステータス"
-                >
-                  <MenuItem value="">すべて</MenuItem>
-                  <MenuItem value={OrganizationStatus.ACTIVE}>アクティブ</MenuItem>
-                  <MenuItem value={OrganizationStatus.TRIAL}>トライアル</MenuItem>
-                  <MenuItem value={OrganizationStatus.SUSPENDED}>停止中</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 3 }}>
-              <FormControl fullWidth size="small">
-                <InputLabel>プラン</InputLabel>
-                <Select
-                  value={planFilter}
-                  onChange={handlePlanFilterChange}
-                  label="プラン"
-                >
-                  <MenuItem value="">すべて</MenuItem>
-                  <MenuItem value={OrganizationPlan.STANDARD}>スタンダード</MenuItem>
-                  <MenuItem value={OrganizationPlan.PROFESSIONAL}>プロフェッショナル</MenuItem>
-                  <MenuItem value={OrganizationPlan.ENTERPRISE}>エンタープライズ</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                size="small"
-                placeholder="組織名で検索..."
-                value={searchTerm}
-                onChange={handleSearchChange}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-          </Grid>
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel>ステータス</InputLabel>
+              <Select
+                value={statusFilter}
+                onChange={handleStatusFilterChange}
+                label="ステータス"
+              >
+                <MenuItem value="">すべて</MenuItem>
+                <MenuItem value={OrganizationStatus.ACTIVE}>アクティブ</MenuItem>
+                <MenuItem value={OrganizationStatus.TRIAL}>トライアル</MenuItem>
+                <MenuItem value={OrganizationStatus.SUSPENDED}>停止中</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel>プラン</InputLabel>
+              <Select
+                value={planFilter}
+                onChange={handlePlanFilterChange}
+                label="プラン"
+              >
+                <MenuItem value="">すべて</MenuItem>
+                <MenuItem value={OrganizationPlan.STANDARD}>スタンダード</MenuItem>
+                <MenuItem value={OrganizationPlan.PROFESSIONAL}>プロフェッショナル</MenuItem>
+                <MenuItem value={OrganizationPlan.ENTERPRISE}>エンタープライズ</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              size="small"
+              placeholder="組織名で検索..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              sx={{ flex: 1, minWidth: 300 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
         </Box>
 
         {/* テーブル */}
@@ -394,17 +445,35 @@ const SuperAdminOrganizationsPage: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {paginatedOrganizations.map((org) => {
-                const owner = mockOrganizationOwners[org.ownerId];
-                const stats = mockOrganizationStats[org.id];
-                return (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                    <Typography variant="body1" color="text.secondary">
+                      組織データを読み込み中...
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : paginatedOrganizations.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                    <Typography variant="body1" color="text.secondary">
+                      組織が見つかりません
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedOrganizations.map((org) => (
                   <TableRow key={org.id} hover>
                     <TableCell>
                       <Typography variant="body2" fontWeight="bold">
                         {org.name}
                       </Typography>
                     </TableCell>
-                    <TableCell>{owner?.name || '-'}</TableCell>
+                    <TableCell>
+                      {typeof org.ownerId === 'object' && org.ownerId?.name 
+                        ? org.ownerId.name 
+                        : '-'}
+                    </TableCell>
                     <TableCell>
                       <Chip
                         label={getPlanLabel(org.plan)}
@@ -420,10 +489,10 @@ const SuperAdminOrganizationsPage: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell align="center">
-                      {stats?.totalStylists || 0}名
+                      -
                     </TableCell>
                     <TableCell>
-                      {formatTokenUsage(stats?.tokenUsage || 0, stats?.tokenLimit || 0)}
+                      -
                     </TableCell>
                     <TableCell>
                       {new Date(org.createdAt).toLocaleDateString('ja-JP')}
@@ -438,14 +507,16 @@ const SuperAdminOrganizationsPage: React.FC = () => {
                       </IconButton>
                       <IconButton
                         size="small"
+                        onClick={() => handleSuspendOrganization(org)}
                         sx={{ color: theme.palette.error.main }}
+                        title="組織を停止"
                       >
-                        <DeleteIcon />
+                        <PauseCircleOutlineIcon />
                       </IconButton>
                     </TableCell>
                   </TableRow>
-                );
-              })}
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>
@@ -491,6 +562,16 @@ const SuperAdminOrganizationsPage: React.FC = () => {
                 value={formData.ownerEmail}
                 onChange={(e) => setFormData({ ...formData, ownerEmail: e.target.value })}
                 placeholder="example@salon.com"
+              />
+              <TextField
+                label="パスワード"
+                type="password"
+                fullWidth
+                required
+                value={formData.ownerPassword}
+                onChange={(e) => setFormData({ ...formData, ownerPassword: e.target.value })}
+                placeholder="8文字以上（大文字・小文字・数字を含む）"
+                helperText="オーナーの初期パスワードを設定してください"
               />
               <FormControl fullWidth>
                 <InputLabel>プラン</InputLabel>
@@ -651,11 +732,9 @@ const SuperAdminOrganizationsPage: React.FC = () => {
                     disabled
                   />
                   <TextField
-                    label="最終ログイン"
+                    label="最終更新日"
                     fullWidth
-                    value={selectedOrganization && mockOrganizationOwners[selectedOrganization.ownerId]?.lastLoginAt
-                      ? new Date(mockOrganizationOwners[selectedOrganization.ownerId].lastLoginAt!).toLocaleString('ja-JP')
-                      : '-'}
+                    value={selectedOrganization ? new Date(selectedOrganization.updatedAt).toLocaleString('ja-JP') : ''}
                     InputProps={{ readOnly: true }}
                     disabled
                   />

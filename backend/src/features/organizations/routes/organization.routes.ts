@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { OrganizationController } from '../controllers/organization.controller';
 import {
+  validateCreateOrganizationWithOwner,
   validateGetOrganizations,
   validateOrganizationId,
   validateUpdateOrganization,
@@ -16,6 +17,15 @@ const organizationController = new OrganizationController();
 
 // 全てのルートで認証が必要
 router.use(authenticate);
+
+// 組織とオーナー同時作成（SuperAdminのみ）
+router.post(
+  '/create-with-owner',
+  authorize(UserRole.SUPER_ADMIN),
+  validateCreateOrganizationWithOwner,
+  handleValidationErrors,
+  organizationController.createOrganizationWithOwner
+);
 
 // 組織一覧取得（SuperAdminのみ）
 router.get(

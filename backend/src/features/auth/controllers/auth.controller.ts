@@ -135,7 +135,6 @@ export class AuthController {
       
       const registerRequest: OrganizationRegisterRequest = {
         organizationName: organization.name,
-        organizationDisplayName: organization.displayName,
         organizationPhone: organization.phone,
         organizationAddress: organization.address,
         ownerName: owner.name,

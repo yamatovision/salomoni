@@ -130,11 +130,28 @@ const AppointmentManagementPage: React.FC = () => {
   // スタイリスト一覧取得
   const fetchStylists = useCallback(async () => {
     try {
-      const users = await userService.getUsers();
-      const stylists = users.filter(user => user.role === UserRole.STYLIST);
+      const response = await userService.getUsers();
+      
+      // レスポンス形式に応じて処理
+      let usersData = [];
+      if (response && 'users' in response && Array.isArray(response.users)) {
+        // ページネーション付きレスポンス
+        usersData = response.users;
+      } else if (Array.isArray(response)) {
+        // 直接配列の場合
+        usersData = response;
+      } else {
+        console.error('予期しないユーザーレスポンス形式:', response);
+        setStylists([]);
+        return;
+      }
+      
+      // スタイリストのみフィルタリング
+      const stylists = usersData.filter(user => user.role === UserRole.STYLIST);
       setStylists(stylists);
     } catch (err) {
       console.error('Failed to fetch stylists:', err);
+      setStylists([]);
     }
   }, []);
 

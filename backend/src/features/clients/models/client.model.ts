@@ -25,6 +25,16 @@ const clientSchema = new Schema<IClientDocument>(
       type: Date,
       required: false,
     },
+    birthTime: {
+      type: String,
+      match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, '有効な時刻形式（HH:mm）を入力してください'],
+      required: false,
+    },
+    birthLocation: {
+      name: String,
+      longitude: Number,
+      latitude: Number,
+    },
     gender: {
       type: String,
       enum: ['male', 'female', 'other'],

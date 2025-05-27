@@ -37,7 +37,6 @@ export class TestAuthHelper {
   static async createTestOrganization(data: Partial<Organization> = {}): Promise<Organization> {
     const organization = new OrganizationModel({
       name: data.name || 'Test Organization',
-      displayName: data.displayName || 'テスト組織',
       email: data.email || `test-org-${Date.now()}-${uuidv4().substring(0, 8)}@example.com`,
       phone: data.phone || '03-1234-5678',
       address: data.address || '東京都渋谷区テスト1-2-3',

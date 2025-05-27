@@ -15,11 +15,9 @@ const appointmentSchema = new Schema<IAppointment>(
     clientId: {
       type: String,
       required: [true, 'クライアントIDは必須です'],
-      index: true,
     },
     stylistId: {
       type: String,
-      index: true,
     },
     scheduledAt: {
       type: Date,

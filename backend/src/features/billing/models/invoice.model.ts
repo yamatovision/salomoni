@@ -60,8 +60,7 @@ const invoiceSchema = new Schema<IInvoice>({
   },
   subscriptionId: {
     type: mongoose.Schema.Types.ObjectId as any,
-    ref: 'Subscription',
-    index: true
+    ref: 'Subscription'
   },
   issueDate: {
     type: Date,
@@ -112,8 +111,7 @@ const invoiceSchema = new Schema<IInvoice>({
   },
   univapayChargeId: {
     type: String,
-    sparse: true,
-    index: true
+    sparse: true
   },
   metadata: {
     type: mongoose.Schema.Types.Mixed,

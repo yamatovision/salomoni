@@ -3,6 +3,7 @@ import { invoiceRepository } from '../repositories/invoice.repository';
 import { paymentHistoryRepository } from '../repositories/payment-history.repository';
 // import { tokenUsageRepository } from '../repositories/token-usage.repository'; // TODO: implement when needed
 import { univapayService, TokenParams, ChargeParams } from './univapay.service';
+import { RevenueSimulationService, SimulationData } from './revenue-simulation.service';
 import { logger } from '../../../common/utils/logger';
 import { 
   ID, 
@@ -376,6 +377,15 @@ export class BillingService {
 
   private async handleSubscriptionPaymentFailed(subscriptionData: any): Promise<void> {
     logger.info('Subscription payment failed', { subscriptionId: subscriptionData.id });
+  }
+
+  async getSimulationData(): Promise<SimulationData> {
+    try {
+      return await RevenueSimulationService.getSimulationData();
+    } catch (error) {
+      logger.error('Failed to get simulation data', { error });
+      throw error;
+    }
   }
 
   private detectCardBrand(cardNumber: string): string {

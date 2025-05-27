@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { sajuService } from '../services/saju.service';
 import { logger } from '../../../common/utils/logger';
 import { ApiResponse } from '../../../types';
+import { BadRequestError } from '../../../common/utils/errors';
 
 export class SajuController {
   /**
@@ -95,6 +96,36 @@ export class SajuController {
       res.status(200).json(response);
     } catch (error) {
       logger.error('[SajuController] 相性診断エラー', error);
+      next(error);
+    }
+  }
+
+  /**
+   * ユーザーの四柱推命プロフィール取得
+   */
+  async getUserFourPillars(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { userId } = req.params;
+      
+      if (!userId) {
+        throw new BadRequestError('ユーザーIDが必要です');
+      }
+      
+      logger.info('[SajuController] ユーザー四柱推命プロフィール取得リクエスト受信', {
+        requestingUserId: req.user?.userId,
+        targetUserId: userId
+      });
+
+      const result = await sajuService.getUserFourPillars(userId);
+
+      const response: ApiResponse<any> = {
+        success: true,
+        data: result
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      logger.error('[SajuController] ユーザー四柱推命プロフィール取得エラー', error);
       next(error);
     }
   }

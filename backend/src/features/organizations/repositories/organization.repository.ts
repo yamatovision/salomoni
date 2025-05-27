@@ -145,7 +145,6 @@ export class OrganizationRepository {
       if (params.filters?.search) {
         query.$or = [
           { name: { $regex: params.filters.search, $options: 'i' } },
-          { displayName: { $regex: params.filters.search, $options: 'i' } },
           { email: { $regex: params.filters.search, $options: 'i' } },
         ];
       }
@@ -153,6 +152,7 @@ export class OrganizationRepository {
       // 並列実行でデータ取得と件数カウント
       const [organizations, total] = await Promise.all([
         OrganizationModel.find(query)
+          .populate('ownerId', 'name email')
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limit),
@@ -160,7 +160,14 @@ export class OrganizationRepository {
       ]);
       
       return {
-        organizations: organizations.map(org => org.toJSON() as Organization),
+        organizations: organizations.map(org => {
+          const orgObj = org.toObject() as any;
+          return {
+            ...orgObj,
+            id: orgObj._id.toString(),
+            _id: undefined
+          } as Organization;
+        }),
         total,
       };
     } catch (error) {

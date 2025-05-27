@@ -24,20 +24,41 @@ export class DashboardService {
         totalStylists,
         weeklyCompletedAppointments,
         monthlyTokenUsage,
-        unassignedAppointments
+        unassignedAppointments,
+        tokenUsageHistory
       ] = await Promise.all([
         this.dashboardRepository.getTodayAppointmentsCount(organizationId),
         this.dashboardRepository.getTotalClientsCount(organizationId),
         this.dashboardRepository.getTotalStylistsCount(organizationId),
         this.dashboardRepository.getWeeklyCompletedAppointmentsCount(organizationId),
         this.dashboardRepository.getMonthlyTokenUsage(organizationId),
-        this.dashboardRepository.getUnassignedAppointments(organizationId)
+        this.dashboardRepository.getUnassignedAppointments(organizationId),
+        this.dashboardRepository.getTokenUsageHistory(organizationId, 30)
       ]);
 
       // トークン使用率を計算
       const tokenUsagePercentage = monthlyTokenUsage.limit > 0 
         ? Math.round((monthlyTokenUsage.used / monthlyTokenUsage.limit) * 100)
         : 0;
+
+      // データが不足している日付を補完
+      const completeTokenUsageData = this.fillMissingDates(tokenUsageHistory, 30);
+
+      // チャートデータを作成
+      const tokenUsageChart = {
+        labels: completeTokenUsageData.map(item => {
+          const date = new Date(item.date);
+          return format(date, 'M/d');
+        }),
+        dailyUsage: completeTokenUsageData.map(item => item.usage),
+        cumulativeUsage: completeTokenUsageData.reduce((acc: number[], item, index) => {
+          if (index === 0) {
+            return [item.usage];
+          }
+          const lastValue = acc[acc.length - 1] || 0;
+          return [...acc, lastValue + item.usage];
+        }, [])
+      };
 
       const summary: DashboardSummary = {
         todayAppointments,
@@ -50,7 +71,8 @@ export class DashboardService {
           percentage: tokenUsagePercentage
         },
         unassignedAppointmentsCount: unassignedAppointments.length,
-        unassignedAppointments
+        unassignedAppointments,
+        tokenUsageChart
       };
 
       logger.info('ダッシュボードサマリー取得成功', {
@@ -58,7 +80,8 @@ export class DashboardService {
         todayAppointments,
         totalClients,
         totalStylists,
-        unassignedCount: unassignedAppointments.length
+        unassignedCount: unassignedAppointments.length,
+        chartDataPoints: tokenUsageChart.labels.length
       });
 
       return summary;

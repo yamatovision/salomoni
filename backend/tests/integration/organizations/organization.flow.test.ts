@@ -108,7 +108,6 @@ describe('組織管理統合テスト', () => {
       expect(response.body.data).toMatchObject({
         id: expect.any(String),
         name: testOrganization.name,
-        displayName: testOrganization.displayName,
       });
       expect(response.body.data.id).toBe(testOrganization.id.toString());
       tracker.mark('組織詳細取得成功');
@@ -151,7 +150,7 @@ describe('組織管理統合テスト', () => {
       tracker.setOperation('組織更新テスト');
       
       const updateData = {
-        displayName: '更新後のサロン名',
+        name: '更新後のサロン名',
         phone: '03-9999-8888',
         address: '東京都新宿区新住所1-2-3',
       };
@@ -167,7 +166,7 @@ describe('組織管理統合テスト', () => {
 
       // データベース確認
       const updated = await OrganizationModel.findById(testOrganization.id);
-      expect(updated?.displayName).toBe(updateData.displayName);
+      expect(updated?.name).toBe(updateData.name);
       tracker.mark('組織更新成功');
     });
 
@@ -175,7 +174,7 @@ describe('組織管理統合テスト', () => {
       const response = await request(app)
         .put(`/api/organizations/${testOrganization.id}`)
         .set('Authorization', `Bearer ${testUsers.admin.token}`)
-        .send({ displayName: '更新テスト' });
+        .send({ name: '更新テスト' });
 
       expect(response.status).toBe(403);
       expect(response.body.success).toBe(false);

@@ -34,10 +34,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { supportService } from '../../services';
 import type {
   SupportTicket,
-  SupportMessage,
   SupportTicketCreateInput,
   SupportTicketReplyInput,
-  SupportTicketMessage,
 } from '../../types';
 import {
   TicketStatus,
@@ -345,6 +343,7 @@ const AdminSupportPage: React.FC = () => {
   const getStatusColor = (status: TicketStatus) => {
     switch (status) {
       case TicketStatus.PENDING:
+      case TicketStatus.OPEN:
         return 'warning';
       case TicketStatus.ANSWERED:
         return 'success';
@@ -362,6 +361,8 @@ const AdminSupportPage: React.FC = () => {
   const getStatusLabel = (status: TicketStatus) => {
     switch (status) {
       case TicketStatus.PENDING:
+        return '未回答';
+      case TicketStatus.OPEN:
         return '未回答';
       case TicketStatus.ANSWERED:
         return '回答済み';
@@ -389,6 +390,27 @@ const AdminSupportPage: React.FC = () => {
     }
     return '佐藤 直子（サロンオーナー）'; // 実際にはユーザー情報から取得
   };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <CircularProgress />
+        </Box>
+      </AdminLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <Box sx={{ p: 3, textAlign: 'center' }}>
+          <Alert severity="error">{error}</Alert>
+          <Button onClick={fetchTickets} sx={{ mt: 2 }}>再読み込み</Button>
+        </Box>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -568,12 +590,28 @@ const AdminSupportPage: React.FC = () => {
               variant="contained"
               startIcon={<SendIcon />}
               onClick={handleNewTicketSubmit}
-              disabled={!newTicketData.title.trim() || !newTicketData.description.trim()}
+              disabled={!newTicketData.title.trim() || !newTicketData.description.trim() || submitting}
             >
-              送信する
+              {submitting ? <CircularProgress size={20} /> : '送信する'}
             </Button>
           </DialogActions>
         </Dialog>
+        
+        {/* Snackbar */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert 
+            onClose={() => setSnackbar({ ...snackbar, open: false })} 
+            severity={snackbar.severity}
+            sx={{ width: '100%' }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </Box>
     </AdminLayout>
   );

@@ -33,7 +33,6 @@ describe('認証フロー統合テスト', () => {
       const requestData = {
         organization: {
           name: 'test-salon',
-          displayName: 'テストサロン',
           email: 'salon@example.com',
           phone: '03-1234-5678',
           address: '東京都渋谷区テスト1-2-3',
@@ -65,7 +64,7 @@ describe('認証フロー統合テスト', () => {
       tracker.setOperation('データベース確認');
       const organization = await OrganizationModel.findOne({ email: requestData.organization.email });
       expect(organization).toBeTruthy();
-      expect(organization?.displayName).toBe(requestData.organization.displayName);
+      expect(organization?.name).toBe(requestData.organization.name);
 
       const user = await UserModel.findOne({ email: requestData.owner.email });
       expect(user).toBeTruthy();
@@ -82,7 +81,6 @@ describe('認証フロー統合テスト', () => {
       const requestData = {
         organization: {
           name: 'test-salon',
-          displayName: 'テストサロン',
           email: 'salon@example.com',
           phone: '03-1234-5678',
           address: '東京都渋谷区テスト1-2-3',

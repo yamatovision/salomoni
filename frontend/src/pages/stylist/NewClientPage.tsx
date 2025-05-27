@@ -41,13 +41,7 @@ import {
 } from '@mui/icons-material';
 import { FiveElements } from '../../types';
 import type { ClientCreateRequest } from '../../types';
-import { clientService } from '../../services';
-import {
-  generateMockFourPillarsData,
-  generateMockElementBalance,
-  generateMockCompatibility,
-  generateBeautyAdvice,
-} from '../../services/mock/data/mockFourPillarsData';
+import { clientService, sajuService } from '../../services';
 
 const steps = ['基本情報入力', '四柱推命計算', '結果確認'];
 
@@ -65,6 +59,7 @@ export const NewClientPage: React.FC = () => {
     birthDate: '',
     birthTime: '',
     gender: '',
+    phoneNumber: '',
   });
   
   // 計算結果
@@ -78,7 +73,7 @@ export const NewClientPage: React.FC = () => {
   const handleNext = () => {
     if (activeStep === 0) {
       // 入力検証
-      if (!formData.name || !formData.birthDate || !formData.gender) {
+      if (!formData.name || !formData.birthDate || !formData.gender || !formData.phoneNumber) {
         return;
       }
       setActiveStep(1);
@@ -95,25 +90,44 @@ export const NewClientPage: React.FC = () => {
   const calculateFourPillars = async () => {
     setIsCalculating(true);
     
-    // シミュレーション用の遅延
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const fourPillars = generateMockFourPillarsData(new Date(formData.birthDate));
-    const elementBalance = generateMockElementBalance(fourPillars);
-    const compatibility = generateMockCompatibility(
-      `client-${Date.now()}`,
-      'mock-user-001' // 現在のスタイリストID
-    );
-    const beautyAdvice = generateBeautyAdvice(elementBalance);
-    
-    setResults({
-      fourPillars,
-      elementBalance,
-      compatibility,
-      beautyAdvice,
-    });
-    
-    setIsCalculating(false);
+    try {
+      // APIから四柱推命データを取得
+      const birthDateTime = new Date(formData.birthDate);
+      if (formData.birthTime) {
+        const [hours, minutes] = formData.birthTime.split(':');
+        birthDateTime.setHours(parseInt(hours), parseInt(minutes));
+      }
+      
+      const sajuData = await sajuService.calculate({
+        birthDate: birthDateTime.toISOString(),
+        gender: formData.gender as 'male' | 'female',
+      });
+      
+      // TODO: 実際のAPIレスポンスに基づいて結果を設定
+      // 現在は仮のデータ構造を使用
+      setResults({
+        fourPillars: sajuData,
+        elementBalance: {
+          wood: 20,
+          fire: 30,
+          earth: 20,
+          metal: 15,
+          water: 15,
+          mainElement: FiveElements.FIRE,
+          isBalanced: false,
+        },
+        compatibility: {
+          totalScore: 85,
+          relationshipType: 'good',
+          advice: '相性は良好です。',
+        },
+        beautyAdvice: ['アドバイス1', 'アドバイス2'],
+      });
+    } catch (error) {
+      console.error('Failed to calculate four pillars:', error);
+    } finally {
+      setIsCalculating(false);
+    }
   };
 
   const toggleSection = (section: string) => {
@@ -172,6 +186,16 @@ export const NewClientPage: React.FC = () => {
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             sx={{ mb: 3 }}
             required
+          />
+          
+          <TextField
+            fullWidth
+            label="電話番号"
+            value={formData.phoneNumber}
+            onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+            sx={{ mb: 3 }}
+            required
+            placeholder="090-1234-5678"
           />
           
           <TextField
@@ -427,6 +451,7 @@ export const NewClientPage: React.FC = () => {
     try {
       const clientData: ClientCreateRequest = {
         name: formData.name,
+        phoneNumber: formData.phoneNumber,
         birthDate: formData.birthDate,
         gender: formData.gender as 'male' | 'female' | 'other',
         memo: `五行バランス: ${getElementName(results.elementBalance.mainElement)}が強い\n相性スコア: ${results.compatibility.totalScore}/100`,
@@ -462,6 +487,7 @@ export const NewClientPage: React.FC = () => {
       birthDate: '',
       birthTime: '',
       gender: '',
+      phoneNumber: '',
     });
   };
 
@@ -491,7 +517,7 @@ export const NewClientPage: React.FC = () => {
             variant="contained"
             onClick={handleNext}
             disabled={
-              (activeStep === 0 && (!formData.name || !formData.birthDate || !formData.gender)) ||
+              (activeStep === 0 && (!formData.name || !formData.birthDate || !formData.gender || !formData.phoneNumber)) ||
               (activeStep === 1 && isCalculating) ||
               activeStep === 2
             }

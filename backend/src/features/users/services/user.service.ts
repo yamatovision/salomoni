@@ -5,7 +5,8 @@ import {
   PaginationParams,
   PaginationInfo,
   UserRole,
-  UserStatus
+  UserStatus,
+  StaffInviteRequest
 } from '../../../types';
 import { UserRepository } from '../repositories/user.repository';
 import { OrganizationRepository } from '../../organizations/repositories/organization.repository';
@@ -126,7 +127,7 @@ export class UserService {
    * ユーザーを招待
    */
   async inviteUser(
-    request: { email: string; name?: string; role: UserRole; employeeNumber?: string },
+    request: StaffInviteRequest & { employeeNumber?: string },
     organizationId: string,
     invitedBy: string
   ): Promise<{ inviteToken: string; expiresAt: Date }> {
@@ -163,12 +164,17 @@ export class UserService {
       expiresAt,
       used: false,
       createdBy: invitedBy,
+      // 追加フィールドを保存
+      name: request.name,
+      birthDate: request.birthDate,
+      phone: request.phone,
+      position: request.position,
     });
 
     // TODO: 招待メールを送信
     // await emailService.sendInvitationEmail({
     //   to: request.email,
-    //   organizationName: organization.displayName,
+    //   organizationName: organization.name,
     //   inviteToken,
     //   expiresAt,
     // });
@@ -386,5 +392,55 @@ export class UserService {
    */
   private hasManagementRole(user: UserProfile): boolean {
     return [UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.ADMIN].includes(user.role);
+  }
+
+  /**
+   * スタイリストの離職リスクサマリーを取得
+   */
+  async getTurnoverRiskSummary(organizationId: string): Promise<{
+    high: number;
+    medium: number;
+    low: number;
+    total: number;
+  }> {
+    logger.info('Calculating turnover risk summary', { organizationId });
+
+    const { users } = await this.userRepository.findAll({
+      pagination: { page: 1, limit: 1000 }, // 全スタイリストを取得
+      filters: {
+        organizationId,
+        role: UserRole.USER, // スタイリストはUSERロール
+        status: UserStatus.ACTIVE
+      }
+    });
+
+    const summary = {
+      high: 0,
+      medium: 0,
+      low: 0,
+      total: users.length
+    };
+
+    // TODO: 実際のリスク分析ロジックを実装
+    // 現時点では仮のデータを返す
+    users.forEach(() => {
+      // 仮のロジック：ランダムにリスクレベルを割り当て
+      const random = Math.random();
+      if (random < 0.2) {
+        summary.high++;
+      } else if (random < 0.5) {
+        summary.medium++;
+      } else {
+        summary.low++;
+      }
+    });
+
+    logger.info('Turnover risk summary calculated', {
+      organizationId,
+      summary,
+      stylistCount: users.length
+    });
+
+    return summary;
   }
 }

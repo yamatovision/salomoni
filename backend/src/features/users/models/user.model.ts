@@ -50,6 +50,15 @@ const userSchema = new Schema<UserDocument>({
   birthDate: {
     type: Date,
   },
+  birthTime: {
+    type: String,
+    match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, '有効な時刻形式（HH:mm）を入力してください'],
+  },
+  birthLocation: {
+    name: String,
+    longitude: Number,
+    latitude: Number,
+  },
   gender: {
     type: String,
     enum: ['male', 'female', 'other', 'prefer_not_to_say'],

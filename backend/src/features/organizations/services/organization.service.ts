@@ -1,11 +1,15 @@
 import { 
   Organization,
+  OrganizationCreateRequest,
   OrganizationUpdateRequest,
   PaginationParams,
   PaginationInfo,
   OrganizationStatus,
   OrganizationPlan,
-  OrganizationStats
+  OrganizationStats,
+  User,
+  UserRole,
+  AuthMethod
 } from '../../../types';
 import { OrganizationRepository } from '../repositories/organization.repository';
 import { UserRepository } from '../../users/repositories/user.repository';
@@ -19,6 +23,64 @@ export class OrganizationService {
   constructor() {
     this.organizationRepository = new OrganizationRepository();
     this.userRepository = new UserRepository();
+  }
+
+  /**
+   * 組織とオーナーを同時に作成（SuperAdmin用）
+   */
+  async createOrganizationWithOwner(data: {
+    organization: Omit<OrganizationCreateRequest, 'ownerId'>;
+    owner: {
+      name: string;
+      email: string;
+      password: string;
+      role: UserRole;
+      authMethods: AuthMethod[];
+    };
+  }): Promise<{
+    organization: Organization;
+    owner: User;
+    temporaryPassword?: string;
+  }> {
+    // メールアドレスの重複チェック（組織）
+    const existingOrg = await this.organizationRepository.findByEmail(data.organization.email);
+    if (existingOrg) {
+      throw new AppError('組織のメールアドレスが既に使用されています', 409, 'DUPLICATE_EMAIL');
+    }
+
+    // メールアドレスの重複チェック（オーナー）
+    const existingUser = await this.userRepository.findByEmail(data.owner.email);
+    if (existingUser) {
+      throw new AppError('オーナーのメールアドレスが既に使用されています', 409, 'DUPLICATE_EMAIL');
+    }
+
+    // オーナーユーザーを作成
+    const owner = await this.userRepository.create({
+      ...data.owner
+    });
+
+    // 組織を作成
+    const organization = await this.organizationRepository.create({
+      ...data.organization,
+      ownerId: owner.id
+    });
+
+    // オーナーに組織IDを紐付け
+    await this.userRepository.update(owner.id, {
+      organizationId: organization.id
+    });
+
+    logger.info('Organization and owner created', {
+      organizationId: organization.id,
+      organizationName: organization.name,
+      ownerId: owner.id,
+      ownerEmail: owner.email
+    });
+
+    return {
+      organization,
+      owner: { ...owner, organizationId: organization.id } as User
+    };
   }
 
   /**

@@ -8,8 +8,7 @@ export interface StylistReportDocument extends IStylistReport, Document {
 const stylistReportSchema = new Schema<StylistReportDocument>({
   stylistId: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   reportPeriod: {
     start: {

@@ -24,6 +24,7 @@ import billingRoutes from './features/billing/routes/billing.routes';
 import importRoutes, { calendarRouter } from './features/import/routes/import.routes';
 import dashboardRoutes from './features/dashboard/routes/dashboard.routes';
 import supportRoutes, { superAdminSupportRouter } from './features/support/routes/support.routes';
+import planRoutes from './features/plans/routes/plan.routes';
 import { univapayService } from './features/billing/services/univapay.service';
 import { logger } from './common/utils/logger';
 
@@ -32,8 +33,13 @@ const PORT = process.env.PORT || 8080;
 
 // ミドルウェアの設定
 app.use(helmet());
+
+// CORS設定のデバッグログ
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || '*';
+logger.info('CORS設定:', { allowedOrigins, credentials: true });
+
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+  origin: allowedOrigins,
   credentials: true,
 }));
 app.use(express.json());
@@ -68,6 +74,8 @@ app.use('/api/admin/dashboard', dashboardRoutes); // ダッシュボード管理
 app.use('/api/admin/stylists', adminStylistRoutes); // 管理者用スタイリスト管理ルート
 app.use('/api/admin/support', supportRoutes); // サポート管理ルート
 app.use('/api/superadmin/support', superAdminSupportRouter); // SuperAdmin用サポート管理ルート
+app.use('/api/superadmin/plans', planRoutes); // SuperAdmin用プラン管理ルート
+app.use('/api/superadmin/revenue', billingRoutes); // SuperAdmin用収益シミュレーションルート
 
 // エラーハンドリング
 app.use(errorHandler);

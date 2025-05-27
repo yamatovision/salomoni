@@ -4,7 +4,8 @@ import type {
   StylistDetail,
   StylistSearchFilter,
   TurnoverRiskAnalysis,
-  StylistReport
+  StylistReport,
+  StaffInviteRequest
 } from '../../types';
 import { API_PATHS } from '../../types';
 
@@ -47,7 +48,7 @@ export class StylistService {
   }
 
   // スタイリスト新規作成（招待）
-  async createStylist(data: Partial<StylistDetail>): Promise<ApiResponse<StylistDetail>> {
+  async createStylist(data: StaffInviteRequest): Promise<ApiResponse<StylistDetail>> {
     const response = await apiClient.post(API_PATHS.USERS.INVITE, data);
     return response.data;
   }
@@ -72,7 +73,7 @@ export class StylistService {
 
   // 離職リスクサマリー取得
   async getTurnoverRiskSummary(): Promise<ApiResponse<any>> {
-    const response = await apiClient.get(`${API_PATHS.ADMIN.STYLISTS}/risk-summary`);
+    const response = await apiClient.get(API_PATHS.ADMIN.STYLISTS_RISK_SUMMARY);
     return response.data;
   }
 }

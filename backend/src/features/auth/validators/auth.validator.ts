@@ -39,10 +39,6 @@ export const validateOrganizationRegistration: ValidationChain[] = [
     .notEmpty().withMessage('組織名は必須です')
     .isLength({ max: 100 }).withMessage('組織名は100文字以内で入力してください')
     .trim(),
-  body('organization.displayName')
-    .notEmpty().withMessage('表示名は必須です')
-    .isLength({ max: 100 }).withMessage('表示名は100文字以内で入力してください')
-    .trim(),
   body('organization.email')
     .notEmpty().withMessage('組織メールアドレスは必須です')
     .isEmail().withMessage('有効なメールアドレスを入力してください')

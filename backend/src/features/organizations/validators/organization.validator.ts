@@ -1,39 +1,40 @@
 import { body, param, query, ValidationChain } from 'express-validator';
-import { OrganizationPlan } from '../../../types';
+import { OrganizationPlan, OrganizationStatus } from '../../../types';
 
-// 組織作成のバリデーション（内部API用）
-export const validateCreateOrganization: ValidationChain[] = [
+// 組織とオーナー同時作成のバリデーション（SuperAdmin用）
+export const validateCreateOrganizationWithOwner: ValidationChain[] = [
   body('name')
     .notEmpty().withMessage('組織名は必須です')
     .isLength({ max: 100 }).withMessage('組織名は100文字以内で入力してください')
     .trim(),
-  body('displayName')
-    .notEmpty().withMessage('表示名は必須です')
-    .isLength({ max: 100 }).withMessage('表示名は100文字以内で入力してください')
+  body('ownerName')
+    .notEmpty().withMessage('オーナー名は必須です')
+    .isLength({ max: 100 }).withMessage('オーナー名は100文字以内で入力してください')
     .trim(),
-  body('email')
-    .notEmpty().withMessage('メールアドレスは必須です')
+  body('ownerEmail')
+    .notEmpty().withMessage('オーナーメールアドレスは必須です')
     .isEmail().withMessage('有効なメールアドレスを入力してください')
     .normalizeEmail(),
+  body('ownerPassword')
+    .notEmpty().withMessage('パスワードは必須です')
+    .isLength({ min: 8 }).withMessage('パスワードは8文字以上で設定してください'),
   body('phone')
-    .notEmpty().withMessage('電話番号は必須です')
+    .optional({ checkFalsy: true })
     .matches(/^[\d-]+$/).withMessage('有効な電話番号を入力してください'),
   body('address')
-    .notEmpty().withMessage('住所は必須です')
+    .optional()
     .trim(),
-  body('ownerId')
-    .notEmpty().withMessage('オーナーIDは必須です')
-    .isMongoId().withMessage('有効なオーナーIDを指定してください'),
   body('plan')
-    .optional()
+    .notEmpty().withMessage('プランは必須です')
     .isIn(Object.values(OrganizationPlan)).withMessage('有効なプランを指定してください'),
-  body('metadata.employeeCount')
+  body('status')
     .optional()
-    .isInt({ min: 1 }).withMessage('従業員数は1以上の整数で入力してください'),
-  body('metadata.businessType')
+    .isIn(Object.values(OrganizationStatus)).withMessage('有効なステータスを指定してください'),
+  body('tokenLimit')
     .optional()
-    .isIn(['salon', 'individual', 'franchise', 'other']).withMessage('有効な事業形態を指定してください'),
+    .isInt({ min: 0 }).withMessage('トークン上限は0以上の整数で入力してください'),
 ];
+
 
 // 組織更新のバリデーション
 export const validateUpdateOrganization: ValidationChain[] = [
@@ -42,10 +43,6 @@ export const validateUpdateOrganization: ValidationChain[] = [
   body('name')
     .optional()
     .isLength({ max: 100 }).withMessage('組織名は100文字以内で入力してください')
-    .trim(),
-  body('displayName')
-    .optional()
-    .isLength({ max: 100 }).withMessage('表示名は100文字以内で入力してください')
     .trim(),
   body('email')
     .optional()

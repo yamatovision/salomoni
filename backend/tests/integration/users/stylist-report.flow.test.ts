@@ -4,14 +4,14 @@ import app from '../../../src/index';
 import { connectTestDatabase, clearTestDatabase, disconnectTestDatabase } from '../../utils/db-test-helper';
 import { createTestOrganizationWithOwner, generateTestToken } from '../../utils/test-auth-helper';
 import { MilestoneTracker } from '../../utils/MilestoneTracker';
-import { UserRole, AppointmentStatus } from '../../../src/types';
+import { UserRole, AppointmentStatus, UserStatus } from '../../../src/types';
 import { UserModel } from '../../../src/features/users/models/user.model';
 import { AppointmentModel } from '../../../src/features/appointments/models/appointment.model';
 import { StylistReportModel } from '../../../src/features/users/models/stylist-report.model';
 import { ClientModel } from '../../../src/features/clients/models/client.model';
 import mongoose from 'mongoose';
 
-describe('/api/admin/stylists/:id/report - スタイリストレポートAPI統合テスト', () => {
+describe('スタイリスト管理API統合テスト', () => {
   let adminToken: string;
   let organizationId: string;
   let stylistId: string;
@@ -376,6 +376,179 @@ describe('/api/admin/stylists/:id/report - スタイリストレポートAPI統�
       expect(executionTime).toBeLessThan(5000); // 5秒以内に完了すること
 
       console.log(`大量データ処理時間: ${executionTime}ms`);
+    });
+  });
+
+  describe('GET /api/admin/stylists/risk-summary - 離職リスクサマリー', () => {
+    it('管理者は離職リスクサマリーを取得できる', async () => {
+      tracker.setOperation('離職リスクサマリー取得テスト');
+      
+      // 複数のスタイリストを作成
+      for (let i = 3; i <= 10; i++) {
+        await UserModel.create({
+          email: `stylist${i}@test.com`,
+          name: `テストスタイリスト${i}`,
+          password: 'Test1234!',
+          role: UserRole.USER,
+          organizationId,
+          status: 'active'
+        });
+      }
+      
+      tracker.mark('追加スタイリスト作成完了');
+
+      const response = await request(app)
+        .get('/api/admin/stylists/risk-summary')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toHaveProperty('high');
+      expect(response.body.data).toHaveProperty('medium');
+      expect(response.body.data).toHaveProperty('low');
+      expect(response.body.data).toHaveProperty('total');
+      
+      // 合計が正しいことを確認
+      const { high, medium, low, total } = response.body.data;
+      expect(high + medium + low).toBe(total);
+      expect(total).toBe(10); // 最初の2つ + 追加の8つ
+      
+      tracker.mark('リスクサマリー取得成功');
+    });
+
+    it('オーナーは離職リスクサマリーを取得できる', async () => {
+      tracker.setOperation('オーナー権限テスト');
+      
+      const response = await request(app)
+        .get('/api/admin/stylists/risk-summary')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.total).toBe(2); // 初期作成分の2人
+      
+      tracker.mark('オーナー権限確認完了');
+    });
+
+    it('一般スタイリストはアクセスできない', async () => {
+      tracker.setOperation('権限エラーテスト - 一般スタイリスト');
+      
+      const stylistToken = generateTestToken({
+        id: stylistId,
+        userId: stylistId,
+        email: 'stylist1@test.com',
+        roles: [UserRole.USER],
+        currentRole: UserRole.USER,
+        organizationId
+      });
+
+      const response = await request(app)
+        .get('/api/admin/stylists/risk-summary')
+        .set('Authorization', `Bearer ${stylistToken}`)
+        .expect(403);
+
+      expect(response.body.success).toBe(false);
+      
+      tracker.mark('スタイリスト権限エラー確認完了');
+    });
+
+    it('SuperAdminは全組織のサマリーを取得できる', async () => {
+      tracker.setOperation('SuperAdmin権限テスト');
+      
+      // 別組織を作成
+      const otherOrg = await createTestOrganizationWithOwner();
+      const otherOrgId = otherOrg.organization.id;
+      
+      // 別組織のスタイリストを追加
+      for (let i = 1; i <= 5; i++) {
+        await UserModel.create({
+          email: `other-stylist${i}@test.com`,
+          name: `他組織スタイリスト${i}`,
+          password: 'Test1234!',
+          role: UserRole.USER,
+          organizationId: otherOrgId,
+          status: 'active'
+        });
+      }
+      
+      // SuperAdminトークンを作成
+      const superAdminToken = generateTestToken({
+        id: 'superadmin-id',
+        userId: 'superadmin-id',
+        email: 'superadmin@test.com',
+        roles: [UserRole.SUPER_ADMIN],
+        currentRole: UserRole.SUPER_ADMIN,
+        organizationId
+      });
+
+      const response = await request(app)
+        .get('/api/admin/stylists/risk-summary')
+        .set('Authorization', `Bearer ${superAdminToken}`)
+        .expect(200);
+
+      // 自組織のスタイリストのみがカウントされることを確認
+      expect(response.body.data.total).toBe(2); // 初期作成分の2人のみ
+      
+      tracker.mark('SuperAdmin権限確認完了');
+    });
+
+    it('認証なしでアクセスできない', async () => {
+      tracker.setOperation('認証エラーテスト');
+      
+      const response = await request(app)
+        .get('/api/admin/stylists/risk-summary')
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+      
+      tracker.mark('認証エラー確認完了');
+    });
+
+    it('組織にスタイリストがいない場合も正常に動作する', async () => {
+      tracker.setOperation('スタイリスト0人テスト');
+      
+      // 新しい組織を作成（スタイリストなし）
+      const emptyOrg = await createTestOrganizationWithOwner();
+      const emptyOrgToken = emptyOrg.ownerToken;
+
+      const response = await request(app)
+        .get('/api/admin/stylists/risk-summary')
+        .set('Authorization', `Bearer ${emptyOrgToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toEqual({
+        high: 0,
+        medium: 0,
+        low: 0,
+        total: 0
+      });
+      
+      tracker.mark('空組織テスト完了');
+    });
+
+    it('非アクティブなスタイリストは含まれない', async () => {
+      tracker.setOperation('非アクティブスタイリスト除外テスト');
+      
+      // 非アクティブなスタイリストを作成
+      await UserModel.create({
+        email: 'inactive-stylist@test.com',
+        name: '非アクティブスタイリスト',
+        password: 'Test1234!',
+        role: UserRole.USER,
+        organizationId,
+        status: UserStatus.SUSPENDED
+      });
+
+      const response = await request(app)
+        .get('/api/admin/stylists/risk-summary')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      // アクティブなスタイリストのみがカウントされることを確認
+      expect(response.body.data.total).toBe(2); // 初期作成分の2人のみ
+      
+      tracker.mark('非アクティブスタイリスト除外確認完了');
     });
   });
 });

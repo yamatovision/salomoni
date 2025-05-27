@@ -10,6 +10,7 @@ import type {
   ChargeTokensResponse,
   CreateSubscriptionRequest,
   CreateSubscriptionResponse,
+  RevenueSimulationData,
 } from '../../types';
 
 export class BillingService {
@@ -56,10 +57,21 @@ export class BillingService {
    * 請求サマリーを取得
    */
   async getBillingSummary(): Promise<BillingSummary> {
-    const response = await apiClient.get<BillingSummary>(
+    const response = await apiClient.get(
       API_PATHS.OWNER.BILLING_SUMMARY
     );
-    return response.data;
+    
+    // デバッグログ
+    console.log('[BillingService] getBillingSummary response:', response.data);
+    
+    // APIレスポンスの構造を正しく処理
+    if (response.data.success && response.data.data) {
+      return response.data.data.summary || {};
+    }
+    
+    // エラーケース
+    console.error('[BillingService] Invalid response structure:', response.data);
+    return {} as BillingSummary;
   }
 
   /**
@@ -80,7 +92,29 @@ export class BillingService {
     const response = await apiClient.get(API_PATHS.OWNER.INVOICES, {
       params
     });
-    return response.data;
+    
+    // デバッグログ
+    console.log('[BillingService] getInvoices response:', response.data);
+    
+    // APIレスポンスの構造を正しく処理
+    if (response.data.success && response.data.data) {
+      const { invoices, pagination } = response.data.data;
+      return {
+        invoices: invoices || [],
+        total: pagination?.total || 0,
+        page: params?.page || 1,
+        totalPages: Math.ceil((pagination?.total || 0) / (params?.limit || 10))
+      };
+    }
+    
+    // エラーケース
+    console.error('[BillingService] Invalid response structure:', response.data);
+    return {
+      invoices: [],
+      total: 0,
+      page: 1,
+      totalPages: 0
+    };
   }
 
   /**
@@ -180,5 +214,20 @@ export class BillingService {
         ]
       }
     };
+  }
+
+  /**
+   * 収益シミュレーションデータを取得（SuperAdmin用）
+   */
+  async getSimulationData(): Promise<RevenueSimulationData> {
+    const response = await apiClient.get<{ success: boolean; data: RevenueSimulationData }>(
+      API_PATHS.SUPERADMIN.REVENUE_SIMULATION_DATA
+    );
+    
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    
+    throw new Error('収益シミュレーションデータの取得に失敗しました');
   }
 }

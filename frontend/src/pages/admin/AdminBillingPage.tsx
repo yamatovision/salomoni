@@ -43,6 +43,7 @@ import {
 import { AdminLayout } from '../../layouts/AdminLayout';
 import { billingService } from '../../services';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
+import { useAuth } from '../../hooks/useAuth';
 import type {
   Invoice,
   BillingSummary,
@@ -55,6 +56,7 @@ import {
 } from '../../types';
 
 const AdminBillingPage: React.FC = () => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [billingSummary, setBillingSummary] = useState<BillingSummary | null>(null);
@@ -96,10 +98,19 @@ const AdminBillingPage: React.FC = () => {
         Promise.resolve(billingService.getSubscriptionPlans()),
       ]);
 
+      // デバッグログ
+      console.log('[AdminBillingPage] loadBillingData results:', {
+        summary,
+        invoiceData,
+        packages,
+        plans
+      });
+
       setBillingSummary(summary);
-      setInvoices(invoiceData.invoices);
-      setTokenPackages(packages);
-      setSubscriptionPlans(plans);
+      // 安全にinvoicesを設定
+      setInvoices(invoiceData?.invoices || []);
+      setTokenPackages(packages || []);
+      setSubscriptionPlans(plans || {});
       
       if (summary.subscription?.planType) {
         setSelectedPlan(summary.subscription.planType);
@@ -132,9 +143,15 @@ const AdminBillingPage: React.FC = () => {
       });
 
       // トークンチャージを実行
+      const selectedPkg = tokenPackages.find(pkg => pkg.id === selectedPackage);
+      if (!selectedPkg) {
+        throw new Error('選択されたパッケージが見つかりません');
+      }
+      
       await billingService.chargeTokens({
-        packageId: selectedPackage,
-        paymentToken: tokenResponse.token,
+        tokenPackage: selectedPackage as 'standard' | 'premium',
+        paymentMethodId: tokenResponse.token,
+        organizationId: user?.organizationId || '',
       });
 
       setSuccessMessage('トークンチャージが完了しました。');
@@ -428,7 +445,7 @@ const AdminBillingPage: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {invoices.map((invoice) => (
+                    {invoices && invoices.length > 0 ? invoices.map((invoice) => (
                       <TableRow key={invoice.id}>
                         <TableCell>{invoice.invoiceNumber}</TableCell>
                         <TableCell>
@@ -454,7 +471,13 @@ const AdminBillingPage: React.FC = () => {
                           </IconButton>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )) : (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center">
+                          請求書がありません
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>

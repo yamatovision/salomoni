@@ -29,10 +29,8 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { 
   getSuperAdminSupportTickets,
-  getSuperAdminSupportTicket,
   replySuperAdminSupportTicket,
-  updateSuperAdminSupportTicket,
-  getSuperAdminSupportTicketStats
+  updateSuperAdminSupportTicket
 } from '../../services/api/superadmin-support';
 import type { 
   SupportTicket, 

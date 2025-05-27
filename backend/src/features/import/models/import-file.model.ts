@@ -66,7 +66,6 @@ const importFileSchema = new Schema<ImportFileDocument>(
       type: Date,
       required: true,
       default: () => new Date(Date.now() + 24 * 60 * 60 * 1000), // 24時間後
-      index: true,
     },
   },
   {

@@ -2,7 +2,6 @@ import { apiClient } from './apiClient';
 import type { 
   ApiResponse,
   Organization,
-  OrganizationCreateRequest,
   OrganizationUpdateRequest,
   OrganizationPlan,
   OrganizationStatus
@@ -35,9 +34,19 @@ export class OrganizationService {
     return response.data;
   }
 
-  // 組織作成
-  async createOrganization(data: OrganizationCreateRequest): Promise<ApiResponse<Organization>> {
-    const response = await apiClient.post(API_PATHS.ORGANIZATIONS.CREATE, data);
+  // 組織とオーナー同時作成（SuperAdmin用）
+  async createOrganizationWithOwner(data: {
+    name: string;
+    ownerName: string;
+    ownerEmail: string;
+    ownerPassword: string;
+    phone?: string;
+    address?: string;
+    plan: OrganizationPlan;
+    status?: OrganizationStatus;
+    tokenLimit?: number;
+  }): Promise<ApiResponse<{ organization: Organization; owner: any }>> {
+    const response = await apiClient.post('/api/organizations/create-with-owner', data);
     return response.data;
   }
 

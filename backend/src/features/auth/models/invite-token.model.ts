@@ -10,6 +10,11 @@ export interface InviteTokenDocument extends Document {
   used: boolean;
   usedAt?: Date;
   createdBy: Types.ObjectId | string;
+  // 追加フィールド
+  name?: string;
+  birthDate?: Date;
+  phone?: string;
+  position?: string;
   markAsUsed(): Promise<InviteTokenDocument>;
 }
 
@@ -56,6 +61,22 @@ const inviteTokenSchema = new Schema<InviteTokenDocument>({
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true,
+  },
+  // 追加フィールド
+  name: {
+    type: String,
+    trim: true,
+  },
+  birthDate: {
+    type: Date,
+  },
+  phone: {
+    type: String,
+    trim: true,
+  },
+  position: {
+    type: String,
+    trim: true,
   },
 }, {
   timestamps: true,

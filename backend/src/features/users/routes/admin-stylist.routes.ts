@@ -12,7 +12,14 @@ const userController = new UserController();
 router.use(authenticate);
 
 // 管理者権限が必要
-router.use(authorize(UserRole.OWNER, UserRole.ADMIN, UserRole.SUPER_ADMIN));
+router.use(authorize(UserRole.OWNER, UserRole.ADMIN));
+
+// スタイリスト離職リスクサマリー取得
+// GET /api/admin/stylists/risk-summary
+router.get(
+  '/risk-summary',
+  userController.getTurnoverRiskSummary
+);
 
 // スタイリストレポート生成
 // GET /api/admin/stylists/:id/report

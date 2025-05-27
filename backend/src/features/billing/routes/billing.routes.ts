@@ -45,7 +45,8 @@ import {
   getInvoices,
   handleWebhook,
   updateSubscription,
-  cancelSubscription
+  cancelSubscription,
+  getSimulationData
 } from '../controllers/billing.controller';
 
 // Type assertion wrapper for authenticated routes
@@ -129,6 +130,15 @@ router.post(
   '/webhook',
   rateLimit({ windowMs: 1 * 60 * 1000, max: 100 }), // 1分間に100回まで
   handleWebhook
+);
+
+// 収益シミュレーションデータ取得（SuperAdmin用）
+// GET /api/superadmin/revenue/simulation-data
+router.get(
+  '/simulation-data',
+  readRateLimit,
+  authenticate,
+  wrapAuthenticatedHandler(getSimulationData)
 );
 
 export default router;

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { billingService } from '../services/billing.service';
 import { subscriptionService } from '../services/subscription.service';
+import { RevenueSimulationService } from '../services/revenue-simulation.service';
 // import { univapayService } from '../services/univapay.service'; // TODO: implement when needed
 import { 
   createPaymentMethodSchema,
@@ -12,7 +13,7 @@ import {
 } from '../validators/billing.validator';
 import { logger } from '../../../common/utils/logger';
 import { AuthenticatedRequest } from '../../../common/middleware/auth';
-import { TokenPackage } from '../../../types';
+import { TokenPackage, UserRole } from '../../../types';
 
 // APIエンドポイント 8.1: 決済トークン作成
 export const createPaymentToken = async (req: AuthenticatedRequest, res: Response) => {
@@ -492,6 +493,42 @@ export const cancelSubscription = async (req: AuthenticatedRequest, res: Respons
     res.status(500).json({
       success: false,
       error: errorMessage || 'サブスクリプションキャンセル中にエラーが発生しました'
+    });
+  }
+};
+
+// 収益シミュレーションデータ取得（SuperAdmin用）
+export const getSimulationData = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // SuperAdmin権限チェック
+    if (req.user?.currentRole !== UserRole.SUPER_ADMIN) {
+      return res.status(403).json({
+        success: false,
+        error: '収益シミュレーションデータへのアクセス権限がありません'
+      });
+    }
+
+    const simulationData = await RevenueSimulationService.getSimulationData();
+
+    logger.info('Revenue simulation data retrieved', {
+      userId: req.user?.id,
+      timestamp: new Date()
+    });
+
+    res.status(200).json({
+      success: true,
+      data: simulationData
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('Failed to get simulation data', {
+      error: errorMessage,
+      userId: req.user?.id
+    });
+
+    res.status(500).json({
+      success: false,
+      error: errorMessage || '収益シミュレーションデータ取得中にエラーが発生しました'
     });
   }
 };

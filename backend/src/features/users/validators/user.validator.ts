@@ -22,6 +22,22 @@ export const validateInviteUser: ValidationChain[] = [
     .optional()
     .isLength({ max: 20 }).withMessage('社員番号は20文字以内で入力してください')
     .trim(),
+  body('birthDate')
+    .optional()
+    .isISO8601().withMessage('有効な日付形式を指定してください')
+    .toDate(),
+  body('phone')
+    .optional()
+    .custom(value => {
+      if (!value || value === '') return true; // 空文字列は許可
+      if (value.length > 20) return false; // 20文字以内
+      return /^[\d-\s\(\)\+]+$/.test(value); // 数字、ハイフン、スペース、括弧、プラス記号を許可
+    }).withMessage('有効な電話番号を入力してください（20文字以内）')
+    .trim(),
+  body('position')
+    .optional()
+    .isLength({ max: 50 }).withMessage('役職は50文字以内で入力してください')
+    .trim(),
 ];
 
 // ユーザー更新のバリデーション
@@ -38,10 +54,14 @@ export const validateUpdateUser: ValidationChain[] = [
     .trim(),
   body('phone')
     .optional()
-    .matches(/^[\d-]+$/).withMessage('有効な電話番号を入力してください'),
+    .custom(value => {
+      if (!value || value === '') return true; // 空文字列は許可
+      return /^[\d-\s\(\)\+]+$/.test(value); // 数字、ハイフン、スペース、括弧、プラス記号を許可
+    }).withMessage('有効な電話番号を入力してください'),
   body('birthDate')
     .optional()
-    .isISO8601().withMessage('生年月日は有効な日付形式で入力してください'),
+    .isISO8601().withMessage('生年月日は有効な日付形式で入力してください')
+    .toDate(),
   body('gender')
     .optional()
     .isIn(['male', 'female', 'other', 'prefer_not_to_say']).withMessage('有効な性別を指定してください'),
@@ -52,6 +72,10 @@ export const validateUpdateUser: ValidationChain[] = [
   body('employeeNumber')
     .optional()
     .isLength({ max: 20 }).withMessage('社員番号は20文字以内で入力してください')
+    .trim(),
+  body('position')
+    .optional()
+    .isLength({ max: 50 }).withMessage('役職は50文字以内で入力してください')
     .trim(),
   body('preferences.notifications.email')
     .optional()

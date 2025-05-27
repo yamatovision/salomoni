@@ -50,7 +50,8 @@ import {
 } from '@mui/icons-material';
 // import { useTheme } from '@mui/material/styles';
 import type { 
-  StylistDetail
+  StylistDetail,
+  StaffInviteRequest
 } from '../../types';
 import { 
   TurnoverRiskLevel,
@@ -168,16 +169,40 @@ const StylistManagementPage: React.FC = () => {
     setLoading(true);
     try {
       const stylistsResponse = await stylistService.getStylists();
+      console.log('スタイリストレスポンス:', stylistsResponse);
+      
       if (stylistsResponse.success && stylistsResponse.data) {
-        setStylists(stylistsResponse.data);
+        // dataがページネーション付きレスポンスの場合
+        if ('users' in stylistsResponse.data && Array.isArray(stylistsResponse.data.users)) {
+          setStylists(stylistsResponse.data.users);
+        } 
+        // dataが直接配列の場合
+        else if (Array.isArray(stylistsResponse.data)) {
+          setStylists(stylistsResponse.data);
+        } 
+        // それ以外の場合は空配列
+        else {
+          console.error('予期しないレスポンス形式:', stylistsResponse.data);
+          setStylists([]);
+        }
+      } else {
+        console.error('スタイリスト一覧の取得に失敗:', stylistsResponse);
+        setStylists([]);
       }
 
       const summaryResponse = await stylistService.getTurnoverRiskSummary();
       if (summaryResponse.success && summaryResponse.data) {
         setRiskSummary(summaryResponse.data);
+      } else {
+        console.error('離職リスクサマリーの取得に失敗:', summaryResponse);
+        // デフォルト値を設定
+        setRiskSummary({ high: 0, medium: 0, low: 0, total: 0 });
       }
     } catch (error) {
       console.error('データ読み込みエラー:', error);
+      // エラー時はデフォルト値を設定
+      setStylists([]);
+      setRiskSummary({ high: 0, medium: 0, low: 0, total: 0 });
     } finally {
       setLoading(false);
     }
@@ -225,8 +250,15 @@ const StylistManagementPage: React.FC = () => {
     try {
       const data = {
         ...formData,
-        birthDate: formData.birthDate ? new Date(formData.birthDate) : undefined
+        birthDate: formData.birthDate || undefined
       };
+
+      // デバッグログ: 送信するデータの確認
+      console.log('[DEBUG] フォーム送信データ:', {
+        formData,
+        processedData: data,
+        isEditing: !!editingStylist
+      });
 
       if (editingStylist) {
         const response = await stylistService.updateStylist(editingStylist.id, data);
@@ -234,7 +266,17 @@ const StylistManagementPage: React.FC = () => {
           alert(response.meta?.message || 'スタイリスト情報を更新しました');
         }
       } else {
-        const response = await stylistService.createStylist(data);
+        // 新規作成時も全てのデータを送信するように修正
+        const inviteData = {
+          email: data.email,
+          role: data.role as UserRole.ADMIN | UserRole.USER,
+          name: data.name,
+          birthDate: formData.birthDate || undefined,
+          phone: data.phone,
+          position: data.position
+        };
+        console.log('[DEBUG] 新規作成送信データ:', inviteData);
+        const response = await stylistService.createStylist(inviteData);
         if (response.success) {
           alert(response.meta?.message || '新規スタイリストを登録しました');
         }
@@ -242,9 +284,19 @@ const StylistManagementPage: React.FC = () => {
 
       handleCloseAddModal();
       loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('保存エラー:', error);
-      alert('保存中にエラーが発生しました');
+      
+      // エラーレスポンスの詳細を表示
+      if (error.response?.data) {
+        console.error('エラー詳細:', error.response.data);
+        const errorMessage = error.response.data.meta?.message || 
+                           error.response.data.errors?.[0]?.message || 
+                           '保存中にエラーが発生しました';
+        alert(errorMessage);
+      } else {
+        alert('保存中にエラーが発生しました');
+      }
     }
   };
 

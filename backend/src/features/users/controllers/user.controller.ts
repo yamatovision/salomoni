@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { UserService } from '../services/user.service';
 import { StylistReportService } from '../services/stylist-report.service';
 import { AppError } from '../../../common/middleware/errorHandler';
+import { logger } from '../../../common/utils/logger';
 import type { 
   PaginationParams,
   UserRole,
@@ -78,6 +79,17 @@ export class UserController {
       const result = await this.userService.getUsers({
         pagination,
         filters,
+      });
+
+      // デバッグログ: ユーザー一覧レスポンス
+      console.log('[DEBUG] getUsers レスポンスデータの一部:', {
+        totalUsers: result.users.length,
+        firstUser: result.users[0] ? {
+          id: result.users[0].id,
+          email: result.users[0].email,
+          birthDate: result.users[0].birthDate,
+          hasBirthDate: !!result.users[0].birthDate
+        } : null
       });
 
       const response: ApiResponse<typeof result> = {
@@ -198,6 +210,9 @@ export class UserController {
         throw new AppError('認証が必要です', 401, 'AUTH001');
       }
 
+      // デバッグログ: 招待リクエストデータ
+      console.log('[DEBUG] inviteUser リクエストボディ:', JSON.stringify(req.body, null, 2));
+      
       const result = await this.userService.inviteUser(
         req.body,
         organizationId,
@@ -432,6 +447,51 @@ export class UserController {
 
       res.json(response);
     } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * スタイリスト離職リスクサマリー取得
+   * GET /api/admin/stylists/risk-summary
+   */
+  getTurnoverRiskSummary = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      logger.info('Fetching turnover risk summary', {
+        userId: req.user?.id,
+        organizationId: req.user?.organizationId,
+        endpoint: '/api/admin/stylists/risk-summary'
+      });
+
+      const organizationId = req.user?.organizationId;
+
+      if (!organizationId) {
+        throw new AppError('認証が必要です', 401, 'AUTH001');
+      }
+
+      const summary = await this.userService.getTurnoverRiskSummary(organizationId);
+
+      logger.info('Turnover risk summary fetched successfully', {
+        organizationId,
+        summary
+      });
+
+      const response: ApiResponse<typeof summary> = {
+        success: true,
+        data: summary,
+      };
+
+      res.json(response);
+    } catch (error) {
+      logger.error('Error fetching turnover risk summary', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        userId: req.user?.id,
+        organizationId: req.user?.organizationId
+      });
       next(error);
     }
   };

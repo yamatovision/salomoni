@@ -25,6 +25,7 @@
 | Phase 3 | スタイリスト機能 | 5日 | AIチャット、今日のアドバイス、クライアント管理 |
 | Phase 4 | 管理者機能 | 5日 | 管理ダッシュボード、各種管理画面 |
 | Phase 5 | SuperAdmin機能 | 3日 | 組織管理、プラン管理、システム管理 |
+| Phase 6 | AIキャラクター自動セットアップ | 3日 | チャットベース初期設定、OpenAI統合 |
 
 #### 2.0.2 プロトタイプ詳細実装順
 
@@ -58,6 +59,12 @@
 | 5.2 | Phase 5 | S-001 | 組織管理画面 | beauty-superadmin-organizations.html | 2.4 | 組織データ | [x] |
 | 5.3 | Phase 5 | S-002 | 課金・プラン管理画面 | beauty-superadmin-plans.html | 2.4 | プランデータ | [x] |
 | 5.4 | Phase 5 | S-003 | サポートチケット管理画面 | beauty-superadmin-support-simple.html | 2.4 | 全チケットデータ | [x] |
+| 6.1 | Phase 6 | AI-001 | AIキャラクターセットアップページ | ai-character-setup.html | 2.4, 3.3 | セットアップフローデータ | [x] |
+| 6.2 | Phase 6 | - | セットアップ状況判定ロジック | - | 6.1 | AIキャラクター存在確認 | [ ] |
+| 6.3 | Phase 6 | - | 生年月日・出生地入力UI | - | 6.1 | ハイブリッドフォーム（チャット+選択） | [x] |
+| 6.4 | Phase 6 | - | 出生地検索・時差連携 | - | 6.3 | SajuEngine時差データ | [ ] |
+| 6.5 | Phase 6 | - | OpenAI自然言語処理統合 | - | 6.1 | 変換処理ロジック | [ ] |
+| 6.6 | Phase 6 | - | 四柱推命自動計算統合 | - | 6.4 | 基本データ生成 | [ ] |
 
 #### 2.0.3 実装上の重要ポイント
 
@@ -137,6 +144,10 @@
 | **5.11** | `/api/chat/characters/:id` | GET | AIキャラクター詳細取得 | 必要 | M-001, M-003 | [x] | [x] | [x] |
 | **5.12** | `/api/chat/characters/:id` | PUT | AIキャラクター更新 | 必要 | M-003 | [x] | [x] | [x] |
 | **5.13** | `/api/chat/characters/:id` | DELETE | AIキャラクター削除 | 必要 | M-003 | [x] | [x] | [x] |
+| **5.14** | `/api/ai-characters/setup-status` | GET | AIキャラクター設定状況確認 | 必要 | 全ページ共通（初期化判定） | [x] | [x] | [x] |
+| **5.15** | `/api/ai-characters/process-natural-input` | POST | 自然言語からAI設定データ変換 | 必要 | AIキャラクターセットアップページ | [x] | [x] | [x] |
+| **5.16** | `/api/ai-characters/setup` | POST | セットアップ専用AIキャラクター作成 | 必要 | AIキャラクターセットアップページ | [x] | [x] | [x] |
+| **5.17** | `/api/saju/locations/japan` | GET | 日本47都道府県リスト取得 | 必要 | AIキャラクターセットアップページ | [x] | [x] | [x] |
 | **6.1** | `/api/appointments` | POST | 新規予約作成 | 必要 | A-004: 予約・担当管理 | [x] | [x] | [x] |
 | **6.2** | `/api/admin/appointments` | GET | 予約一覧取得（管理者） | 必要 | A-004: 予約・担当管理 | [x] | [x] | [x] |
 | **6.3** | `/api/appointments/:id` | GET | 予約詳細取得 | 必要 | A-004, M-004 | [x] | [x] | [x] |
@@ -296,6 +307,7 @@ npx ts-node scripts/test-login-api.ts
 | P-004 | 組織登録ページ | `/auth/register-organization` | 公開 | ✅実装済み |
 | - | LINE認証コールバック | `/auth/line-callback` | 公開 | ✅実装済み |
 | P-004 | 初回設定ページ | `/auth/initial-setup` | 要認証（PENDING） | ✅実装済み |
+| AI-001 | AIキャラクターセットアップページ | `/ai-character-setup` | 要認証 | ✅実装済み |
 | M-001 | AIチャット相談ページ | `/chat` | 要認証 | ✅実装済み |
 | M-002 | 今日のアドバイスページ | `/dashboard` | 要認証 | ✅実装済み |
 | M-003 | 設定ページ | `/settings` | 要認証 | ✅実装済み |
@@ -313,6 +325,62 @@ npx ts-node scripts/test-login-api.ts
 | S-003 | サポートチケット管理画面 | `/superadmin/support` | 要SuperAdmin権限 | ✅実装済み |
 
 ## 3. 直近の引き継ぎ
+
+### ★AIキャラクターセットアップ機能の実装完了（2025-05-27更新）
+
+**実装完了機能**
+- AIキャラクターセットアップ機能（タスク5.14, 5.15, 5.16, 5.17）
+  - セットアップ状態確認API
+  - 自然言語処理API（OpenAI GPT-4使用）
+  - セットアップ実行API
+  - 日本都道府県リスト取得API
+
+**実装の詳細**
+1. バックエンドAPI
+   - `/api/ai-characters/setup-status`: AIキャラクターの存在チェック
+   - `/api/ai-characters/process-natural-input`: 自然言語入力を構造化データに変換
+   - `/api/ai-characters/setup`: AIキャラクターとユーザー情報の初期設定
+   - `/api/saju/locations/japan`: 日本47都道府県のリストと座標情報
+
+2. フロントエンド実装
+   - AIキャラクターセットアップページ（`/ai-character-setup`）
+   - チャット形式の対話的UI
+   - 生年月日、出生地、出生時刻の入力フォーム
+   - SajuEngineを使用した四柱推命計算
+
+3. 統合テスト
+   - 全エンドポイントの統合テスト作成済み
+   - OpenAI API、MongoDB、SajuEngineの実際の動作をテスト
+
+**参考資料**
+- 要件定義書: `/docs/ai-character-setup-requirements.md`
+- 型定義: `/backend/src/types/index.ts`（AICharacterSetup関連の型）
+
+### ★10 API統合エージェントからの引き継ぎ（2025-05-28更新）
+
+**API統合完了機能（最新）**
+- AIキャラクターセットアップ機能（タスク5.14, 5.15, 5.16, 5.17）のフロントエンドAPI統合
+  - 5.14: AIキャラクター設定状況確認
+  - 5.15: 自然言語からAI設定データ変換
+  - 5.16: セットアップ専用AIキャラクター作成
+  - 5.17: 日本47都道府県リスト取得
+
+**実装内容**
+1. モック切り替えロジックの完全削除
+   - `/frontend/src/services/api/aiCharacterSetup.ts`からUSE_MOCKフラグ削除
+   - モックデータimport削除
+   - 実APIのみを使用するように修正
+
+2. モックインジケーターの削除
+   - AICharacterSetupPageからモックデータ使用中バナー削除
+
+3. モックファイルの削除
+   - `/frontend/src/services/mock/mockAICharacterSetup.ts`削除
+
+4. API統合の動作確認
+   - ビルドエラーなし
+   - 型定義の整合性確認済み
+   - API_PATHS.SAJU_LOCATIONS.JAPAN使用
 
 ### ★10 API統合エージェントからの引き継ぎ（2025-05-27更新）
 

@@ -14,6 +14,7 @@ import { LoginPage } from '../pages/public/LoginPage';
 import { OrganizationRegisterPage } from '../pages/public/OrganizationRegisterPage';
 import { LineCallbackPage } from '../pages/public/LineCallbackPage';
 import { InitialSetupPage } from '../pages/public/InitialSetupPage';
+import AICharacterSetupPage from '../pages/public/AICharacterSetupPage';
 
 // 実装済みページ（Phase 3）
 import { SplashPage } from '../pages/public/SplashPage';
@@ -50,6 +51,7 @@ export const AppRouter = () => {
         <Route path={ROUTES.public.organizationRegister} element={<OrganizationRegisterPage />} />
         <Route path={ROUTES.public.lineCallback} element={<LineCallbackPage />} />
         <Route path={ROUTES.public.initialSetup} element={<InitialSetupPage />} />
+        <Route path={ROUTES.public.aiCharacterSetup} element={<AICharacterSetupPage />} />
 
         {/* スタイリストルート（要認証） */}
         <Route element={<ProtectedRoute requiredRoles={[UserRole.USER, UserRole.STYLIST, UserRole.ADMIN, UserRole.OWNER]} />}>

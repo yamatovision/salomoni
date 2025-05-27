@@ -128,3 +128,80 @@ export const idParamValidator = [
   param('id')
     .isMongoId().withMessage('有効なIDを指定してください'),
 ];
+
+// AIキャラクターセットアップ状態確認（パラメータなし）
+export const setupStatusValidator = [];
+
+// 自然言語入力処理
+export const processNaturalInputValidator = [
+  body('input')
+    .notEmpty().withMessage('入力内容は必須です')
+    .isString().withMessage('入力内容は文字列で入力してください')
+    .trim()
+    .isLength({ min: 1, max: 500 }).withMessage('入力内容は1〜500文字で入力してください'),
+  
+  body('field')
+    .notEmpty().withMessage('フィールド種別は必須です')
+    .isIn(['personality', 'style']).withMessage('フィールド種別はpersonalityまたはstyleで指定してください'),
+];
+
+// AIキャラクターセットアップ
+export const setupAICharacterValidator = [
+  body('name')
+    .notEmpty().withMessage('AIキャラクター名は必須です')
+    .isString().withMessage('AIキャラクター名は文字列で入力してください')
+    .trim()
+    .isLength({ min: 1, max: 50 }).withMessage('AIキャラクター名は1〜50文字で入力してください'),
+  
+  body('birthDate')
+    .notEmpty().withMessage('生年月日は必須です')
+    .isISO8601().withMessage('生年月日はISO 8601形式（YYYY-MM-DD）で入力してください'),
+  
+  body('birthPlace')
+    .notEmpty().withMessage('出生地は必須です')
+    .isString().withMessage('出生地は文字列で入力してください')
+    .trim()
+    .isLength({ min: 1, max: 100 }).withMessage('出生地は1〜100文字で入力してください'),
+  
+  body('birthTime')
+    .optional()
+    .matches(/^([01]\d|2[0-3]):([0-5]\d)$/).withMessage('出生時間はHH:mm形式で入力してください'),
+  
+  body('personalityInput')
+    .notEmpty().withMessage('性格の説明は必須です')
+    .isString().withMessage('性格の説明は文字列で入力してください')
+    .trim()
+    .isLength({ min: 1, max: 500 }).withMessage('性格の説明は1〜500文字で入力してください'),
+  
+  body('styleInput')
+    .notEmpty().withMessage('スタイルの説明は必須です')
+    .isString().withMessage('スタイルの説明は文字列で入力してください')
+    .trim()
+    .isLength({ min: 1, max: 500 }).withMessage('スタイルの説明は1〜500文字で入力してください'),
+  
+  body('processedPersonality')
+    .notEmpty().withMessage('処理済み性格データは必須です')
+    .isObject().withMessage('処理済み性格データはオブジェクトで指定してください'),
+  
+  body('processedPersonality.softness')
+    .notEmpty().withMessage('やさしさ度は必須です')
+    .isInt({ min: 0, max: 100 }).withMessage('やさしさ度は0〜100の整数で入力してください'),
+  
+  body('processedPersonality.energy')
+    .notEmpty().withMessage('エネルギー度は必須です')
+    .isInt({ min: 0, max: 100 }).withMessage('エネルギー度は0〜100の整数で入力してください'),
+  
+  body('processedPersonality.formality')
+    .notEmpty().withMessage('フォーマル度は必須です')
+    .isInt({ min: 0, max: 100 }).withMessage('フォーマル度は0〜100の整数で入力してください'),
+  
+  body('processedStyle')
+    .notEmpty().withMessage('処理済みスタイルデータは必須です')
+    .isArray().withMessage('処理済みスタイルデータは配列で指定してください')
+    .custom((value: string[]) => {
+      if (value.length === 0) {
+        throw new Error('スタイルフラグを少なくとも1つ指定してください');
+      }
+      return value.every(style => Object.values(AICharacterStyle).includes(style as AICharacterStyle));
+    }).withMessage('無効なスタイルフラグが含まれています'),
+];

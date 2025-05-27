@@ -42,6 +42,9 @@ Thumbs.db
 # AppGeniusの一時ファイル
 .appgenius_temp/
 
+# デプロイメント設定（機密情報含む）
+docs/deployment/
+
 # TypeScript
 *.tsbuildinfo
 

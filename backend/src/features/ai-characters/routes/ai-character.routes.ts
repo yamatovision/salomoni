@@ -8,6 +8,9 @@ import {
   createUpdateAIMemoryValidator,
   getAIMemoryValidator,
   idParamValidator,
+  setupStatusValidator,
+  processNaturalInputValidator,
+  setupAICharacterValidator,
 } from '../validators/ai-character.validator';
 
 const router = Router();
@@ -23,7 +26,7 @@ router.post(
 );
 
 router.get(
-  '/characters/me',
+  '/my-character',
   authenticate,
   aiCharacterController.getMyAICharacter
 );
@@ -67,6 +70,31 @@ router.get(
   getAIMemoryValidator,
   handleValidationErrors,
   aiCharacterController.getMemories
+);
+
+// セットアップ関連
+router.get(
+  '/setup-status',
+  authenticate,
+  setupStatusValidator,
+  handleValidationErrors,
+  aiCharacterController.getSetupStatus
+);
+
+router.post(
+  '/process-natural-input',
+  authenticate,
+  processNaturalInputValidator,
+  handleValidationErrors,
+  aiCharacterController.processNaturalInput
+);
+
+router.post(
+  '/setup',
+  authenticate,
+  setupAICharacterValidator,
+  handleValidationErrors,
+  aiCharacterController.setupAICharacter
 );
 
 export const aiCharacterRoutes = router;

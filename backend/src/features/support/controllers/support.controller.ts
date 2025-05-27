@@ -417,7 +417,10 @@ export class SupportController {
 
       logger.info('SuperAdminサポートチケット返信リクエスト', {
         senderId: user.id,
-        ticketId
+        ticketId,
+        requestBody: req.body, // デバッグ用：リクエストボディ全体をログに記録
+        hasContent: !!content,
+        contentLength: content?.length || 0
       });
 
       const message = await this.supportService.replyToTicket(

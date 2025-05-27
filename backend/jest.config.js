@@ -12,7 +12,8 @@ module.exports = {
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1'
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^saju-engine$': '<rootDir>/sajuengine_package/dist/index'
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   testTimeout: 30000,

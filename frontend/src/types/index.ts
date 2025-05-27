@@ -144,6 +144,7 @@ export const API_PATHS = {
     CLIENT: (clientId: string) => `/api/saju/client/${clientId}`,
     COMPATIBILITY_ENHANCED: (userId1: string, userId2: string) => `/api/saju/compatibility/enhanced/${userId1}/${userId2}`,
     TEAM: (teamId: string) => `/api/saju/compatibility/team/${teamId}`,
+    LOCATIONS_JAPAN: '/api/saju/locations/japan',
   },
 
   // チャット関連
@@ -161,10 +162,19 @@ export const API_PATHS = {
   // AIキャラクター関連
   AI_CHARACTERS: {
     BASE: '/api/ai-characters',
-    CHARACTERS: '/api/ai-characters',
+    CHARACTERS: '/api/ai-characters/characters',
     MY_CHARACTER: '/api/ai-characters/my-character',
-    CHARACTER: (characterId: string) => `/api/ai-characters/${characterId}`,
-    CHARACTER_MEMORY: (characterId: string) => `/api/ai-characters/${characterId}/memory`,
+    CHARACTER: (characterId: string) => `/api/ai-characters/characters/${characterId}`,
+    CHARACTER_MEMORY: (characterId: string) => `/api/ai-characters/characters/${characterId}/memory`,
+    // セットアップ関連
+    SETUP_STATUS: '/api/ai-characters/setup-status',
+    PROCESS_NATURAL_INPUT: '/api/ai-characters/process-natural-input',
+    SETUP: '/api/ai-characters/setup',
+  },
+
+  // 四柱推命関連（セットアップ用追加）
+  SAJU_LOCATIONS: {
+    JAPAN: '/api/saju/locations/japan',
   },
 
   // 予約関連
@@ -676,6 +686,94 @@ export interface AICharacterUpdateRequest {
     energy: number;
     formality: number;
   };
+}
+
+// AIキャラクターセットアップ関連
+export interface AICharacterSetupStatus {
+  needsSetup: boolean;
+  hasCharacter: boolean;
+}
+
+export interface AICharacterNaturalInputRequest {
+  input: string;
+  field: 'personality' | 'style';
+}
+
+export interface AICharacterNaturalInputResponse {
+  processedData: PersonalityScore | AICharacterStyle[];
+  confidence: number; // 0-1: 変換の信頼度
+  originalInput: string;
+}
+
+export interface AICharacterSetupRequest {
+  name: string;
+  birthDate: string; // ISO 8601形式 (YYYY-MM-DD)
+  birthPlace: string;
+  birthTime?: string; // HH:mm形式、オプション
+  personalityInput: string;
+  styleInput: string;
+  processedPersonality: PersonalityScore;
+  processedStyle: AICharacterStyle[];
+}
+
+export interface AICharacterSetupResponse {
+  success: boolean;
+  character: AICharacter;
+  sajuData: FourPillarsData; // 四柱推命基本データ
+  setupData: {
+    name: string;
+    birthDate: string;
+    birthPlace: string;
+    birthTime?: string;
+    personalityInput: string;
+    styleInput: string;
+    processedPersonality: PersonalityScore;
+    processedStyle: AICharacterStyle[];
+  };
+}
+
+// セットアップフロー関連
+export interface SetupStep {
+  id: string;
+  stepNumber: number;
+  aiMessage: string;
+  field: 'name' | 'birthDate' | 'birthPlace' | 'birthTime' | 'personality' | 'style';
+  isRequired: boolean;
+  validation?: (input: string) => boolean;
+  processor?: 'direct' | 'openai' | 'saju';
+}
+
+export interface SetupProgress {
+  currentStep: number;
+  totalSteps: number;
+  completedSteps: string[];
+  collectedData: {
+    name?: string;
+    birthDate?: string;
+    birthPlace?: string;
+    birthTime?: string;
+    personalityInput?: string;
+    styleInput?: string;
+    processedPersonality?: PersonalityScore;
+    processedStyle?: AICharacterStyle[];
+  };
+}
+
+// PersonalityScore型定義（既存の確認）
+export interface PersonalityScore {
+  softness: number;    // 0-100: やさしさ度
+  energy: number;      // 0-100: エネルギー度
+  formality: number;   // 0-100: フォーマル度
+}
+
+// 日本国内出生地関連
+export interface JapanesePrefecture {
+  name: string; // 例: "東京都"
+  adjustmentMinutes: number; // 時差調整値（分）
+}
+
+export interface JapanesePrefecturesResponse {
+  prefectures: JapanesePrefecture[];
 }
 
 // AIメモリタイプ

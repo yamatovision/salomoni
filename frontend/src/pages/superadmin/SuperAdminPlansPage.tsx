@@ -57,6 +57,7 @@ import type {
 } from '../../types';
 import {
   OrganizationPlan,
+  InvoiceStatus,
 } from '../../types';
 import { Line } from 'react-chartjs-2';
 import {
@@ -783,10 +784,10 @@ export default function SuperAdminPlansPage() {
                             </Typography>
                           </Box>
                           <Typography variant="h4" sx={{ color: '#F26A8D', fontWeight: 'bold' }}>
-                            {formatCurrency(billingSummary.totalRevenue)}
+                            {formatCurrency(billingSummary.revenue.total)}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            今月: {formatCurrency(billingSummary.monthlyRevenue)}
+                            前月比: {billingSummary.revenue.monthlyGrowth}%
                           </Typography>
                         </CardContent>
                       </Card>
@@ -801,10 +802,10 @@ export default function SuperAdminPlansPage() {
                             </Typography>
                           </Box>
                           <Typography variant="h4" sx={{ color: '#4caf50', fontWeight: 'bold' }}>
-                            {billingSummary.paidInvoices}
+                            -
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            総額: {formatCurrency(billingSummary.paidAmount)}
+                            成功率: {billingSummary.paymentStatus.successRate}%
                           </Typography>
                         </CardContent>
                       </Card>
@@ -819,10 +820,10 @@ export default function SuperAdminPlansPage() {
                             </Typography>
                           </Box>
                           <Typography variant="h4" sx={{ color: '#ff9800', fontWeight: 'bold' }}>
-                            {billingSummary.pendingInvoices}
+                            -
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            総額: {formatCurrency(billingSummary.pendingAmount)}
+                            未収金: {formatCurrency(billingSummary.paymentStatus.totalOutstanding)}
                           </Typography>
                         </CardContent>
                       </Card>
@@ -837,10 +838,10 @@ export default function SuperAdminPlansPage() {
                             </Typography>
                           </Box>
                           <Typography variant="h4" sx={{ color: '#f44336', fontWeight: 'bold' }}>
-                            {billingSummary.overdueInvoices}
+                            -
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            総額: {formatCurrency(billingSummary.overdueAmount)}
+                            延滞額: {formatCurrency(billingSummary.paymentStatus.totalOverdue)}
                           </Typography>
                         </CardContent>
                       </Card>
@@ -880,7 +881,7 @@ export default function SuperAdminPlansPage() {
                   <List>
                     {invoices.map((invoice) => (
                       <ListItem
-                        key={invoice._id}
+                        key={invoice.id}
                         sx={{
                           border: 1,
                           borderColor: 'divider',
@@ -895,25 +896,25 @@ export default function SuperAdminPlansPage() {
                           primary={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Typography variant="body1">
-                                {invoice.organization.name}
+                                {invoice.organizationName}
                               </Typography>
                               <Chip
-                                label={invoice.number}
+                                label={invoice.invoiceNumber}
                                 size="small"
                                 color="primary"
                                 variant="outlined"
                               />
                               <Chip
                                 label={
-                                  invoice.status === 'paid' ? '支払済み' :
-                                  invoice.status === 'pending' ? '未払い' :
-                                  invoice.status === 'overdue' ? '延滞' : invoice.status
+                                  invoice.status === InvoiceStatus.PAID ? '支払済み' :
+                                  invoice.status === InvoiceStatus.SENT ? '未払い' :
+                                  invoice.status === InvoiceStatus.OVERDUE ? '延滞' : invoice.status
                                 }
                                 size="small"
                                 color={
-                                  invoice.status === 'paid' ? 'success' :
-                                  invoice.status === 'pending' ? 'warning' :
-                                  invoice.status === 'overdue' ? 'error' : 'default'
+                                  invoice.status === InvoiceStatus.PAID ? 'success' :
+                                  invoice.status === InvoiceStatus.SENT ? 'warning' :
+                                  invoice.status === InvoiceStatus.OVERDUE ? 'error' : 'default'
                                 }
                               />
                             </Box>

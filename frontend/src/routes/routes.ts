@@ -9,6 +9,7 @@ export const ROUTES = {
     organizationRegister: '/auth/register-organization',
     lineCallback: '/auth/line-callback',
     initialSetup: '/auth/initial-setup',
+    aiCharacterSetup: '/ai-character/setup',
   },
   
   // スタイリストルート（要認証）

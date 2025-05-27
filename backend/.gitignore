@@ -12,6 +12,10 @@ dist/
 .env.test
 .env.production
 .env.yaml
+env.yaml
+
+# Firebase & secrets
+reference/
 
 # IDE
 .vscode/

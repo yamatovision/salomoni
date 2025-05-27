@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIアシスタント作成 - Salomoni</title>
+    
+    <!-- Material UI CDN -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #fce7f3 0%, #fdf2f8 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #fce7f3 0%, #fdf2f8 100%);
+            padding: 1rem 2rem;
+            box-shadow: none;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .header h1 {
+            color: #374151;
+            font-weight: 500;
+            font-size: 1.5rem;
+        }
+
+        .step-indicator {
+            position: absolute;
+            right: 2rem;
+            background: rgba(226, 152, 164, 0.1);
+            border: 1px solid rgba(226, 152, 164, 0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: #E298A4;
+            font-weight: 500;
+        }
+
+        .container {
+            flex: 1;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 80px);
+        }
+
+        .chat-area {
+            flex: 1;
+            background: linear-gradient(180deg, #fafafa 0%, #f8fafc 100%);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(226, 152, 164, 0.1);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            max-width: 70%;
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        .message.ai {
+            align-self: flex-start;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .avatar.ai {
+            background: #F26A8D;
+            box-shadow: 0 2px 8px rgba(242, 106, 141, 0.3);
+        }
+
+        .avatar.user {
+            background: linear-gradient(135deg, #E298A4 0%, #D186A4 100%);
+        }
+
+        .message-content {
+            background: #f8f9fa;
+            padding: 1rem 1.25rem;
+            border-radius: 18px;
+            line-height: 1.5;
+            position: relative;
+        }
+
+        .message.ai .message-content {
+            background: white;
+            border: 1px solid rgba(226, 152, 164, 0.1);
+            color: #374151;
+            border-bottom-left-radius: 6px;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #E298A4 0%, #D186A4 100%);
+            color: white;
+            border-bottom-right-radius: 6px;
+            box-shadow: 0 3px 12px rgba(226, 152, 164, 0.3);
+        }
+
+        .input-area {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(226, 152, 164, 0.1);
+            padding: 1rem;
+            display: none;
+            gap: 1rem;
+            align-items: flex-end;
+            border: 1px solid rgba(226, 152, 164, 0.2);
+        }
+        
+        .input-area.show {
+            display: flex;
+        }
+
+        .input-field {
+            flex: 1;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            font-family: inherit;
+            resize: none;
+            min-height: 20px;
+            max-height: 120px;
+            transition: border-color 0.2s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #E298A4;
+            box-shadow: 0 0 0 3px rgba(226, 152, 164, 0.1);
+        }
+
+        .send-button {
+            background: linear-gradient(135deg, #E298A4 0%, #D186A4 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(226, 152, 164, 0.3);
+        }
+
+        .send-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(226, 152, 164, 0.4);
+        }
+
+        .send-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 0.75rem;
+            margin: 1rem 0;
+        }
+
+        .typing-indicator.show {
+            display: flex;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: #E298A4;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        .welcome-card {
+            background: linear-gradient(135deg, #fce7f3 0%, #f3e8ff 50%, #e0e7ff 100%);
+            color: #374151;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(226, 152, 164, 0.2);
+            box-shadow: 0 6px 20px rgba(226, 152, 164, 0.15);
+        }
+
+        .welcome-card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+
+        .welcome-card p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+
+        .continue-button {
+            background: #F26A8D;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 15px 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 1.5rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(242, 106, 141, 0.3);
+        }
+
+        .continue-button:hover {
+            background: #e11d48;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(242, 106, 141, 0.4);
+        }
+
+        /* インラインフォームスタイル */
+        .inline-form-area {
+            margin: 1rem 0;
+        }
+
+        .form-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px 0;
+            border: 2px solid #F26A8D;
+            box-shadow: 0 4px 15px rgba(242, 106, 141, 0.1);
+            animation: slideUp 0.3s ease;
+        }
+
+        .form-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #F26A8D;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .date-form {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .form-select {
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 16px;
+            background: #f8fafc;
+            color: #374151;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            min-width: 80px;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: #F26A8D;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(242, 106, 141, 0.1);
+        }
+
+        .form-input {
+            width: 100%;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 16px;
+            background: #f8fafc;
+            color: #374151;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #F26A8D;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(242, 106, 141, 0.1);
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            color: #374151;
+            transition: color 0.3s ease;
+        }
+
+        .radio-option input[type="radio"] {
+            width: 20px;
+            height: 20px;
+            accent-color: #F26A8D;
+        }
+
+        .radio-option:hover {
+            color: #F26A8D;
+        }
+
+        .location-form, .time-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .time-inputs {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .form-submit-btn {
+            background: #F26A8D;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(242, 106, 141, 0.3);
+            margin-top: 10px;
+        }
+
+        .form-submit-btn:hover {
+            background: #e11d48;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(242, 106, 141, 0.4);
+        }
+
+        .form-submit-btn:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .header {
+                padding: 1rem;
+            }
+            
+            .step-indicator {
+                right: 1rem;
+                font-size: 0.8rem;
+                padding: 0.4rem 0.8rem;
+            }
+            
+            .message {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>AIアシスタント作成</h1>
+        <div class="step-indicator" id="stepIndicator">準備中</div>
+    </header>
+
+    <div class="container">
+        <div class="chat-area" id="chatArea">
+            <!-- ウェルカムカード -->
+            <div class="welcome-card" id="welcomeCard">
+                <h2>✨ AIアシスタントを作成しましょう</h2>
+                <p>あなた専用のAIアシスタントを作成します。<br>
+                簡単な質問にお答えいただくだけで、あなたにぴったりのアドバイザーが完成します。</p>
+                <button class="continue-button" onclick="startSetup()">セットアップを開始</button>
+            </div>
+        </div>
+
+
+        <!-- チャット入力エリア -->
+        <div class="input-area" id="inputArea">
+            <textarea 
+                class="input-field" 
+                id="messageInput" 
+                placeholder="メッセージを入力..."
+                rows="1"
+            ></textarea>
+            <button class="send-button" id="sendButton" onclick="sendMessage()">送信</button>
+        </div>
+
+        <!-- インラインフォームエリア -->
+        <div class="inline-form-area" id="inlineFormArea">
+            <!-- 日付フォーム -->
+            <div class="form-card" id="dateForm" style="display: none;">
+                <div class="form-title">生年月日を選択してください</div>
+                <div class="date-form">
+                    <select class="form-select" id="yearSelect">
+                        <option value="">年</option>
+                    </select>
+                    <select class="form-select" id="monthSelect">
+                        <option value="">月</option>
+                    </select>
+                    <select class="form-select" id="daySelect">
+                        <option value="">日</option>
+                    </select>
+                </div>
+                <button class="form-submit-btn" onclick="submitDateForm()">決定</button>
+            </div>
+
+            <!-- 場所フォーム -->
+            <div class="form-card" id="locationForm" style="display: none;">
+                <div class="form-title">出生地を選択してください</div>
+                <div class="location-form">
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="locationType" value="japan" checked onchange="toggleLocationInput()">
+                            <span>日本国内</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="locationType" value="overseas" onchange="toggleLocationInput()">
+                            <span>海外</span>
+                        </label>
+                    </div>
+                    <select class="form-select" id="japanSelect">
+                        <option value="">都道府県を選択</option>
+                        <option value="北海道">北海道</option>
+                        <option value="青森県">青森県</option>
+                        <option value="岩手県">岩手県</option>
+                        <option value="宮城県">宮城県</option>
+                        <option value="秋田県">秋田県</option>
+                        <option value="山形県">山形県</option>
+                        <option value="福島県">福島県</option>
+                        <option value="茨城県">茨城県</option>
+                        <option value="栃木県">栃木県</option>
+                        <option value="群馬県">群馬県</option>
+                        <option value="埼玉県">埼玉県</option>
+                        <option value="千葉県">千葉県</option>
+                        <option value="東京都">東京都</option>
+                        <option value="神奈川県">神奈川県</option>
+                        <option value="新潟県">新潟県</option>
+                        <option value="富山県">富山県</option>
+                        <option value="石川県">石川県</option>
+                        <option value="福井県">福井県</option>
+                        <option value="山梨県">山梨県</option>
+                        <option value="長野県">長野県</option>
+                        <option value="岐阜県">岐阜県</option>
+                        <option value="静岡県">静岡県</option>
+                        <option value="愛知県">愛知県</option>
+                        <option value="三重県">三重県</option>
+                        <option value="滋賀県">滋賀県</option>
+                        <option value="京都府">京都府</option>
+                        <option value="大阪府">大阪府</option>
+                        <option value="兵庫県">兵庫県</option>
+                        <option value="奈良県">奈良県</option>
+                        <option value="和歌山県">和歌山県</option>
+                        <option value="鳥取県">鳥取県</option>
+                        <option value="島根県">島根県</option>
+                        <option value="岡山県">岡山県</option>
+                        <option value="広島県">広島県</option>
+                        <option value="山口県">山口県</option>
+                        <option value="徳島県">徳島県</option>
+                        <option value="香川県">香川県</option>
+                        <option value="愛媛県">愛媛県</option>
+                        <option value="高知県">高知県</option>
+                        <option value="福岡県">福岡県</option>
+                        <option value="佐賀県">佐賀県</option>
+                        <option value="長崎県">長崎県</option>
+                        <option value="熊本県">熊本県</option>
+                        <option value="大分県">大分県</option>
+                        <option value="宮崎県">宮崎県</option>
+                        <option value="鹿児島県">鹿児島県</option>
+                        <option value="沖縄県">沖縄県</option>
+                    </select>
+                    <input type="text" class="form-input" id="overseasInput" placeholder="国名と都市名を入力 (例: アメリカ ニューヨーク)" style="display: none;">
+                </div>
+                <button class="form-submit-btn" onclick="submitLocationForm()">決定</button>
+            </div>
+
+            <!-- 時間フォーム -->
+            <div class="form-card" id="timeForm" style="display: none;">
+                <div class="form-title">出生時間を選択してください</div>
+                <div class="time-form">
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="timeType" value="known" checked onchange="toggleTimeInput()">
+                            <span>時間がわかる</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="timeType" value="unknown" onchange="toggleTimeInput()">
+                            <span>わからない</span>
+                        </label>
+                    </div>
+                    <div class="time-inputs" id="timeInputs">
+                        <select class="form-select" id="hourSelect">
+                            <option value="">時</option>
+                        </select>
+                        <select class="form-select" id="minuteSelect">
+                            <option value="">分</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="form-submit-btn" onclick="submitTimeForm()">決定</button>
+            </div>
+        </div>
+
+        <!-- タイピングインジケーター -->
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="avatar ai">AI</div>
+            <div class="message-content">
+                <div class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // セットアップ状態管理
+        let currentStep = 0;
+        let setupData = {
+            name: '',
+            birthdate: '',
+            birthplace: '',
+            birthtime: '',
+            personality: '',
+            style: '',
+            processing: false
+        };
+
+        const steps = [
+            {
+                id: 'name',
+                indicator: 'ステップ 1/6',
+                question: 'まず、AIアシスタントにどんな名前をつけたいですか？\n\n例：「さくら」「アドバイザー田中」「ミミ」など、お好きな名前をどうぞ！',
+                placeholder: '名前を入力してください...'
+            },
+            {
+                id: 'birthdate',
+                indicator: 'ステップ 2/6',
+                question: 'より正確なアドバイスのために、あなたの生年月日を教えてください\n\n例：「1990年5月15日」「1995/3/22」など',
+                placeholder: '生年月日を入力してください...'
+            },
+            {
+                id: 'birthplace',
+                indicator: 'ステップ 3/6',
+                question: '出生地を教えてください\n\n例：「東京都」「大阪府」「アメリカ ニューヨーク」など',
+                placeholder: '出生地を入力してください...'
+            },
+            {
+                id: 'birthtime',
+                indicator: 'ステップ 4/6',
+                question: '出生時間がわかる場合は教えてください。より詳細で正確な分析が可能になります。\n\nわからない場合は「わからない」または「スキップ」と入力してください\n\n例：「14:30」「午後2時半」「わからない」',
+                placeholder: '出生時間を入力するか「わからない」と入力...'
+            },
+            {
+                id: 'personality',
+                indicator: 'ステップ 5/6',
+                question: 'どんな性格のアドバイザーがお好みですか？\n\n例：「優しくて親しみやすい人」「プロフェッショナルで詳しく教えてくれる人」「励ましながら背中を押してくれる人」',
+                placeholder: 'どんな性格が良いか教えてください...'
+            },
+            {
+                id: 'style',
+                indicator: 'ステップ 6/6',
+                question: 'どんなアドバイススタイルをお求めですか？\n\n例：「詳しく丁寧に」「励ましながら」「簡潔に要点だけ」「実用的なアドバイス重視」',
+                placeholder: 'どんなスタイルが良いか教えてください...'
+            }
+        ];
+
+        // セットアップ開始
+        function startSetup() {
+            document.getElementById('welcomeCard').style.display = 'none';
+            document.getElementById('inputArea').style.display = 'flex';
+            
+            currentStep = 0;
+            askNextQuestion();
+        }
+
+        // 次の質問を表示
+        function askNextQuestion() {
+            const step = steps[currentStep];
+            document.getElementById('stepIndicator').textContent = step.indicator;
+            
+            setTimeout(() => {
+                addAIMessage(step.question);
+                showInputForStep(step);
+            }, 500);
+        }
+
+        // ステップに応じた入力を表示
+        function showInputForStep(step) {
+            // 全てを非表示
+            document.getElementById('inputArea').classList.remove('show');
+            document.getElementById('dateForm').style.display = 'none';
+            document.getElementById('locationForm').style.display = 'none';
+            document.getElementById('timeForm').style.display = 'none';
+            
+            if (step.id === 'name' || step.id === 'personality' || step.id === 'style') {
+                // チャット入力
+                document.getElementById('inputArea').classList.add('show');
+                document.getElementById('messageInput').placeholder = step.placeholder;
+                setTimeout(() => {
+                    document.getElementById('messageInput').focus();
+                }, 100);
+            } else if (step.id === 'birthdate') {
+                // 日付フォーム
+                initializeDateForm();
+                document.getElementById('dateForm').style.display = 'block';
+            } else if (step.id === 'birthplace') {
+                // 場所フォーム
+                document.getElementById('locationForm').style.display = 'block';
+                document.getElementById('japanSelect').style.display = 'block';
+                document.getElementById('overseasInput').style.display = 'none';
+            } else if (step.id === 'birthtime') {
+                // 時間フォーム
+                initializeTimeForm();
+                document.getElementById('timeForm').style.display = 'block';
+            }
+        }
+
+
+        // 次のステップに進む
+        function proceedToNextStep() {
+            // 全ての入力を非表示
+            document.getElementById('inputArea').classList.remove('show');
+            document.getElementById('dateForm').style.display = 'none';
+            document.getElementById('locationForm').style.display = 'none';
+            document.getElementById('timeForm').style.display = 'none';
+            
+            if (currentStep < steps.length - 1) {
+                currentStep++;
+                setTimeout(() => {
+                    askNextQuestion();
+                }, 1000);
+            } else {
+                completeSetup();
+            }
+        }
+
+        // メッセージ送信
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message || setupData.processing) return;
+            
+            // ユーザーメッセージを追加
+            addUserMessage(message);
+            input.value = '';
+            
+            // 入力を保存
+            const step = steps[currentStep];
+            setupData[step.id] = message;
+            
+            // 次のステップまたは完了処理
+            proceedToNextStep();
+        }
+
+        // セットアップ完了
+        function completeSetup() {
+            setupData.processing = true;
+            document.getElementById('stepIndicator').textContent = '作成中...';
+            
+            showTyping();
+            
+            setTimeout(() => {
+                hideTyping();
+                addAIMessage(`素晴らしいです！「${setupData.name}」の作成が完了しました！\n\n✨ ${setupData.name}は「${setupData.personality}」という性格で「${setupData.style}」なスタイルのアドバイザーとして設定されました。\n\n📅 生年月日: ${setupData.birthdate}\n📍 出生地: ${setupData.birthplace}\n${setupData.birthtime ? '🕐 出生時間: ' + setupData.birthtime : ''}\n\n四柱推命の基本データも自動計算されました。これからあなたの美容とライフスタイルのサポートをさせていただきます！`);
+                
+                setTimeout(() => {
+                    document.getElementById('stepIndicator').textContent = '作成完了';
+                    showCompletionButton();
+                }, 1000);
+            }, 2000);
+        }
+
+        // 完了ボタンを表示
+        function showCompletionButton() {
+            const chatArea = document.getElementById('chatArea');
+            const completionCard = document.createElement('div');
+            completionCard.className = 'welcome-card';
+            completionCard.innerHTML = `
+                <h2>🎉 セットアップ完了！</h2>
+                <p>${setupData.name}があなたをお待ちしています</p>
+                <button class="continue-button" onclick="goToChat()">チャットを開始</button>
+            `;
+            chatArea.appendChild(completionCard);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        // チャットページに移動
+        function goToChat() {
+            alert('チャットページに移動します\n（実装時は /chat にリダイレクト）');
+        }
+
+        // AIメッセージを追加
+        function addAIMessage(text) {
+            const chatArea = document.getElementById('chatArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ai';
+            
+            messageDiv.innerHTML = `
+                <div class="avatar ai">AI</div>
+                <div class="message-content">${text.replace(/\n/g, '<br>')}</div>
+            `;
+            
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        // ユーザーメッセージを追加
+        function addUserMessage(text) {
+            const chatArea = document.getElementById('chatArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message user';
+            
+            messageDiv.innerHTML = `
+                <div class="avatar user">あなた</div>
+                <div class="message-content">${text}</div>
+            `;
+            
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        // タイピングインジケーター表示
+        function showTyping() {
+            document.getElementById('typingIndicator').classList.add('show');
+        }
+
+        // タイピングインジケーター非表示
+        function hideTyping() {
+            document.getElementById('typingIndicator').classList.remove('show');
+        }
+
+        // フォーム初期化関数
+        function initializeDateForm() {
+            const yearSelect = document.getElementById('yearSelect');
+            const monthSelect = document.getElementById('monthSelect');
+            const daySelect = document.getElementById('daySelect');
+            
+            // 年の選択肢を追加 (1950-2010)
+            yearSelect.innerHTML = '<option value="">年</option>';
+            for (let year = 2010; year >= 1950; year--) {
+                yearSelect.innerHTML += `<option value="${year}">${year}</option>`;
+            }
+            
+            // 月の選択肢を追加
+            monthSelect.innerHTML = '<option value="">月</option>';
+            for (let month = 1; month <= 12; month++) {
+                monthSelect.innerHTML += `<option value="${month}">${month}</option>`;
+            }
+            
+            // 日の選択肢を追加
+            daySelect.innerHTML = '<option value="">日</option>';
+            for (let day = 1; day <= 31; day++) {
+                daySelect.innerHTML += `<option value="${day}">${day}</option>`;
+            }
+            
+            // サンプルデータを自動入力
+            setTimeout(() => {
+                yearSelect.value = '1990';
+                monthSelect.value = '5';
+                daySelect.value = '15';
+            }, 300);
+        }
+        
+        function initializeTimeForm() {
+            const hourSelect = document.getElementById('hourSelect');
+            const minuteSelect = document.getElementById('minuteSelect');
+            
+            // 時の選択肢を追加
+            hourSelect.innerHTML = '<option value="">時</option>';
+            for (let hour = 0; hour <= 23; hour++) {
+                const hourStr = hour.toString().padStart(2, '0');
+                hourSelect.innerHTML += `<option value="${hour}">${hourStr}</option>`;
+            }
+            
+            // 分の選択肢を追加
+            minuteSelect.innerHTML = '<option value="">分</option>';
+            for (let minute = 0; minute <= 59; minute += 5) {
+                const minuteStr = minute.toString().padStart(2, '0');
+                minuteSelect.innerHTML += `<option value="${minute}">${minuteStr}</option>`;
+            }
+        }
+        
+        // フォーム送信関数
+        function submitDateForm() {
+            const year = document.getElementById('yearSelect').value;
+            const month = document.getElementById('monthSelect').value;
+            const day = document.getElementById('daySelect').value;
+            
+            if (!year || !month || !day) {
+                alert('すべての項目を選択してください');
+                return;
+            }
+            
+            const dateString = `${year}年${month}月${day}日`;
+            addUserMessage(dateString);
+            setupData.birthdate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            proceedToNextStep();
+        }
+        
+        function submitLocationForm() {
+            const locationType = document.querySelector('input[name=\"locationType\"]:checked').value;
+            let location = '';
+            
+            if (locationType === 'japan') {
+                location = document.getElementById('japanSelect').value;
+            } else {
+                location = document.getElementById('overseasInput').value;
+            }
+            
+            if (!location) {
+                alert('出生地を選択または入力してください');
+                return;
+            }
+            
+            addUserMessage(location);
+            setupData.birthplace = location;
+            proceedToNextStep();
+        }
+        
+        function submitTimeForm() {
+            const timeType = document.querySelector('input[name=\"timeType\"]:checked').value;
+            
+            if (timeType === 'unknown') {
+                addUserMessage('わからない');
+                setupData.birthtime = null;
+            } else {
+                const hour = document.getElementById('hourSelect').value;
+                const minute = document.getElementById('minuteSelect').value;
+                
+                if (!hour || minute === '') {
+                    alert('時間と分を選択してください');
+                    return;
+                }
+                
+                const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                addUserMessage(timeString);
+                setupData.birthtime = timeString;
+            }
+            
+            proceedToNextStep();
+        }
+        
+        // ラジオボタンの切り替え
+        function toggleLocationInput() {
+            const locationType = document.querySelector('input[name=\"locationType\"]:checked').value;
+            const japanSelect = document.getElementById('japanSelect');
+            const overseasInput = document.getElementById('overseasInput');
+            
+            if (locationType === 'japan') {
+                japanSelect.style.display = 'block';
+                overseasInput.style.display = 'none';
+            } else {
+                japanSelect.style.display = 'none';
+                overseasInput.style.display = 'block';
+                overseasInput.focus();
+            }
+        }
+        
+        function toggleTimeInput() {
+            const timeType = document.querySelector('input[name=\"timeType\"]:checked').value;
+            const timeInputs = document.getElementById('timeInputs');
+            
+            if (timeType === 'known') {
+                timeInputs.style.display = 'flex';
+            } else {
+                timeInputs.style.display = 'none';
+            }
+        }
+
+        // Enter送信
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // テキストエリアの自動調整
+        document.getElementById('messageInput').addEventListener('input', function(e) {
+            e.target.style.height = 'auto';
+            e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+        });
+    </script>
+</body>
+</html>

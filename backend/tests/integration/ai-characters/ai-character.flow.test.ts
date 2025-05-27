@@ -4,7 +4,8 @@ import { connectTestDatabase, disconnectTestDatabase } from '../../utils/db-test
 import { createTestUserWithToken } from '../../utils/test-auth-helper';
 import { AICharacterModel } from '../../../src/features/ai-characters/models/ai-character.model';
 import { AIMemoryModel } from '../../../src/features/ai-characters/models/ai-memory.model';
-import { AICharacterStyle, AIMemoryType } from '../../../src/types';
+import { UserModel } from '../../../src/features/users/models/user.model';
+import { AICharacterStyle, AIMemoryType, API_PATHS } from '../../../src/types';
 import { MilestoneTracker } from '../../utils/MilestoneTracker';
 
 describe('AIキャラクター・メモリ統合テスト', () => {
@@ -52,7 +53,7 @@ describe('AIキャラクター・メモリ統合テスト', () => {
 
       tracker.mark('APIリクエスト送信');
       const response = await request(app)
-        .post('/api/chat/characters')
+        .post(API_PATHS.AI_CHARACTERS.CHARACTERS)
         .set('Authorization', `Bearer ${authToken}`)
         .send(characterData);
       tracker.mark('APIレスポンス受信');
@@ -74,7 +75,7 @@ describe('AIキャラクター・メモリ統合テスト', () => {
 
     it('必須フィールドがない場合はエラーになる', async () => {
       const response = await request(app)
-        .post('/api/chat/characters')
+        .post(API_PATHS.AI_CHARACTERS.CHARACTERS)
         .set('Authorization', `Bearer ${authToken}`)
         .send({});
 
@@ -86,7 +87,7 @@ describe('AIキャラクター・メモリ統合テスト', () => {
     it('同じユーザーで複数のAIキャラクターは作成できない', async () => {
       // 1つ目を作成
       await request(app)
-        .post('/api/chat/characters')
+        .post(API_PATHS.AI_CHARACTERS.CHARACTERS)
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           name: '最初のAIパートナー',
@@ -94,7 +95,7 @@ describe('AIキャラクター・メモリ統合テスト', () => {
 
       // 2つ目を作成しようとする
       const response = await request(app)
-        .post('/api/chat/characters')
+        .post(API_PATHS.AI_CHARACTERS.CHARACTERS)
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           name: '2つ目のAIパートナー',
@@ -124,7 +125,7 @@ describe('AIキャラクター・メモリ統合テスト', () => {
     it('自分のAIキャラクターを取得できる', async () => {
       tracker.setOperation('AIキャラクター取得');
       const response = await request(app)
-        .get('/api/chat/characters/me')
+        .get(API_PATHS.AI_CHARACTERS.MY_CHARACTER)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -164,7 +165,7 @@ describe('AIキャラクター・メモリ統合テスト', () => {
       };
 
       const response = await request(app)
-        .put(`/api/chat/characters/${characterId}`)
+        .put(API_PATHS.AI_CHARACTERS.CHARACTER(characterId))
         .set('Authorization', `Bearer ${authToken}`)
         .send(updateData);
 
@@ -196,7 +197,7 @@ describe('AIキャラクター・メモリ統合テスト', () => {
 
       tracker.mark('APIリクエスト送信');
       const response = await request(app)
-        .post(`/api/chat/characters/${characterId}/memory`)
+        .post(API_PATHS.AI_CHARACTERS.CHARACTER_MEMORY(characterId))
         .set('Authorization', `Bearer ${authToken}`)
         .send(memoryData);
       tracker.mark('APIレスポンス受信');
@@ -222,7 +223,7 @@ describe('AIキャラクター・メモリ統合テスト', () => {
       };
 
       const response = await request(app)
-        .post(`/api/chat/characters/${characterId}/memory`)
+        .post(API_PATHS.AI_CHARACTERS.CHARACTER_MEMORY(characterId))
         .set('Authorization', `Bearer ${authToken}`)
         .send(memoryData);
 
@@ -272,7 +273,7 @@ describe('AIキャラクター・メモリ統合テスト', () => {
     it('AIメモリ一覧を取得できる', async () => {
       tracker.setOperation('AIメモリ一覧取得');
       const response = await request(app)
-        .get(`/api/chat/characters/${characterId}/memory`)
+        .get(API_PATHS.AI_CHARACTERS.CHARACTER_MEMORY(characterId))
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -283,7 +284,7 @@ describe('AIキャラクター・メモリ統合テスト', () => {
 
     it('カテゴリでフィルタリングできる', async () => {
       const response = await request(app)
-        .get(`/api/chat/characters/${characterId}/memory`)
+        .get(API_PATHS.AI_CHARACTERS.CHARACTER_MEMORY(characterId))
         .query({ category: 'preference' })
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -295,7 +296,7 @@ describe('AIキャラクター・メモリ統合テスト', () => {
 
     it('アクティブ状態でフィルタリングできる', async () => {
       const response = await request(app)
-        .get(`/api/chat/characters/${characterId}/memory`)
+        .get(API_PATHS.AI_CHARACTERS.CHARACTER_MEMORY(characterId))
         .query({ isActive: true })
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -328,7 +329,7 @@ describe('AIキャラクター・メモリ統合テスト', () => {
       tracker.mark('テスト開始');
 
       const response = await request(app)
-        .delete(`/api/chat/characters/${characterId}`)
+        .delete(API_PATHS.AI_CHARACTERS.CHARACTER(characterId))
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -344,6 +345,265 @@ describe('AIキャラクター・メモリ統合テスト', () => {
 
       tracker.mark('検証完了');
       tracker.summary();
+    });
+  });
+
+  describe('AIキャラクターセットアップ統合テスト', () => {
+    let newAuthToken: string;
+    let newUserId: string;
+
+    beforeEach(async () => {
+      // セットアップ用の新規ユーザー作成（AIキャラクターなし）
+      const testUser = await createTestUserWithToken({
+        name: 'Setup Test User',
+        email: `setup-${Date.now()}@test.com`,
+      });
+      newAuthToken = testUser.token;
+      newUserId = testUser.user.id;
+    });
+
+    describe('GET /api/ai-characters/setup-status', () => {
+      it('AIキャラクターが存在しない場合、needsSetup=trueを返す', async () => {
+        tracker.setOperation('セットアップ状態確認（キャラクターなし）');
+        tracker.mark('テスト開始');
+
+        const response = await request(app)
+          .get(API_PATHS.AI_CHARACTERS.SETUP_STATUS)
+          .set('Authorization', `Bearer ${newAuthToken}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data).toEqual({
+          needsSetup: true,
+          hasCharacter: false,
+        });
+
+        tracker.mark('検証完了');
+      });
+
+      it('AIキャラクターが存在する場合、needsSetup=falseを返す', async () => {
+        // AIキャラクターを作成
+        await AICharacterModel.create({
+          name: '既存のAIパートナー',
+          userId: newUserId,
+        });
+
+        const response = await request(app)
+          .get(API_PATHS.AI_CHARACTERS.SETUP_STATUS)
+          .set('Authorization', `Bearer ${newAuthToken}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data).toEqual({
+          needsSetup: false,
+          hasCharacter: true,
+        });
+      });
+    });
+
+    describe('POST /api/ai-characters/process-natural-input', () => {
+      it('性格の自然言語入力を処理できる', async () => {
+        tracker.setOperation('自然言語処理（性格）');
+        tracker.mark('テスト開始');
+
+        const response = await request(app)
+          .post(API_PATHS.AI_CHARACTERS.PROCESS_NATURAL_INPUT)
+          .set('Authorization', `Bearer ${newAuthToken}`)
+          .send({
+            input: '優しくて親しみやすい、でもプロフェッショナル',
+            field: 'personality'
+          });
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data).toMatchObject({
+          processedData: {
+            softness: expect.any(Number),
+            energy: expect.any(Number),
+            formality: expect.any(Number),
+          },
+          confidence: expect.any(Number),
+          originalInput: '優しくて親しみやすい、でもプロフェッショナル',
+        });
+
+        // 値の範囲チェック
+        const { processedData } = response.body.data;
+        expect(processedData.softness).toBeGreaterThanOrEqual(0);
+        expect(processedData.softness).toBeLessThanOrEqual(100);
+        expect(processedData.energy).toBeGreaterThanOrEqual(0);
+        expect(processedData.energy).toBeLessThanOrEqual(100);
+        expect(processedData.formality).toBeGreaterThanOrEqual(0);
+        expect(processedData.formality).toBeLessThanOrEqual(100);
+
+        tracker.mark('検証完了');
+      });
+
+      it('スタイルの自然言語入力を処理できる', async () => {
+        const response = await request(app)
+          .post(API_PATHS.AI_CHARACTERS.PROCESS_NATURAL_INPUT)
+          .set('Authorization', `Bearer ${newAuthToken}`)
+          .send({
+            input: '明るくてフレンドリー、少し甘えた感じ',
+            field: 'style'
+          });
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data).toMatchObject({
+          processedData: expect.any(Array),
+          confidence: expect.any(Number),
+          originalInput: '明るくてフレンドリー、少し甘えた感じ',
+        });
+
+        // スタイルフラグの検証
+        const { processedData } = response.body.data;
+        expect(Array.isArray(processedData)).toBe(true);
+        expect(processedData.length).toBeGreaterThan(0);
+        processedData.forEach((style: string) => {
+          expect(Object.values(AICharacterStyle)).toContain(style);
+        });
+      });
+    });
+
+    describe('POST /api/ai-characters/setup', () => {
+      it('完全なセットアップリクエストでAIキャラクターを作成できる', async () => {
+        tracker.setOperation('AIキャラクターセットアップ');
+        tracker.mark('テスト開始');
+
+        const setupData = {
+          name: '初期設定AIパートナー',
+          birthDate: '1990-05-15',
+          birthPlace: '東京都',
+          birthTime: '14:30',
+          personalityInput: '優しくて親しみやすい',
+          styleInput: '明るくてフレンドリー',
+          processedPersonality: {
+            softness: 80,
+            energy: 70,
+            formality: 30,
+          },
+          processedStyle: [AICharacterStyle.CHEERFUL, AICharacterStyle.SOFT],
+        };
+
+        tracker.mark('APIリクエスト送信');
+        const response = await request(app)
+          .post(API_PATHS.AI_CHARACTERS.SETUP)
+          .set('Authorization', `Bearer ${newAuthToken}`)
+          .send(setupData);
+        tracker.mark('APIレスポンス受信');
+
+        expect(response.status).toBe(201);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data).toMatchObject({
+          success: true,
+          character: {
+            name: setupData.name,
+            userId: newUserId,
+            styleFlags: setupData.processedStyle,
+            personalityScore: setupData.processedPersonality,
+          },
+          sajuData: expect.any(Object),
+          setupData: expect.objectContaining({
+            name: setupData.name,
+            birthDate: setupData.birthDate,
+            birthPlace: setupData.birthPlace,
+            birthTime: setupData.birthTime,
+          }),
+        });
+
+        // ユーザー情報が更新されたことを確認
+        const updatedUser = await UserModel.findById(newUserId);
+        expect(updatedUser?.birthDate).toBeDefined();
+        expect(updatedUser?.birthLocation).toBeDefined();
+        expect(updatedUser?.birthTime).toBe('14:30');
+
+        tracker.mark('検証完了');
+        tracker.summary();
+      });
+
+      it('既にAIキャラクターが存在する場合はエラーになる', async () => {
+        // AIキャラクターを作成
+        await AICharacterModel.create({
+          name: '既存のAIパートナー',
+          userId: newUserId,
+        });
+
+        const response = await request(app)
+          .post(API_PATHS.AI_CHARACTERS.SETUP)
+          .set('Authorization', `Bearer ${newAuthToken}`)
+          .send({
+            name: '新しいAIパートナー',
+            birthDate: '1990-05-15',
+            birthPlace: '東京都',
+            personalityInput: '優しい',
+            styleInput: '明るい',
+            processedPersonality: { softness: 70, energy: 60, formality: 40 },
+            processedStyle: [AICharacterStyle.SOFT],
+          });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toContain('既に存在します');
+      });
+
+      it('出生時間がオプショナルであることを確認', async () => {
+        const setupData = {
+          name: '時間なしAIパートナー',
+          birthDate: '1985-12-25',
+          birthPlace: '大阪府',
+          // birthTime を省略
+          personalityInput: 'クールで冷静',
+          styleInput: '大人っぽい',
+          processedPersonality: {
+            softness: 30,
+            energy: 40,
+            formality: 80,
+          },
+          processedStyle: [AICharacterStyle.COOL],
+        };
+
+        const response = await request(app)
+          .post(API_PATHS.AI_CHARACTERS.SETUP)
+          .set('Authorization', `Bearer ${newAuthToken}`)
+          .send(setupData);
+
+        expect(response.status).toBe(201);
+        expect(response.body.success).toBe(true);
+
+        // デフォルト値が設定されることを確認
+        const updatedUser = await UserModel.findById(newUserId);
+        expect(updatedUser?.birthTime).toBe('00:00');
+      });
+    });
+
+    describe('GET /api/saju/locations/japan', () => {
+      it('日本の都道府県リストを取得できる', async () => {
+        tracker.setOperation('都道府県リスト取得');
+        
+        const response = await request(app)
+          .get(API_PATHS.SAJU_LOCATIONS.JAPAN)
+          .set('Authorization', `Bearer ${newAuthToken}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.prefectures).toBeDefined();
+        expect(Array.isArray(response.body.data.prefectures)).toBe(true);
+        expect(response.body.data.prefectures.length).toBe(47);
+
+        // いくつかの都道府県をチェック
+        const prefectures = response.body.data.prefectures;
+        expect(prefectures.find((p: any) => p.name === '東京都')).toBeDefined();
+        expect(prefectures.find((p: any) => p.name === '大阪府')).toBeDefined();
+        expect(prefectures.find((p: any) => p.name === '北海道')).toBeDefined();
+        expect(prefectures.find((p: any) => p.name === '沖縄県')).toBeDefined();
+
+        // 各都道府県の構造をチェック
+        prefectures.forEach((prefecture: any) => {
+          expect(prefecture).toHaveProperty('name');
+          expect(prefecture).toHaveProperty('adjustmentMinutes');
+          expect(typeof prefecture.name).toBe('string');
+          expect(typeof prefecture.adjustmentMinutes).toBe('number');
+        });
+      });
     });
   });
 });

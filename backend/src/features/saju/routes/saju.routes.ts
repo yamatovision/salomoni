@@ -66,4 +66,14 @@ router.get(
   sajuController.getUserFourPillars.bind(sajuController)
 );
 
+/**
+ * 日本の都道府県リスト取得
+ * GET /api/saju/locations/japan
+ */
+router.get(
+  '/locations/japan',
+  authenticate,
+  sajuController.getJapanesePrefectures.bind(sajuController)
+);
+
 export default router;

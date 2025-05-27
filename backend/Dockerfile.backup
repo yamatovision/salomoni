@@ -1,0 +1,42 @@
+# ビルドステージ
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# package.jsonとpackage-lock.jsonをコピー
+COPY package*.json ./
+
+# 依存関係をインストール
+RUN npm ci
+
+# ソースコードをコピー
+COPY . .
+
+# TypeScriptをビルド
+RUN npm run build
+
+# 実行ステージ
+FROM node:20-alpine
+
+WORKDIR /app
+
+# package.jsonとpackage-lock.jsonをコピー
+COPY package*.json ./
+
+# 本番用の依存関係のみインストール
+RUN npm ci --only=production
+
+# ビルド済みのファイルをコピー
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/sajuengine_package ./sajuengine_package
+
+# referenceディレクトリをコピー（Firebase認証情報）
+COPY reference ./reference
+
+# ポートを設定
+ENV PORT=8080
+EXPOSE 8080
+
+# アプリケーションを実行
+CMD ["node", "dist/index.js"]

@@ -77,7 +77,10 @@ export class AICharacterController {
   // 現在のユーザーのAIキャラクター取得
   getMyAICharacter = async (req: Request, res: Response, next: NextFunction) => {
     try {
+      logger.info('getMyAICharacter開始:', { path: req.path, user: req.user?.id });
+      
       if (!req.user) {
+        logger.error('getMyAICharacter: 認証情報なし');
         return res.status(401).json({
           success: false,
           error: '認証が必要です',
@@ -85,10 +88,12 @@ export class AICharacterController {
       }
       
       const userId = req.user.id;
+      logger.info(`AIキャラクター検索: userId=${userId}`);
       
       const aiCharacter = await this.aiCharacterService.getAICharacterByUserId(userId);
       
       if (!aiCharacter) {
+        logger.error(`AIキャラクターが見つかりません: userId=${userId}`);
         return res.status(404).json({
           success: false,
           error: 'AIキャラクターが見つかりません',
@@ -238,6 +243,73 @@ export class AICharacterController {
       });
     } catch (error) {
       logger.error('AIキャラクター削除エラー:', error);
+      next(error);
+    }
+  };
+
+  // セットアップ状態確認
+  getSetupStatus = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          error: '認証が必要です',
+        });
+      }
+
+      const status = await this.aiCharacterService.getSetupStatus(req.user.id);
+
+      res.json({
+        success: true,
+        data: status,
+      });
+    } catch (error) {
+      logger.error('セットアップ状態確認エラー:', error);
+      next(error);
+    }
+  };
+
+  // 自然言語入力処理
+  processNaturalInput = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { input, field } = req.body;
+
+      const result = await this.aiCharacterService.processNaturalInput({
+        input,
+        field,
+      });
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      logger.error('自然言語入力処理エラー:', error);
+      next(error);
+    }
+  };
+
+  // AIキャラクターセットアップ
+  setupAICharacter = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          error: '認証が必要です',
+        });
+      }
+
+      const result = await this.aiCharacterService.setupAICharacter(
+        req.user.id,
+        req.body
+      );
+
+      res.status(201).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      logger.error('AIキャラクターセットアップエラー:', error);
       next(error);
     }
   };

@@ -94,9 +94,11 @@ const SuperAdminSupportPage: React.FC = () => {
       const replyData: SupportTicketReplyInput = {
         senderId: user.id,
         message: replyMessage.trim(),
+        content: replyMessage.trim(), // バックエンド互換性のため content フィールドも追加
         isStaff: true
       };
 
+      console.log('Sending reply data:', replyData); // デバッグログ
       await replySuperAdminSupportTicket(selectedTicket.id, replyData);
       
       // ローカルの状態を更新

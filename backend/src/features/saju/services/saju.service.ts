@@ -1,11 +1,13 @@
-import { SajuEngine, SajuResult } from '../../../../../sajuengine_package';
+import { SajuEngine, SajuResult } from 'saju-engine';
 import { logger } from '../../../common/utils/logger';
 import { 
   FourPillarsData, 
   CompatibilityResult,
   FourPillarsCalculateRequest,
   FourPillarsAnalyzeRequest,
-  CompatibilityCalculateRequest
+  CompatibilityCalculateRequest,
+  JapanesePrefecture,
+  JapanesePrefecturesResponse
 } from '../../../types';
 import mongoose from 'mongoose';
 import { UserModel } from '../../users/models/user.model';
@@ -1081,6 +1083,69 @@ export class SajuService {
   //     return '価値観の違いがありますが、お互いを尊重することで成長できる関係です。';
   //   }
   // }
+
+  /**
+   * 日本の都道府県リスト取得
+   */
+  async getJapanesePrefectures(): Promise<JapanesePrefecturesResponse> {
+    try {
+      // 日本の47都道府県と時差調整データ
+      const prefectures: JapanesePrefecture[] = [
+        { name: '北海道', adjustmentMinutes: 0 },
+        { name: '青森県', adjustmentMinutes: 0 },
+        { name: '岩手県', adjustmentMinutes: 0 },
+        { name: '宮城県', adjustmentMinutes: 0 },
+        { name: '秋田県', adjustmentMinutes: 0 },
+        { name: '山形県', adjustmentMinutes: 0 },
+        { name: '福島県', adjustmentMinutes: 0 },
+        { name: '茨城県', adjustmentMinutes: 0 },
+        { name: '栃木県', adjustmentMinutes: 0 },
+        { name: '群馬県', adjustmentMinutes: 0 },
+        { name: '埼玉県', adjustmentMinutes: 0 },
+        { name: '千葉県', adjustmentMinutes: 0 },
+        { name: '東京都', adjustmentMinutes: 0 },
+        { name: '神奈川県', adjustmentMinutes: 0 },
+        { name: '新潟県', adjustmentMinutes: 0 },
+        { name: '富山県', adjustmentMinutes: 0 },
+        { name: '石川県', adjustmentMinutes: 0 },
+        { name: '福井県', adjustmentMinutes: 0 },
+        { name: '山梨県', adjustmentMinutes: 0 },
+        { name: '長野県', adjustmentMinutes: 0 },
+        { name: '岐阜県', adjustmentMinutes: 0 },
+        { name: '静岡県', adjustmentMinutes: 0 },
+        { name: '愛知県', adjustmentMinutes: 0 },
+        { name: '三重県', adjustmentMinutes: 0 },
+        { name: '滋賀県', adjustmentMinutes: 0 },
+        { name: '京都府', adjustmentMinutes: 0 },
+        { name: '大阪府', adjustmentMinutes: 0 },
+        { name: '兵庫県', adjustmentMinutes: 0 },
+        { name: '奈良県', adjustmentMinutes: 0 },
+        { name: '和歌山県', adjustmentMinutes: 0 },
+        { name: '鳥取県', adjustmentMinutes: 0 },
+        { name: '島根県', adjustmentMinutes: 0 },
+        { name: '岡山県', adjustmentMinutes: 0 },
+        { name: '広島県', adjustmentMinutes: 0 },
+        { name: '山口県', adjustmentMinutes: 0 },
+        { name: '徳島県', adjustmentMinutes: 0 },
+        { name: '香川県', adjustmentMinutes: 0 },
+        { name: '愛媛県', adjustmentMinutes: 0 },
+        { name: '高知県', adjustmentMinutes: 0 },
+        { name: '福岡県', adjustmentMinutes: 0 },
+        { name: '佐賀県', adjustmentMinutes: 0 },
+        { name: '長崎県', adjustmentMinutes: 0 },
+        { name: '熊本県', adjustmentMinutes: 0 },
+        { name: '大分県', adjustmentMinutes: 0 },
+        { name: '宮崎県', adjustmentMinutes: 0 },
+        { name: '鹿児島県', adjustmentMinutes: 0 },
+        { name: '沖縄県', adjustmentMinutes: 0 },
+      ];
+
+      return { prefectures };
+    } catch (error) {
+      logger.error('都道府県リスト取得エラー:', error);
+      throw error;
+    }
+  }
 }
 
 // シングルトンインスタンスをエクスポート

@@ -129,6 +129,29 @@ export class SajuController {
       next(error);
     }
   }
+
+  /**
+   * 日本の都道府県リスト取得
+   */
+  async getJapanesePrefectures(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      logger.info('[SajuController] 日本の都道府県リスト取得リクエスト受信', {
+        userId: req.user?.userId
+      });
+
+      const result = await sajuService.getJapanesePrefectures();
+
+      const response: ApiResponse<any> = {
+        success: true,
+        data: result
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      logger.error('[SajuController] 日本の都道府県リスト取得エラー', error);
+      next(error);
+    }
+  }
 }
 
 // シングルトンインスタンスをエクスポート

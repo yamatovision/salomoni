@@ -1,26 +1,19 @@
-# Node.js 20のベースイメージを使用
 FROM node:20-alpine
 
-# 作業ディレクトリを設定
 WORKDIR /app
 
-# package.jsonとpackage-lock.jsonをコピー
-COPY package*.json ./
-
-# 開発依存関係も含めてインストール（ビルドに必要）
-RUN npm ci
-
-# アプリケーションのソースコードをコピー
+# Copy everything
 COPY . .
 
-# TypeScriptをビルド
+# Install dependencies
+RUN npm ci
+
+# Build TypeScript
 RUN npm run build
 
-# 本番用の依存関係のみを再インストール
-RUN npm ci --only=production
-
-# Cloud Runではポート8080を使用
+# Expose port
 ENV PORT=8080
+EXPOSE 8080
 
-# アプリケーションを実行
-CMD ["npm", "start"]
+# Start the application
+CMD ["node", "dist/src/index.js"]

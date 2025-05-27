@@ -105,8 +105,11 @@ export class FortuneService {
       }
 
       // AIキャラクターを取得
+      logger.info(`AIキャラクター取得開始: userId=${userId}`);
       const aiCharacter = await this.aiCharacterRepository.findByUserId(userId);
+      logger.info(`AIキャラクター取得結果: ${aiCharacter ? 'found' : 'not found'}`);
       if (!aiCharacter) {
+        logger.error(`AIキャラクターが見つかりません: userId=${userId}`);
         throw new AppError('AIキャラクターが見つかりません', 404, 'AI_CHARACTER_NOT_FOUND');
       }
 

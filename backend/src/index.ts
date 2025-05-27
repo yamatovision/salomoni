@@ -63,7 +63,10 @@ app.use('/api/organizations', organizationRoutes);
 app.use('/api/saju', sajuRoutes);
 app.use('/api', clientRoutes); // クライアント管理ルート（/api/admin/clients, /api/clients）
 app.use('/api/chat', chatRoutes); // チャット・会話管理ルート
-app.use('/api/chat', aiCharacterRoutes); // AIキャラクター・メモリ管理ルート
+app.use('/api/ai-characters', (req, _res, next) => {
+  logger.info(`AIキャラクタールート受信: ${req.method} ${req.path}`);
+  next();
+}, aiCharacterRoutes); // AIキャラクター・メモリ管理ルート
 app.use('/api/appointments', appointmentRoutes); // 予約管理ルート
 app.use('/api/admin', adminAppointmentRoutes); // 管理者用予約ルート
 app.use('/api/fortune', fortuneRoutes); // 運勢・アドバイス管理ルート

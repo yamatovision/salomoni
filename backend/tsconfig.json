@@ -28,7 +28,11 @@
     "declarationMap": true,
     "sourceMap": true,
     "incremental": true,
-    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "baseUrl": "./",
+    "paths": {
+      "saju-engine": ["sajuengine_package/dist/index"]
+    }
   },
   "include": [
     "src/**/*",
@@ -36,7 +40,8 @@
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "sajuengine_package"
   ],
   "ts-node": {
     "require": ["tsconfig-paths/register"]

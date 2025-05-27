@@ -1,0 +1,40 @@
+# This file specifies files that are *not* uploaded to Google Cloud Platform
+# using gcloud.
+
+.gcloudignore
+.git
+.gitignore
+
+# Node.js dependencies
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+
+# Build artifacts
+dist/
+
+# Test files
+coverage/
+.nyc_output
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.swp
+*.swo
+
+# Upload directories
+uploads/

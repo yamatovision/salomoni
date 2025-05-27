@@ -11,12 +11,6 @@ import {
   CardActions,
   Button,
   Chip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   IconButton,
   TextField,
   MenuItem,
@@ -34,6 +28,7 @@ import {
   Alert,
   CircularProgress,
   Snackbar,
+  Pagination,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
@@ -49,15 +44,19 @@ import {
   Assessment as AssessmentIcon,
   Receipt as ReceiptIcon,
   CreditCard as CreditCardIcon,
+  Business as BusinessIcon,
+  CalendarToday as CalendarTodayIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import type { 
   PlanDetail, 
   TokenPlan,
   RevenueSimulationData,
+  SuperAdminBillingSummary,
+  SuperAdminInvoice,
 } from '../../types';
 import {
   OrganizationPlan,
-  InvoiceStatus,
 } from '../../types';
 import { Line } from 'react-chartjs-2';
 import {
@@ -73,6 +72,7 @@ import {
 import type { ChartOptions } from 'chart.js';
 import { planService, type Plan } from '../../services/api/plans';
 import { BillingService } from '../../services/api/billing';
+import { superAdminBillingService } from '../../services';
 import { RevenueSimulator, defaultSimulationParams } from '../../utils/revenueSimulation';
 
 // Chart.js設定
@@ -126,12 +126,29 @@ export default function SuperAdminPlansPage() {
   const [simulator, setSimulator] = useState<RevenueSimulator | null>(null);
   const [simulationParams, setSimulationParams] = useState(defaultSimulationParams);
   
+  // 請求管理用状態
+  const [billingSummary, setBillingSummary] = useState<SuperAdminBillingSummary | null>(null);
+  const [invoices, setInvoices] = useState<SuperAdminInvoice[]>([]);
+  const [invoicesPagination, setInvoicesPagination] = useState({
+    page: 1,
+    total: 0,
+    totalPages: 0,
+  });
+  const [invoiceFilter, setInvoiceFilter] = useState<'all' | 'paid' | 'pending' | 'overdue'>('all');
+  
   const billingService = new BillingService();
   
   // データ取得
   useEffect(() => {
     loadData();
   }, []);
+  
+  // タブ変更時に請求管理データを取得
+  useEffect(() => {
+    if (tabValue === 2) {
+      loadBillingData();
+    }
+  }, [tabValue]);
   
   const loadData = async () => {
     try {
@@ -156,6 +173,75 @@ export default function SuperAdminPlansPage() {
       setLoading(false);
     }
   };
+  
+  const loadBillingData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // 請求サマリーと請求書一覧を取得
+      const [summaryData, invoicesData] = await Promise.all([
+        superAdminBillingService.getBillingSummary(),
+        superAdminBillingService.getInvoices({
+          page: invoicesPagination.page,
+          limit: 10,
+          status: invoiceFilter === 'all' ? undefined : invoiceFilter,
+        }),
+      ]);
+      
+      setBillingSummary(summaryData);
+      setInvoices(invoicesData.invoices);
+      setInvoicesPagination({
+        page: invoicesData.page,
+        total: invoicesData.total,
+        totalPages: invoicesData.totalPages,
+      });
+    } catch (err) {
+      console.error('請求データ取得エラー:', err);
+      setError('請求データの取得に失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleInvoiceFilterChange = (newFilter: typeof invoiceFilter) => {
+    setInvoiceFilter(newFilter);
+    setInvoicesPagination(prev => ({ ...prev, page: 1 }));
+  };
+  
+  const handleInvoicePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
+    setInvoicesPagination(prev => ({ ...prev, page: value }));
+  };
+  
+  // フィルターまたはページ変更時に請求書を再取得
+  useEffect(() => {
+    if (tabValue === 2) {
+      const loadInvoices = async () => {
+        try {
+          setLoading(true);
+          const invoicesData = await superAdminBillingService.getInvoices({
+            page: invoicesPagination.page,
+            limit: 10,
+            status: invoiceFilter === 'all' ? undefined : invoiceFilter,
+          });
+          
+          setInvoices(invoicesData.invoices);
+          setInvoicesPagination({
+            page: invoicesData.page,
+            total: invoicesData.total,
+            totalPages: invoicesData.totalPages,
+          });
+        } catch (err) {
+          console.error('請求書取得エラー:', err);
+          setError('請求書の取得に失敗しました');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      loadInvoices();
+    }
+  }, [tabValue, invoiceFilter, invoicesPagination.page]);
   
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -673,23 +759,204 @@ export default function SuperAdminPlansPage() {
 
         {/* 請求管理 */}
         <TabPanel value={tabValue} index={2}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            minHeight: 400,
-            flexDirection: 'column',
-            gap: 2
-          }}>
-            <ReceiptIcon sx={{ fontSize: 64, color: 'text.secondary' }} />
-            <Typography variant="h6" color="text.secondary">
-              請求管理機能は現在開発中です
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', maxWidth: 500 }}>
-              SuperAdmin向けの請求管理APIはまだ実装されていません。
-              各組織の請求書は組織のOwner権限で確認できます。
-            </Typography>
-          </Box>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : error ? (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          ) : (
+            <Grid container spacing={3}>
+              {/* 請求サマリー */}
+              {billingSummary && (
+                <Grid size={{ xs: 12 }}>
+                  <Grid container spacing={2}>
+                    <Grid size={{ xs: 12, md: 3 }}>
+                      <Card sx={{ bgcolor: '#fce4ec' }}>
+                        <CardContent>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <AttachMoneyIcon sx={{ color: '#F26A8D', mr: 1 }} />
+                            <Typography color="text.secondary" variant="body2">
+                              総収益
+                            </Typography>
+                          </Box>
+                          <Typography variant="h4" sx={{ color: '#F26A8D', fontWeight: 'bold' }}>
+                            {formatCurrency(billingSummary.totalRevenue)}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            今月: {formatCurrency(billingSummary.monthlyRevenue)}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 3 }}>
+                      <Card sx={{ bgcolor: '#e8f5e9' }}>
+                        <CardContent>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <CheckCircleIcon sx={{ color: '#4caf50', mr: 1 }} />
+                            <Typography color="text.secondary" variant="body2">
+                              支払済み
+                            </Typography>
+                          </Box>
+                          <Typography variant="h4" sx={{ color: '#4caf50', fontWeight: 'bold' }}>
+                            {billingSummary.paidInvoices}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            総額: {formatCurrency(billingSummary.paidAmount)}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 3 }}>
+                      <Card sx={{ bgcolor: '#fff3e0' }}>
+                        <CardContent>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <CalendarTodayIcon sx={{ color: '#ff9800', mr: 1 }} />
+                            <Typography color="text.secondary" variant="body2">
+                              未払い
+                            </Typography>
+                          </Box>
+                          <Typography variant="h4" sx={{ color: '#ff9800', fontWeight: 'bold' }}>
+                            {billingSummary.pendingInvoices}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            総額: {formatCurrency(billingSummary.pendingAmount)}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 3 }}>
+                      <Card sx={{ bgcolor: '#ffebee' }}>
+                        <CardContent>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <CancelIcon sx={{ color: '#f44336', mr: 1 }} />
+                            <Typography color="text.secondary" variant="body2">
+                              延滞
+                            </Typography>
+                          </Box>
+                          <Typography variant="h4" sx={{ color: '#f44336', fontWeight: 'bold' }}>
+                            {billingSummary.overdueInvoices}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            総額: {formatCurrency(billingSummary.overdueAmount)}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  </Grid>
+                </Grid>
+              )}
+
+              {/* 請求書一覧 */}
+              <Grid size={{ xs: 12 }}>
+                <Paper sx={{ p: 3 }}>
+                  <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6">請求書一覧</Typography>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Tabs 
+                        value={invoiceFilter}
+                        onChange={(_e, value) => handleInvoiceFilterChange(value)}
+                        sx={{
+                          minHeight: 36,
+                          '& .MuiTab-root': {
+                            minHeight: 36,
+                            py: 1,
+                          },
+                        }}
+                      >
+                        <Tab label="すべて" value="all" />
+                        <Tab label="支払済み" value="paid" />
+                        <Tab label="未払い" value="pending" />
+                        <Tab label="延滞" value="overdue" />
+                      </Tabs>
+                      <IconButton onClick={loadBillingData} size="small">
+                        <RefreshIcon />
+                      </IconButton>
+                    </Box>
+                  </Box>
+
+                  <List>
+                    {invoices.map((invoice) => (
+                      <ListItem
+                        key={invoice._id}
+                        sx={{
+                          border: 1,
+                          borderColor: 'divider',
+                          borderRadius: 1,
+                          mb: 1,
+                        }}
+                      >
+                        <ListItemIcon>
+                          <BusinessIcon />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body1">
+                                {invoice.organization.name}
+                              </Typography>
+                              <Chip
+                                label={invoice.number}
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                              />
+                              <Chip
+                                label={
+                                  invoice.status === 'paid' ? '支払済み' :
+                                  invoice.status === 'pending' ? '未払い' :
+                                  invoice.status === 'overdue' ? '延滞' : invoice.status
+                                }
+                                size="small"
+                                color={
+                                  invoice.status === 'paid' ? 'success' :
+                                  invoice.status === 'pending' ? 'warning' :
+                                  invoice.status === 'overdue' ? 'error' : 'default'
+                                }
+                              />
+                            </Box>
+                          }
+                          secondary={
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                発行日: {new Date(invoice.issueDate).toLocaleDateString('ja-JP')} | 
+                                期限: {new Date(invoice.dueDate).toLocaleDateString('ja-JP')}
+                              </Typography>
+                              <Typography variant="h6" sx={{ color: '#F26A8D' }}>
+                                {formatCurrency(invoice.amount)}
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+
+                  {/* ページネーション */}
+                  {invoicesPagination.totalPages > 1 && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                      <Pagination
+                        count={invoicesPagination.totalPages}
+                        page={invoicesPagination.page}
+                        onChange={handleInvoicePageChange}
+                        color="primary"
+                      />
+                    </Box>
+                  )}
+                  
+                  {invoices.length === 0 && (
+                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                      <Typography color="text.secondary">
+                        請求書が見つかりません
+                      </Typography>
+                    </Box>
+                  )}
+                </Paper>
+              </Grid>
+            </Grid>
+          )}
         </TabPanel>
       </Paper>
 

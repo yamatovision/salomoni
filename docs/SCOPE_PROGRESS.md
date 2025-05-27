@@ -169,10 +169,10 @@
 | **12.4** | `/api/superadmin/plans` | POST | プラン作成 | 必要 | S-002 | [x] | [x] | [x] |
 | **12.5** | `/api/superadmin/plans/:planId` | PUT | プラン更新 | 必要 | S-002 | [x] | [x] | [x] |
 | **12.6** | `/api/superadmin/plans/:planId` | DELETE | プラン削除 | 必要 | S-002 | [x] | [x] | [x] |
-| **13.1** | `/api/superadmin/billing/summary` | GET | SuperAdmin請求サマリー取得 | 必要 | S-002 | [ ] | [ ] | [ ] |
+| **13.1** | `/api/superadmin/billing/summary` | GET | SuperAdmin請求サマリー取得 | 必要 | S-002 | [x] | [x] | [x] |
 | **13.2** | `/api/superadmin/billing/revenue-trends` | GET | 収益トレンド取得 | 必要 | S-002 | [ ] | [ ] | [ ] |
-| **13.3** | `/api/superadmin/billing/invoices` | GET | 全組織の請求書一覧取得 | 必要 | S-002 | [ ] | [ ] | [ ] |
-| **13.4** | `/api/superadmin/billing/invoices/:invoiceId` | GET | 請求書詳細取得 | 必要 | S-002 | [ ] | [ ] | [ ] |
+| **13.3** | `/api/superadmin/billing/invoices` | GET | 全組織の請求書一覧取得 | 必要 | S-002 | [x] | [x] | [x] |
+| **13.4** | `/api/superadmin/billing/invoices/:invoiceId` | GET | 請求書詳細取得 | 必要 | S-002 | [x] | [x] | [x] |
 | **13.5** | `/api/superadmin/billing/invoices/:invoiceId` | PATCH | 請求書更新 | 必要 | S-002 | [ ] | [ ] | [ ] |
 | **13.6** | `/api/superadmin/billing/invoices/:invoiceId/resend` | POST | 請求書再送信 | 必要 | S-002 | [ ] | [ ] | [ ] |
 | **13.7** | `/api/superadmin/billing/payment-methods` | GET | 全組織の支払い方法一覧 | 必要 | S-002 | [ ] | [ ] | [ ] |
@@ -314,24 +314,60 @@ npx ts-node scripts/test-login-api.ts
 
 ## 3. 直近の引き継ぎ
 
-### ★9統合テスト成功請負人からの完了報告（2025-05-26更新）
+### ★10 API統合エージェントからの引き継ぎ（2025-05-27更新）
 
-**最新テスト完了項目**
-- サポートチケット機能API（/api/admin/support/* および /api/superadmin/support/*）- 21個のテストケースすべて成功
-- 実行時間: 約28秒
-- 各エンドポイントの統合テスト100%成功
+**API統合完了機能**
+- SuperAdmin請求管理機能（タスク13.1, 13.3, 13.4）のフロントエンドAPI統合
+  - 13.1: SuperAdmin請求サマリー取得
+  - 13.3: 全組織の請求書一覧取得  
+  - 13.4: 請求書詳細取得（UIには未実装だが、APIサービスに実装済み）
 
-**サポートチケット機能テスト成功内容**
-1. チケット作成機能（POST /api/admin/support/tickets）
-   - ユーザーが新規チケットを作成できる
-   - 必須フィールドが不足している場合はエラーを返す
-2. チケット一覧取得（GET /api/admin/support/tickets）
-   - 通常ユーザーは自分のチケットのみ取得できる
-   - 管理者は組織内の全チケットを取得できる
-   - スーパー管理者は全組織のチケットを取得できる
-   - フィルタリング機能が正しく動作する
-3. チケット詳細取得（GET /api/admin/support/tickets/:ticketId）
-   - チケット作成者は自分のチケット詳細を取得できる
+**実装内容**
+1. SuperAdminBillingServiceの作成
+   - `/frontend/src/services/api/superadmin-billing.ts`
+   - 請求サマリー、請求書一覧、請求書詳細のAPIメソッド実装
+   - 適切なエラーハンドリング実装
+
+2. SuperAdminPlansPageの請求管理タブ実装
+   - 請求サマリーカード（総収益、支払済み、未払い、延滞）
+   - 請求書一覧表示（組織名、請求書番号、ステータス、金額）
+   - フィルター機能（すべて、支払済み、未払い、延滞）
+   - ページネーション対応
+   - リアルタイムデータ更新（更新ボタン）
+
+**統合作業の詳細**
+- モックコードは完全に削除済み
+- services/index.tsにSuperAdminBillingServiceを追加
+- エラーハンドリングと読み込み状態の管理を実装
+- 日本語UIで統一
+
+**動作確認に必要な条件**
+- SuperAdmin権限でログイン
+- バックエンドAPIサーバーが起動している
+- テストデータが存在する（統合テストで作成されたデータが利用可能）
+
+### ★9統合テスト成功請負人への引き継ぎ（2025-05-27更新）
+
+**実装完了機能**
+- SuperAdmin請求管理機能 Phase 1（タスク13.1, 13.3, 13.4）
+- 請求サマリー取得、請求書一覧取得、請求書詳細取得のAPIエンドポイント
+
+**統合テスト情報（★9が実行するテスト）**
+- [作成した統合テストファイル]: `/backend/tests/integration/billing/superadmin-billing.flow.test.ts`
+- [テスト実行コマンド]: `npm run test:integration -- superadmin-billing`
+- [マイルストーントラッカーの場所]: `/backend/tests/utils/MilestoneTracker.ts`
+- [テストユーティリティの場所]: `/backend/tests/utils/`
+
+**★9への注意事項**
+- 統合テストでは実データベースと実際のAPI呼び出しを使用（モックは一切使用していません）
+- 環境変数の設定確認が必要（特にデータベース接続情報）
+- テストデータは各テストケースごとに自動的に作成・クリーンアップされます
+- SuperAdmin認証トークンはTestAuthHelperで自動取得されます
+
+**参考資料**
+- 要件定義書: `/docs/api-design/superadmin-billing-api.md`
+- 型定義: `/backend/src/types/index.ts` (行番号2553-2730)
+- APIパス定義: `/backend/src/types/index.ts` (行番号265-275)
    - 他のユーザーは他人のチケットにアクセスできない
 4. チケットへの返信（POST /api/admin/support/tickets/:ticketId/reply）
    - チケット作成者が返信を追加できる
@@ -429,6 +465,19 @@ npx ts-node scripts/test-login-api.ts
 **参考資料**
 - 四柱推命エンジン: `/sajuengine_package/`
 - ユーザーモデル: `/backend/src/features/users/models/user.model.ts`
+
+### ★9統合テスト成功請負人による完了報告（2025-05-27更新）
+
+**テスト完了機能**
+- SuperAdmin請求管理機能 Phase 1の統合テスト
+  - 13.1 請求サマリー取得
+  - 13.3 全組織の請求書一覧取得  
+  - 13.4 請求書詳細取得
+
+**テスト結果**
+- 実行コマンド: `npm test -- tests/integration/billing/superadmin-billing.flow.test.ts`
+- 結果: Tests: 10 passed, 10 total（100%成功）
+- Mongooseの重複インデックス警告は機能に影響なし（univapayTokenId, univapayChargeId等のインデックス）
 
 ### ★8バックエンド実装エージェントからの引き継ぎ（2025-05-27更新）
 

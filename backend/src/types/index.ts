@@ -385,6 +385,7 @@ export interface StaffInviteRequest {
   birthDate?: Date | string;
   phone?: string;
   position?: string;
+  password?: string; // 管理者が設定する初期パスワード
 }
 
 // 招待完了リクエスト
@@ -471,6 +472,9 @@ export interface UserUpdateRequest {
   phone?: string;
   profileImage?: string;
   organizationId?: ID;
+  password?: string; // 管理者がパスワードをリセット
+  position?: string; // 役職
+  role?: UserRole; // 権限
 }
 
 // ==========================================
@@ -2610,6 +2614,9 @@ export interface RevenueTrendData {
     };
   };
 }
+
+// SuperAdmin用請求書型（SuperAdminInvoiceListItemのエイリアス）
+export type SuperAdminInvoice = SuperAdminInvoiceListItem;
 
 // SuperAdmin用請求書リストアイテム
 export interface SuperAdminInvoiceListItem {

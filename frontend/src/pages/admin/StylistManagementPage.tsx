@@ -50,8 +50,7 @@ import {
 } from '@mui/icons-material';
 // import { useTheme } from '@mui/material/styles';
 import type { 
-  StylistDetail,
-  StaffInviteRequest
+  StylistDetail
 } from '../../types';
 import { 
   TurnoverRiskLevel,
@@ -157,7 +156,8 @@ const StylistManagementPage: React.FC = () => {
     birthDate: '',
     position: '',
     role: UserRole.USER,
-    phone: ''
+    phone: '',
+    password: '' // パスワードフィールドを追加
   });
 
   // データ読み込み
@@ -224,7 +224,8 @@ const StylistManagementPage: React.FC = () => {
         birthDate: stylist.birthDate ? new Date(stylist.birthDate).toISOString().split('T')[0] : '',
         position: stylist.position,
         role: stylist.role,
-        phone: stylist.phone || ''
+        phone: stylist.phone || '',
+        password: '' // 編集時はパスワードを空に
       });
     } else {
       setEditingStylist(null);
@@ -234,7 +235,8 @@ const StylistManagementPage: React.FC = () => {
         birthDate: '',
         position: '',
         role: UserRole.USER,
-        phone: ''
+        phone: '',
+        password: ''
       });
     }
     setAddModalOpen(true);
@@ -250,7 +252,7 @@ const StylistManagementPage: React.FC = () => {
     try {
       const data = {
         ...formData,
-        birthDate: formData.birthDate || undefined
+        birthDate: formData.birthDate ? new Date(formData.birthDate) : undefined
       };
 
       // デバッグログ: 送信するデータの確認
@@ -261,7 +263,21 @@ const StylistManagementPage: React.FC = () => {
       });
 
       if (editingStylist) {
-        const response = await stylistService.updateStylist(editingStylist.id, data);
+        // 編集時はパスワードが空の場合は送信しない
+        const updateData: any = {
+          name: data.name,
+          birthDate: data.birthDate,
+          position: data.position,
+          role: data.role,
+          phone: data.phone
+        };
+        
+        // パスワードが入力されている場合のみ追加
+        if (formData.password) {
+          updateData.password = formData.password;
+        }
+        
+        const response = await stylistService.updateStylist(editingStylist.id, updateData);
         if (response.success) {
           alert(response.meta?.message || 'スタイリスト情報を更新しました');
         }
@@ -273,7 +289,8 @@ const StylistManagementPage: React.FC = () => {
           name: data.name,
           birthDate: formData.birthDate || undefined,
           phone: data.phone,
-          position: data.position
+          position: data.position,
+          password: formData.password // パスワードを追加
         };
         console.log('[DEBUG] 新規作成送信データ:', inviteData);
         const response = await stylistService.createStylist(inviteData);
@@ -653,13 +670,13 @@ const StylistManagementPage: React.FC = () => {
               placeholder="例: 山田 花子"
             />
             <TextField
-              label="生年月日"
+              label="生年月日 (オプショナル)"
               type="date"
               fullWidth
-              required
               value={formData.birthDate}
               onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
               InputLabelProps={{ shrink: true }}
+              helperText="スタイリストが後から設定できます"
             />
             <FormControl fullWidth required>
               <InputLabel>役職</InputLabel>
@@ -704,6 +721,18 @@ const StylistManagementPage: React.FC = () => {
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               placeholder="例: 090-1234-5678"
+            />
+            <TextField
+              label={editingStylist ? "パスワード変更 (オプショナル)" : "パスワード"}
+              type="password"
+              fullWidth
+              required={!editingStylist}
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              placeholder="8文字以上で入力"
+              helperText={editingStylist 
+                ? "変更する場合のみ入力してください" 
+                : "スタイリストの初期パスワードを設定します"}
             />
           </Stack>
 

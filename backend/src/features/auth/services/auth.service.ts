@@ -638,6 +638,11 @@ export class AuthService {
         throw new AppError('招待元の組織が無効化されています', 403, 'AUTH007');
       }
 
+      // 既にパスワードが設定されている場合（管理者が作成済み）
+      if (inviteToken.password) {
+        throw new AppError('このアカウントは既に有効化されています', 400, 'ALREADY_ACTIVATED');
+      }
+
       // ユーザーを作成
       const userData: any = {
         email: inviteToken.email,

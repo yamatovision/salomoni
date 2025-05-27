@@ -254,4 +254,11 @@ export class OrganizationRepository {
       throw error;
     }
   }
+
+  /**
+   * アクティブな組織数を取得（SuperAdmin用エイリアス）
+   */
+  async countActiveOrganizations(): Promise<number> {
+    return this.countActive();
+  }
 }

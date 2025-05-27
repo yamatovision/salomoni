@@ -130,6 +130,92 @@ export class SubscriptionRepository {
       throw new Error(`サブスクリプション削除に失敗しました: ${errorMessage}`);
     }
   }
+
+  // SuperAdmin用メソッド
+  async getSubscriptionStats(): Promise<{
+    total: number;
+    active: number;
+    trialing: number;
+    cancelled: number;
+    expired: number;
+  }> {
+    try {
+      const results = await Subscription.aggregate([
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+
+      const stats = {
+        total: 0,
+        active: 0,
+        trialing: 0,
+        cancelled: 0,
+        expired: 0
+      };
+
+      results.forEach(result => {
+        stats.total += result.count;
+        switch (result._id) {
+          case 'active':
+            stats.active = result.count;
+            break;
+          case 'trialing':
+            stats.trialing = result.count;
+            break;
+          case 'cancelled':
+            stats.cancelled = result.count;
+            break;
+          case 'expired':
+            stats.expired = result.count;
+            break;
+        }
+      });
+
+      return stats;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to get subscription stats', { error: errorMessage });
+      throw new Error(`サブスクリプション統計取得に失敗しました: ${errorMessage}`);
+    }
+  }
+
+  async getMonthlyRecurringRevenue(): Promise<number> {
+    try {
+      // プランごとの料金マッピング（仮の値）
+      const planPricing: Record<string, number> = {
+        free: 0,
+        standard: 3000,
+        professional: 5000,
+        enterprise: 10000
+      };
+
+      const result = await Subscription.aggregate([
+        { $match: { status: 'active' } },
+        {
+          $group: {
+            _id: '$plan',
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+
+      let mrr = 0;
+      result.forEach(item => {
+        const price = planPricing[item._id] || 0;
+        mrr += price * item.count;
+      });
+
+      return mrr;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to get MRR', { error: errorMessage });
+      throw new Error(`月間経常収益取得に失敗しました: ${errorMessage}`);
+    }
+  }
 }
 
 export const subscriptionRepository = new SubscriptionRepository();

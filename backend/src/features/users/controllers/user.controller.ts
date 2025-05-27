@@ -222,6 +222,11 @@ export class UserController {
       const response: ApiResponse<typeof result> = {
         success: true,
         data: result,
+        meta: {
+          message: result.user 
+            ? `${result.user.name}さんを登録しました。ログイン情報をお伝えください。`
+            : '招待メールを送信しました。'
+        }
       };
 
       res.status(201).json(response);

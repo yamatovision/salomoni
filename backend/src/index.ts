@@ -21,6 +21,7 @@ import { chatRoutes } from './features/chat/routes/chat.routes';
 import { appointmentRoutes, adminAppointmentRoutes } from './features/appointments/routes/appointment.routes';
 import { fortuneRoutes } from './features/fortune/routes/fortune.routes';
 import billingRoutes from './features/billing/routes/billing.routes';
+import superAdminBillingRoutes from './features/billing/routes/superadmin-billing.routes';
 import importRoutes, { calendarRouter } from './features/import/routes/import.routes';
 import dashboardRoutes from './features/dashboard/routes/dashboard.routes';
 import supportRoutes, { superAdminSupportRouter } from './features/support/routes/support.routes';
@@ -76,6 +77,7 @@ app.use('/api/admin/support', supportRoutes); // サポート管理ルート
 app.use('/api/superadmin/support', superAdminSupportRouter); // SuperAdmin用サポート管理ルート
 app.use('/api/superadmin/plans', planRoutes); // SuperAdmin用プラン管理ルート
 app.use('/api/superadmin/revenue', billingRoutes); // SuperAdmin用収益シミュレーションルート
+app.use('/api/superadmin/billing', superAdminBillingRoutes); // SuperAdmin用請求管理ルート
 
 // エラーハンドリング
 app.use(errorHandler);

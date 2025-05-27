@@ -38,6 +38,9 @@ export const validateInviteUser: ValidationChain[] = [
     .optional()
     .isLength({ max: 50 }).withMessage('役職は50文字以内で入力してください')
     .trim(),
+  body('password')
+    .optional()
+    .isLength({ min: 8 }).withMessage('パスワードは8文字以上で入力してください'),
 ];
 
 // ユーザー更新のバリデーション
@@ -77,6 +80,12 @@ export const validateUpdateUser: ValidationChain[] = [
     .optional()
     .isLength({ max: 50 }).withMessage('役職は50文字以内で入力してください')
     .trim(),
+  body('password')
+    .optional()
+    .isLength({ min: 8 }).withMessage('パスワードは8文字以上で入力してください'),
+  body('role')
+    .optional()
+    .isIn(Object.values(UserRole)).withMessage('有効なロールを指定してください'),
   body('preferences.notifications.email')
     .optional()
     .isBoolean().withMessage('メール通知設定は真偽値で指定してください'),

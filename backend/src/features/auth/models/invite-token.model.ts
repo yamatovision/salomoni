@@ -15,6 +15,7 @@ export interface InviteTokenDocument extends Document {
   birthDate?: Date;
   phone?: string;
   position?: string;
+  password?: string; // 管理者が設定した初期パスワード
   markAsUsed(): Promise<InviteTokenDocument>;
 }
 
@@ -77,6 +78,9 @@ const inviteTokenSchema = new Schema<InviteTokenDocument>({
   position: {
     type: String,
     trim: true,
+  },
+  password: {
+    type: String,
   },
 }, {
   timestamps: true,

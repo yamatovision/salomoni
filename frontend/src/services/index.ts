@@ -13,6 +13,7 @@ import { BillingService } from './api/billing';
 import { importService } from './api/import';
 import { dashboardService } from './api/dashboard';
 import * as supportAPI from './api/support';
+import { superAdminBillingService } from './api/superadmin-billing';
 
 // サービスのエクスポート - 実APIのみ使用
 export const authService = new AuthService();
@@ -33,6 +34,9 @@ export { importService };
 
 // ダッシュボードサービス
 export { dashboardService };
+
+// SuperAdminサービス
+export { superAdminBillingService };
 
 // モック使用状態のエクスポート（後方互換性のため常にfalse）
 export const isMockMode = false;

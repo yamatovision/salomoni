@@ -205,6 +205,114 @@ export class InvoiceRepository {
       throw new Error(`請求書削除に失敗しました: ${errorMessage}`);
     }
   }
+
+  // SuperAdmin用メソッド
+  async findAllWithPagination(
+    filter: FilterQuery<IInvoice> = {},
+    page: number = 1,
+    limit: number = 20,
+    sortBy: string = 'createdAt',
+    sortOrder: 'asc' | 'desc' = 'desc'
+  ): Promise<{ invoices: IInvoice[]; total: number; pages: number }> {
+    try {
+      const skip = (page - 1) * limit;
+      const sortOptions: any = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
+
+      const [invoices, total] = await Promise.all([
+        Invoice.find(filter)
+          .populate('organizationId')
+          .populate('subscriptionId')
+          .populate('paymentMethodId')
+          .sort(sortOptions)
+          .skip(skip)
+          .limit(limit),
+        Invoice.countDocuments(filter)
+      ]);
+
+      return {
+        invoices,
+        total,
+        pages: Math.ceil(total / limit)
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to find invoices with pagination', { error: errorMessage, filter, page, limit });
+      throw new Error(`請求書一覧取得に失敗しました: ${errorMessage}`);
+    }
+  }
+
+  async getTotalAmountByPeriod(
+    startDate: Date,
+    endDate: Date,
+    organizationId?: ID
+  ): Promise<{ total: number; paid: number; pending: number; failed: number }> {
+    try {
+      const matchConditions: any = {
+        issueDate: { $gte: startDate, $lte: endDate }
+      };
+      if (organizationId) {
+        matchConditions.organizationId = organizationId;
+      }
+
+      const results = await Invoice.aggregate([
+        { $match: matchConditions },
+        {
+          $group: {
+            _id: '$status',
+            amount: { $sum: '$total' },
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+
+      const summary = {
+        total: 0,
+        paid: 0,
+        pending: 0,
+        failed: 0
+      };
+
+      results.forEach(result => {
+        summary.total += result.amount;
+        if (result._id === 'paid') {
+          summary.paid = result.amount;
+        } else if (result._id === 'sent' || result._id === 'draft') {
+          summary.pending += result.amount;
+        } else if (result._id === 'failed') {
+          summary.failed = result.amount;
+        }
+      });
+
+      return summary;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to get total amount by period', { error: errorMessage, startDate, endDate });
+      throw new Error(`期間別請求金額集計に失敗しました: ${errorMessage}`);
+    }
+  }
+
+  async getInvoicesByDateRange(
+    startDate: Date,
+    endDate: Date,
+    filter: FilterQuery<IInvoice> = {}
+  ): Promise<IInvoice[]> {
+    try {
+      const query = {
+        ...filter,
+        issueDate: { $gte: startDate, $lte: endDate }
+      };
+
+      return await Invoice.find(query)
+        .populate('organizationId')
+        .populate('subscriptionId')
+        .populate('paymentMethodId')
+        .sort({ issueDate: -1 });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to get invoices by date range', { error: errorMessage, startDate, endDate });
+      throw new Error(`期間別請求書取得に失敗しました: ${errorMessage}`);
+    }
+  }
 }
 
 export const invoiceRepository = new InvoiceRepository();

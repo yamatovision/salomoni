@@ -250,6 +250,70 @@ export class PaymentHistoryRepository {
       throw new Error(`支払い履歴削除に失敗しました: ${errorMessage}`);
     }
   }
+
+  // SuperAdmin用メソッド
+  async getPaymentStatsByPeriod(
+    startDate: Date,
+    endDate: Date,
+    organizationId?: ID
+  ): Promise<{
+    total: number;
+    succeeded: number;
+    failed: number;
+    pending: number;
+    totalAmount: number;
+  }> {
+    try {
+      const matchConditions: any = {
+        createdAt: { $gte: startDate, $lte: endDate }
+      };
+      if (organizationId) {
+        matchConditions.organizationId = organizationId;
+      }
+
+      const results = await PaymentHistory.aggregate([
+        { $match: matchConditions },
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 },
+            amount: { $sum: '$amount' }
+          }
+        }
+      ]);
+
+      const stats = {
+        total: 0,
+        succeeded: 0,
+        failed: 0,
+        pending: 0,
+        totalAmount: 0
+      };
+
+      results.forEach(result => {
+        stats.total += result.count;
+        stats.totalAmount += result.amount;
+        
+        switch (result._id) {
+          case 'success':
+            stats.succeeded = result.count;
+            break;
+          case 'failed':
+            stats.failed = result.count;
+            break;
+          case 'pending':
+            stats.pending = result.count;
+            break;
+        }
+      });
+
+      return stats;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to get payment stats by period', { error: errorMessage, startDate, endDate });
+      throw new Error(`期間別支払い統計取得に失敗しました: ${errorMessage}`);
+    }
+  }
 }
 
 export const paymentHistoryRepository = new PaymentHistoryRepository();

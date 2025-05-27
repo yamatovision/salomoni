@@ -6,7 +6,8 @@ import {
   PaginationInfo,
   UserRole,
   UserStatus,
-  StaffInviteRequest
+  StaffInviteRequest,
+  AuthMethod
 } from '../../../types';
 import { UserRepository } from '../repositories/user.repository';
 import { OrganizationRepository } from '../../organizations/repositories/organization.repository';
@@ -114,9 +115,23 @@ export class UserService {
       }
     }
 
-    const updatedUser = await this.userRepository.update(id, data);
+    // パスワードを除外したデータで更新
+    const { password, ...updateData } = data;
+    
+    const updatedUser = await this.userRepository.update(id, updateData);
     if (!updatedUser) {
       throw new AppError('ユーザーの更新に失敗しました', 500, 'UPDATE_FAILED');
+    }
+
+    // パスワードが指定されている場合は別途更新
+    if (password) {
+      const userDoc = await UserModel.findById(id);
+      if (!userDoc) {
+        throw new AppError('ユーザーが見つかりません', 404, 'USER_NOT_FOUND');
+      }
+      userDoc.password = password;
+      await userDoc.save();
+      logger.info('Password updated by admin', { userId: id, updatedBy: currentUserId });
     }
 
     logger.info('User updated', { userId: id, updatedBy: currentUserId });
@@ -130,7 +145,7 @@ export class UserService {
     request: StaffInviteRequest & { employeeNumber?: string },
     organizationId: string,
     invitedBy: string
-  ): Promise<{ inviteToken: string; expiresAt: Date }> {
+  ): Promise<{ inviteToken?: string; expiresAt?: Date; user?: UserProfile }> {
     // メールアドレスの重複チェック
     const existingUser = await this.userRepository.findByEmail(request.email);
     if (existingUser) {
@@ -169,6 +184,7 @@ export class UserService {
       birthDate: request.birthDate,
       phone: request.phone,
       position: request.position,
+      password: request.password,
     });
 
     // TODO: 招待メールを送信
@@ -178,6 +194,50 @@ export class UserService {
     //   inviteToken,
     //   expiresAt,
     // });
+
+    // パスワードが設定されている場合は、直接ユーザーを作成
+    if (request.password) {
+      const userData: any = {
+        email: request.email,
+        name: request.name || request.email.split('@')[0],
+        password: request.password,
+        role: request.role,
+        organizationId: organizationId,
+        status: UserStatus.ACTIVE,
+        authMethods: [AuthMethod.EMAIL],
+      };
+
+      // オプショナルフィールドの設定
+      if (request.birthDate) {
+        userData.birthDate = new Date(request.birthDate);
+      }
+      if (request.phone) {
+        userData.phone = request.phone;
+      }
+      if (request.position) {
+        userData.position = request.position;
+      }
+      if (request.employeeNumber) {
+        userData.employeeNumber = request.employeeNumber;
+      }
+
+      const user = await this.userRepository.create(userData);
+
+      // 招待トークンを使用済みにマーク
+      const inviteTokenDoc = await InviteTokenModel.findOne({ token: inviteToken });
+      if (inviteTokenDoc) {
+        await inviteTokenDoc.markAsUsed();
+      }
+
+      logger.info('User created directly with password', {
+        userId: user.id,
+        email: user.email,
+        organizationId,
+        invitedBy,
+      });
+
+      return { user };
+    }
 
     logger.info('User invited', {
       email: request.email,

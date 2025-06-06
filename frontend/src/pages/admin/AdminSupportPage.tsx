@@ -675,17 +675,17 @@ const TicketList: React.FC<TicketListProps> = ({
                 </Box>
               }
               secondary={
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-                  <Box sx={{ display: 'flex', gap: 1.5, fontSize: '0.75rem', color: 'text.secondary' }}>
+                <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                  <span style={{ display: 'flex', gap: '12px', fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
                     <span>作成日: {new Date(ticket.createdAt).toLocaleDateString('ja-JP')}</span>
                     <span>最終更新: {new Date(ticket.updatedAt).toLocaleDateString('ja-JP')}</span>
-                  </Box>
+                  </span>
                   <Chip
                     label={getStatusLabel(ticket.status)}
                     color={getStatusColor(ticket.status)}
                     size="small"
                   />
-                </Box>
+                </span>
               }
             />
             </ListItemButton>

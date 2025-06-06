@@ -92,9 +92,12 @@ export class UserController {
         } : null
       });
 
-      const response: ApiResponse<typeof result> = {
+      const response: ApiResponse<any> = {
         success: true,
-        data: result,
+        data: {
+          data: result.users,
+          pagination: result.pagination,
+        },
       };
 
       res.json(response);

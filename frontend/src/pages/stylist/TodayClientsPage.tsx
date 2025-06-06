@@ -28,8 +28,7 @@ import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import type { Client } from '../../types';
-import { clientService } from '../../services';
-import { ROUTES } from '../../routes/routes';
+import { clientService, aiCharacterService } from '../../services';
 
 // ページID: M-004
 
@@ -122,8 +121,13 @@ const TodayClientsPage: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
+        
+        // 今日の日付を取得
+        const today = new Date().toISOString().split('T')[0];
+        
         const todayClients = await clientService.getDailyClients(
-          user?.role === 'stylist' ? user.id : undefined
+          user?.role === 'user' ? user.id : undefined, // スタイリストの場合は自分のID
+          today
         );
         setClients(todayClients);
       } catch (error) {
@@ -134,7 +138,9 @@ const TodayClientsPage: React.FC = () => {
       }
     };
 
-    loadClientData();
+    if (user) {
+      loadClientData();
+    }
   }, [user]);
 
   const handleCardToggle = (clientId: string) => {
@@ -149,8 +155,23 @@ const TodayClientsPage: React.FC = () => {
     });
   };
 
-  const handleChatClick = (clientId: string) => {
-    navigate(ROUTES.stylist.chat.replace(':id', clientId));
+  const handleChatClick = async (clientId: string) => {
+    try {
+      // クライアントのAIキャラクター設定状況を確認
+      const setupStatus = await aiCharacterService.getClientSetupStatus(clientId);
+      
+      if (setupStatus.success && setupStatus.data?.hasAICharacter) {
+        // 設定済みの場合：チャット画面へ遷移
+        navigate('/chat', { state: { clientId } });
+      } else {
+        // 未設定の場合：AIキャラクター設定画面へ遷移
+        navigate(`/ai-character-setup/client/${clientId}`);
+      }
+    } catch (error) {
+      console.error('AIキャラクター設定状況の確認に失敗しました:', error);
+      // エラーの場合はとりあえずチャット画面へ
+      navigate('/chat', { state: { clientId } });
+    }
   };
 
   const getInitials = (name: string) => {

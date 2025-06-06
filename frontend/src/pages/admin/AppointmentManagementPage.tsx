@@ -24,6 +24,7 @@ import {
   Stack,
   Paper,
   Grid,
+  Autocomplete,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -106,6 +107,8 @@ const AppointmentManagementPage: React.FC = () => {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [newClientMode, setNewClientMode] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedStylist, setSelectedStylist] = useState<string>('');
   
   // タイムスロット（10:00-20:00）
   const timeSlots = Array.from({ length: 11 }, (_, i) => {
@@ -130,25 +133,8 @@ const AppointmentManagementPage: React.FC = () => {
   // スタイリスト一覧取得
   const fetchStylists = useCallback(async () => {
     try {
-      const response = await userService.getUsers();
-      
-      // レスポンス形式に応じて処理
-      let usersData = [];
-      if (response && 'users' in response && Array.isArray(response.users)) {
-        // ページネーション付きレスポンス
-        usersData = response.users;
-      } else if (Array.isArray(response)) {
-        // 直接配列の場合
-        usersData = response;
-      } else {
-        console.error('予期しないユーザーレスポンス形式:', response);
-        setStylists([]);
-        return;
-      }
-      
-      // スタイリストのみフィルタリング
-      const stylists = usersData.filter(user => user.role === UserRole.STYLIST);
-      setStylists(stylists);
+      const response = await userService.getUsers({ role: UserRole.USER });
+      setStylists(response.users);
     } catch (err) {
       console.error('Failed to fetch stylists:', err);
       setStylists([]);
@@ -191,6 +177,9 @@ const AppointmentManagementPage: React.FC = () => {
 
   const handleOpenAddModal = (timeSlot: string) => {
     setSelectedTimeSlot(timeSlot);
+    setNewClientMode(false); // デフォルトは既存クライアント選択モード
+    setSelectedClient(null);
+    setSelectedStylist(''); // スタイリスト選択もリセット
     setAddModalOpen(true);
   };
 
@@ -207,11 +196,77 @@ const AppointmentManagementPage: React.FC = () => {
     }
   };
 
+  // 予約登録処理
+  const handleCreateAppointment = async () => {
+    try {
+      // バリデーション
+      if (!newClientMode && !selectedClient) {
+        alert('クライアントを選択してください');
+        return;
+      }
+      
+      if (!selectedStylist) {
+        alert('担当スタイリストを選択してください');
+        return;
+      }
+
+      if (!selectedTimeSlot) {
+        alert('時間枠を選択してください');
+        return;
+      }
+
+      // 予約データを作成
+      const appointmentData = {
+        clientId: newClientMode ? 'new' : selectedClient!.id, // TODO: 新規クライアント作成処理
+        stylistId: selectedStylist,
+        // JST時間をUTC時間に正しく変換（JST - 9時間 = UTC）
+        scheduledAt: new Date(`${selectedDate.toISOString().split('T')[0]}T${selectedTimeSlot}:00.000+09:00`).toISOString(),
+        duration: 60, // デフォルト60分
+        services: ['カット'], // TODO: サービス選択の実装
+        note: ''
+      };
+
+      console.log('Creating appointment:', appointmentData);
+
+      // 実際のAPI呼び出し
+      const createdAppointment = await appointmentService.createAppointment(appointmentData);
+      console.log('Created appointment:', createdAppointment);
+      
+      alert('予約を登録しました');
+      
+      // モーダルを閉じて状態をリセット
+      setAddModalOpen(false);
+      setNewClientMode(false);
+      setSelectedClient(null);
+      setSelectedStylist('');
+      
+      // 予約リストを再取得
+      fetchAppointments();
+      
+    } catch (err: any) {
+      console.error('Failed to create appointment:', err);
+      
+      // エラーの詳細を表示
+      let errorMessage = '予約登録に失敗しました';
+      if (err.response?.data?.error) {
+        errorMessage += `: ${err.response.data.error}`;
+      } else if (err.message) {
+        errorMessage += `: ${err.message}`;
+      }
+      
+      alert(errorMessage);
+    }
+  };
+
   // 時間帯ごとの予約を取得
   const getAppointmentsByTimeSlot = (timeSlot: string): Appointment[] => {
     const hour = parseInt(timeSlot.split(':')[0]);
+    
     return appointments.filter(apt => {
-      const aptHour = new Date(apt.scheduledAt).getHours();
+      // UTC時間を日本時間（JST）に変換
+      const aptDate = new Date(apt.scheduledAt);
+      // JavaScriptのgetHours()は自動的にローカルタイムゾーン（JST）に変換される
+      const aptHour = aptDate.getHours();
       return aptHour === hour;
     });
   };
@@ -715,14 +770,19 @@ const AppointmentManagementPage: React.FC = () => {
                   control={
                     <Switch
                       checked={newClientMode}
-                      onChange={(e) => setNewClientMode(e.target.checked)}
+                      onChange={(e) => {
+                        setNewClientMode(e.target.checked);
+                        if (e.target.checked) {
+                          setSelectedClient(null); // 新規モードに切り替え時は選択クライアントをリセット
+                        }
+                      }}
                     />
                   }
                   label="新規クライアント"
                 />
               </Box>
               
-              {newClientMode && (
+              {newClientMode ? (
                 <Grid container spacing={2}>
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField fullWidth label="名前" />
@@ -763,61 +823,164 @@ const AppointmentManagementPage: React.FC = () => {
                     <TextField fullWidth multiline rows={2} label="メモ" />
                   </Grid>
                 </Grid>
+              ) : (
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12 }}>
+                    <Autocomplete
+                      options={clients}
+                      getOptionLabel={(option) => option.name}
+                      value={selectedClient}
+                      onChange={(_, newValue) => setSelectedClient(newValue)}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="既存クライアントを選択"
+                          placeholder="クライアント名で検索..."
+                        />
+                      )}
+                      renderOption={(props, option) => {
+                        const { key, ...otherProps } = props;
+                        return (
+                          <Box component="li" key={key} {...otherProps}>
+                            <Avatar
+                              sx={{
+                                bgcolor: option.gender === 'female' ? '#f48fb1' : '#90caf9',
+                                width: 32,
+                                height: 32,
+                                mr: 2,
+                              }}
+                            >
+                              {option.name.charAt(0)}
+                            </Avatar>
+                            <Box>
+                              <Typography variant="body2">{option.name}</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                              {option.phoneNumber} | {option.gender === 'male' ? '男性' : option.gender === 'female' ? '女性' : 'その他'}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        );
+                      }}
+                      filterOptions={(options, { inputValue }) =>
+                        options.filter((option) =>
+                          option.name.toLowerCase().includes(inputValue.toLowerCase()) ||
+                          (option.phoneNumber && option.phoneNumber.includes(inputValue))
+                        )
+                      }
+                    />
+                  </Grid>
+                  {selectedClient && (
+                    <Grid size={{ xs: 12 }}>
+                      <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+                        <Typography variant="subtitle2" gutterBottom>
+                          選択中のクライアント情報
+                        </Typography>
+                        <Stack direction="row" spacing={2} alignItems="center">
+                          <Avatar
+                            sx={{
+                              bgcolor: selectedClient.gender === 'female' ? '#f48fb1' : '#90caf9',
+                              width: 40,
+                              height: 40,
+                            }}
+                          >
+                            {selectedClient.name.charAt(0)}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="body2" fontWeight={500}>
+                              {selectedClient.name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {selectedClient.phoneNumber} | {selectedClient.gender === 'male' ? '男性' : selectedClient.gender === 'female' ? '女性' : 'その他'}
+                            </Typography>
+                            {selectedClient.email && (
+                              <Typography variant="caption" color="text.secondary" display="block">
+                                {selectedClient.email}
+                              </Typography>
+                            )}
+                          </Box>
+                        </Stack>
+                      </Paper>
+                    </Grid>
+                  )}
+                </Grid>
               )}
             </Box>
 
             {/* 担当スタイリスト */}
             <Box>
               <Typography variant="subtitle2" gutterBottom>
-                担当スタイリスト
+                担当スタイリスト ({stylists.length}名)
               </Typography>
-              <RadioGroup>
-                <Grid container spacing={2}>
-                  {stylists.map((stylist) => (
-                    <Grid size={{ xs: 12, sm: 6 }} key={stylist.id}>
-                      <Paper
-                        sx={{
-                          p: 2,
-                          cursor: 'pointer',
-                          border: '1px solid',
-                          borderColor: 'divider',
-                          '&:hover': { bgcolor: 'grey.50' },
-                        }}
-                      >
-                        <FormControlLabel
-                          value={stylist.id}
-                          control={<Radio />}
-                          label={
-                            <Box display="flex" alignItems="center" gap={2}>
-                              <Avatar
-                                sx={{
-                                  bgcolor: stylist.gender === 'female' ? '#f48fb1' : '#90caf9',
-                                  width: 36,
-                                  height: 36,
-                                }}
-                              >
-                                {getInitials(stylist.name)}
-                              </Avatar>
-                              <Box>
-                                <Typography variant="body2">{stylist.name}</Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {stylist.gender} | {stylist.department}
-                                </Typography>
+              {stylists.length > 0 ? (
+                <RadioGroup
+                  value={selectedStylist}
+                  onChange={(e) => setSelectedStylist(e.target.value)}
+                >
+                  <Grid container spacing={2}>
+                    {stylists.map((stylist) => (
+                      <Grid size={{ xs: 12, sm: 6 }} key={stylist.id}>
+                        <Paper
+                          sx={{
+                            p: 2,
+                            cursor: 'pointer',
+                            border: '1px solid',
+                            borderColor: selectedStylist === stylist.id ? 'primary.main' : 'divider',
+                            bgcolor: selectedStylist === stylist.id ? 'primary.light' : 'transparent',
+                            '&:hover': { bgcolor: selectedStylist === stylist.id ? 'primary.light' : 'grey.50' },
+                          }}
+                          onClick={() => setSelectedStylist(stylist.id)}
+                        >
+                          <FormControlLabel
+                            value={stylist.id}
+                            control={<Radio />}
+                            label={
+                              <Box display="flex" alignItems="center" gap={2}>
+                                <Avatar
+                                  sx={{
+                                    bgcolor: stylist.gender === 'female' ? '#f48fb1' : '#90caf9',
+                                    width: 36,
+                                    height: 36,
+                                  }}
+                                >
+                                  {getInitials(stylist.name)}
+                                </Avatar>
+                                <Box>
+                                  <Typography variant="body2">{stylist.name}</Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {stylist.gender} | {stylist.department}
+                                  </Typography>
+                                </Box>
                               </Box>
-                            </Box>
-                          }
-                        />
-                      </Paper>
-                    </Grid>
-                  ))}
-                </Grid>
-              </RadioGroup>
+                            }
+                          />
+                        </Paper>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </RadioGroup>
+              ) : (
+                <Paper sx={{ p: 3, textAlign: 'center', bgcolor: 'grey.50' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    スタイリストが登録されていません
+                  </Typography>
+                </Paper>
+              )}
             </Box>
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setAddModalOpen(false)}>キャンセル</Button>
-          <Button variant="contained" startIcon={<CheckCircleIcon />}>
+          <Button onClick={() => {
+            setAddModalOpen(false);
+            setNewClientMode(false);
+            setSelectedClient(null);
+            setSelectedStylist('');
+          }}>キャンセル</Button>
+          <Button 
+            variant="contained" 
+            startIcon={<CheckCircleIcon />}
+            disabled={(!newClientMode && !selectedClient) || !selectedStylist} // クライアントとスタイリストの両方が必要
+            onClick={handleCreateAppointment}
+          >
             予約を登録
           </Button>
         </DialogActions>

@@ -7,22 +7,39 @@ import {
   FourPillarsAnalyzeRequest,
   CompatibilityCalculateRequest,
   JapanesePrefecture,
-  JapanesePrefecturesResponse
+  JapanesePrefecturesResponse,
+  ID
 } from '../../../types';
 import mongoose from 'mongoose';
 import { UserModel } from '../../users/models/user.model';
+import { FourPillarsDataRepository } from '../repositories/four-pillars-data.repository';
+import { JAPAN_PREFECTURES_DATA } from './prefecture-data';
 
 export class SajuService {
   private sajuEngine: SajuEngine;
+  private fourPillarsDataRepository: FourPillarsDataRepository;
 
   constructor() {
     this.sajuEngine = new SajuEngine();
+    this.fourPillarsDataRepository = new FourPillarsDataRepository();
   }
 
   /**
-   * 四柱推命計算を実行
+   * IDで四柱推命データを取得
    */
-  async calculateFourPillars(data: FourPillarsCalculateRequest): Promise<FourPillarsData> {
+  async getFourPillarsData(fourPillarsDataId: string): Promise<FourPillarsData | null> {
+    try {
+      return await this.fourPillarsDataRepository.findById(fourPillarsDataId);
+    } catch (error) {
+      logger.error('[SajuService] 四柱推命データ取得エラー', { error, fourPillarsDataId });
+      return null;
+    }
+  }
+
+  /**
+   * 四柱推命計算を実行（保存機能付き）
+   */
+  async calculateFourPillars(data: FourPillarsCalculateRequest, userId?: ID, clientId?: ID): Promise<FourPillarsData> {
     try {
       logger.info('[SajuService] 四柱推命計算開始', { 
         birthDate: data.birthDate,
@@ -40,10 +57,21 @@ export class SajuService {
         data.location
       );
 
+      // デバッグ：計算結果を確認
+      logger.info('[SajuService] SajuEngine計算結果', {
+        fourPillars: {
+          year: { stem: result.fourPillars.yearPillar.stem, branch: result.fourPillars.yearPillar.branch },
+          month: { stem: result.fourPillars.monthPillar.stem, branch: result.fourPillars.monthPillar.branch },
+          day: { stem: result.fourPillars.dayPillar.stem, branch: result.fourPillars.dayPillar.branch },
+          hour: { stem: result.fourPillars.hourPillar.stem, branch: result.fourPillars.hourPillar.branch },
+        },
+        elementProfile: result.elementProfile
+      });
+
       // APIレスポンス形式に変換
-      const fourPillarsData: FourPillarsData = {
-        _id: new mongoose.Types.ObjectId().toString(), // 一時的なIDを生成
-        userId: '',
+      const fourPillarsDataInput = {
+        userId,
+        clientId,
         birthDate: data.birthDate,
         birthTime: data.birthTime,
         location: data.location,
@@ -100,16 +128,33 @@ export class SajuService {
 
         // 格局と用神
         kakukyoku: result.kakukyoku ? result.kakukyoku.type : undefined,
-        yojin: result.yojin ? [result.yojin.tenGod] : undefined,
-
-        calculatedAt: new Date()
+        yojin: result.yojin ? [result.yojin.tenGod] : undefined
       };
 
+      // データベースに保存（userIdまたはclientIdが指定されている場合のみ）
+      let savedData: FourPillarsData;
+      if (userId || clientId) {
+        savedData = await this.fourPillarsDataRepository.create(fourPillarsDataInput);
+        logger.info('[SajuService] 四柱推命データを保存しました', { 
+          id: savedData._id,
+          userId,
+          clientId
+        });
+      } else {
+        // 保存しない場合は一時的なIDを生成してレスポンス形式に変換
+        savedData = {
+          _id: new mongoose.Types.ObjectId().toString(),
+          calculatedAt: new Date(),
+          ...fourPillarsDataInput
+        } as FourPillarsData;
+      }
+
       logger.info('[SajuService] 四柱推命計算完了', { 
-        mainElement: result.elementProfile.mainElement 
+        mainElement: result.elementProfile.mainElement,
+        saved: !!(userId || clientId)
       });
 
-      return fourPillarsData;
+      return savedData;
 
     } catch (error) {
       logger.error('[SajuService] 四柱推命計算エラー', error);
@@ -144,6 +189,77 @@ export class SajuService {
     } catch (error) {
       logger.error('[SajuService] 追加分析エラー', error);
       throw new Error('追加分析に失敗しました');
+    }
+  }
+
+  /**
+   * 2人の相性を計算（シンプル版）
+   */
+  async calculateTwoPersonCompatibility(userId1: string, userId2: string): Promise<{ score: number; details: any }> {
+    try {
+      logger.info('[SajuService] 2人の相性計算開始', { userId1, userId2 });
+
+      // ユーザー情報を取得
+      const UserModel = require('../../users/models/user.model').UserModel;
+      const ClientModel = require('../../clients/models/client.model').ClientModel;
+      
+      // ユーザー1の情報を取得（クライアントまたはユーザー）
+      let user1Data: any;
+      let user1 = await UserModel.findById(userId1);
+      if (!user1) {
+        const client1 = await ClientModel.findById(userId1);
+        if (!client1) {
+          throw new Error(`User/Client ${userId1} not found`);
+        }
+        if (!client1.birthDate) {
+          throw new Error(`Client ${userId1} has no birth date`);
+        }
+        user1Data = {
+          userId: client1._id.toString(),
+          birthDate: client1.birthDate.toISOString().split('T')[0],
+          birthTime: client1.birthTime || '12:00',
+          location: client1.birthLocation || { name: '東京', longitude: 139.6917, latitude: 35.6895 }
+        };
+      } else {
+        if (!user1.birthDate) {
+          throw new Error(`User ${userId1} has no birth date`);
+        }
+        user1Data = {
+          userId: user1._id.toString(),
+          birthDate: user1.birthDate.toISOString().split('T')[0],
+          birthTime: user1.birthTime || '12:00',
+          location: user1.birthLocation || { name: '東京', longitude: 139.6917, latitude: 35.6895 }
+        };
+      }
+
+      // ユーザー2の情報を取得
+      const user2 = await UserModel.findById(userId2);
+      if (!user2) {
+        throw new Error(`User ${userId2} not found`);
+      }
+      if (!user2.birthDate) {
+        throw new Error(`User ${userId2} has no birth date`);
+      }
+      const user2Data = {
+        userId: user2._id.toString(),
+        birthDate: user2.birthDate.toISOString().split('T')[0],
+        birthTime: user2.birthTime || '12:00',
+        location: user2.birthLocation || { name: '東京', longitude: 139.6917, latitude: 35.6895 }
+      };
+
+      // 相性計算を実行
+      const compatibilityResult = await this.calculateCompatibility({
+        users: [user1Data, user2Data]
+      });
+
+      // calculateCompatibilityメソッドの戻り値から直接データを取得
+      return {
+        score: compatibilityResult.overallScore,
+        details: compatibilityResult.details
+      };
+    } catch (error) {
+      logger.error('[SajuService] 2人の相性計算エラー', { error, userId1, userId2 });
+      throw error;
     }
   }
 
@@ -294,6 +410,12 @@ export class SajuService {
       '庚': '金', '辛': '金',
       '壬': '水', '癸': '水'
     };
+    
+    // デバッグログ
+    if (!stemElements[stem]) {
+      logger.warn('[SajuService] 認識できない天干', { stem, available: Object.keys(stemElements) });
+    }
+    
     return stemElements[stem] || '木';
   }
 
@@ -822,7 +944,51 @@ export class SajuService {
   }
   
   /**
-   * ユーザーの四柱推命プロフィール取得
+   * 保存済み四柱推命データをユーザーIDで取得
+   */
+  async getSavedFourPillarsByUserId(userId: ID): Promise<FourPillarsData | null> {
+    try {
+      logger.info('[SajuService] 保存済み四柱推命データ取得開始', { userId });
+      
+      const savedData = await this.fourPillarsDataRepository.findLatestByUserId(userId);
+      
+      if (savedData) {
+        logger.info('[SajuService] 保存済み四柱推命データ取得完了', { userId, dataId: savedData._id });
+      } else {
+        logger.info('[SajuService] 保存済み四柱推命データが見つかりません', { userId });
+      }
+      
+      return savedData;
+    } catch (error) {
+      logger.error('[SajuService] 保存済み四柱推命データ取得エラー', { error, userId });
+      throw new Error('保存済み四柱推命データの取得に失敗しました');
+    }
+  }
+
+  /**
+   * 保存済み四柱推命データをクライアントIDで取得
+   */
+  async getSavedFourPillarsByClientId(clientId: ID): Promise<FourPillarsData | null> {
+    try {
+      logger.info('[SajuService] クライアントの保存済み四柱推命データ取得開始', { clientId });
+      
+      const savedData = await this.fourPillarsDataRepository.findLatestByClientId(clientId);
+      
+      if (savedData) {
+        logger.info('[SajuService] クライアントの保存済み四柱推命データ取得完了', { clientId, dataId: savedData._id });
+      } else {
+        logger.info('[SajuService] クライアントの保存済み四柱推命データが見つかりません', { clientId });
+      }
+      
+      return savedData;
+    } catch (error) {
+      logger.error('[SajuService] クライアントの保存済み四柱推命データ取得エラー', { error, clientId });
+      throw new Error('クライアントの保存済み四柱推命データの取得に失敗しました');
+    }
+  }
+
+  /**
+   * ユーザーの四柱推命プロフィール取得（保存データ優先、なければ計算）
    */
   async getUserFourPillars(userId: string): Promise<any> {
     try {
@@ -910,6 +1076,8 @@ export class SajuService {
           water: sajuResult.elementProfile.water
         },
         tenGods: sajuResult.tenGods,
+        kakukyoku: sajuResult.kakukyoku,
+        yojin: sajuResult.yojin,
         personality: {
           mainElement: sajuResult.elementProfile.mainElement,
           traits: this.generatePersonalityTraits(sajuResult),
@@ -1085,60 +1253,151 @@ export class SajuService {
   // }
 
   /**
+   * クライアントの四柱推命プロフィール取得（保存データ優先、なければ計算）
+   */
+  async getClientFourPillars(clientId: string): Promise<any> {
+    try {
+      logger.info('[SajuService] クライアント四柱推命プロフィール取得開始', { clientId });
+
+      // データベースからクライアント情報を取得
+      const { ClientModel } = await import('../../clients/models/client.model');
+      const client = await ClientModel.findById(clientId);
+      if (!client) {
+        throw new Error('クライアントが見つかりません');
+      }
+
+      // 生年月日が未登録の場合はエラー
+      if (!client.birthDate) {
+        throw new Error('生年月日が登録されていません');
+      }
+
+      // 保存済みの四柱推命データを確認
+      let fourPillarsData = await this.getSavedFourPillarsByClientId(clientId);
+
+      // 保存データがない場合は新規計算
+      if (!fourPillarsData) {
+        logger.info('[SajuService] 保存データがないため新規計算します', { clientId });
+        
+        const calculateRequest: FourPillarsCalculateRequest = {
+          birthDate: client.birthDate.toISOString().split('T')[0],
+          birthTime: client.birthTime || '00:00',
+          timezone: 'Asia/Tokyo',
+          location: client.birthLocation || {
+            name: '東京',
+            longitude: 139.6917,
+            latitude: 35.6895,
+          },
+        };
+
+        fourPillarsData = await this.calculateFourPillars(
+          calculateRequest,
+          undefined,
+          clientId
+        );
+      }
+
+      // 追加情報を生成
+      const sajuResult = this.convertToSajuResult(fourPillarsData);
+      
+      const profile = {
+        client: {
+          id: client.id,
+          name: client.name,
+          birthDate: client.birthDate,
+          birthTime: client.birthTime,
+          birthLocation: client.birthLocation,
+        },
+        fourPillars: {
+          yearPillar: fourPillarsData.yearPillar,
+          monthPillar: fourPillarsData.monthPillar,
+          dayPillar: fourPillarsData.dayPillar,
+          hourPillar: fourPillarsData.hourPillar,
+        },
+        elementBalance: fourPillarsData.elementBalance,
+        tenGods: fourPillarsData.tenGods,
+        kakukyoku: fourPillarsData.kakukyoku,
+        yojin: fourPillarsData.yojin,
+        personality: {
+          traits: this.generatePersonalityTraits(sajuResult),
+          strengths: this.generateStrengths(sajuResult),
+          weaknesses: this.generateWeaknesses(sajuResult)
+        },
+        calculatedAt: fourPillarsData.calculatedAt || new Date()
+      };
+
+      logger.info('[SajuService] クライアント四柱推命プロフィール取得完了', { clientId });
+      return profile;
+
+    } catch (error) {
+      logger.error('[SajuService] クライアント四柱推命プロフィール取得エラー', { error, clientId });
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('クライアントの四柱推命プロフィール取得に失敗しました');
+    }
+  }
+
+  /**
+   * FourPillarsDataをSajuResult形式に変換（getUserFourPillarsから抽出）
+   */
+  private convertToSajuResult(fourPillarsData: FourPillarsData): any {
+    return {
+      elementProfile: {
+        wood: fourPillarsData.elementBalance.wood,
+        fire: fourPillarsData.elementBalance.fire,
+        earth: fourPillarsData.elementBalance.earth,
+        metal: fourPillarsData.elementBalance.metal,
+        water: fourPillarsData.elementBalance.water,
+        mainElement: fourPillarsData.elementBalance.mainElement || this.determineMainElement(fourPillarsData.elementBalance),
+      },
+      fourPillars: {
+        yearPillar: {
+          stem: fourPillarsData.yearPillar.heavenlyStem,
+          branch: fourPillarsData.yearPillar.earthlyBranch,
+        },
+        monthPillar: {
+          stem: fourPillarsData.monthPillar.heavenlyStem,
+          branch: fourPillarsData.monthPillar.earthlyBranch,
+        },
+        dayPillar: {
+          stem: fourPillarsData.dayPillar.heavenlyStem,
+          branch: fourPillarsData.dayPillar.earthlyBranch,
+        },
+        hourPillar: {
+          stem: fourPillarsData.hourPillar.heavenlyStem,
+          branch: fourPillarsData.hourPillar.earthlyBranch,
+        },
+      },
+      tenGods: fourPillarsData.tenGods,
+      hiddenStems: fourPillarsData.hiddenStems,
+      twelveFortunes: fourPillarsData.twelveFortunes,
+      kakukyoku: fourPillarsData.kakukyoku ? { type: fourPillarsData.kakukyoku } : undefined,
+      yojin: fourPillarsData.yojin ? { tenGod: fourPillarsData.yojin[0] } : undefined,
+    };
+  }
+
+  /**
+   * 主要な五行要素を判定
+   */
+  private determineMainElement(elementBalance: ElementBalance): string {
+    const elements = [
+      { name: '木', value: elementBalance.wood },
+      { name: '火', value: elementBalance.fire },
+      { name: '土', value: elementBalance.earth },
+      { name: '金', value: elementBalance.metal },
+      { name: '水', value: elementBalance.water },
+    ];
+    
+    return elements.reduce((max, elem) => elem.value > max.value ? elem : max).name;
+  }
+
+  /**
    * 日本の都道府県リスト取得
    */
   async getJapanesePrefectures(): Promise<JapanesePrefecturesResponse> {
     try {
-      // 日本の47都道府県と時差調整データ
-      const prefectures: JapanesePrefecture[] = [
-        { name: '北海道', adjustmentMinutes: 0 },
-        { name: '青森県', adjustmentMinutes: 0 },
-        { name: '岩手県', adjustmentMinutes: 0 },
-        { name: '宮城県', adjustmentMinutes: 0 },
-        { name: '秋田県', adjustmentMinutes: 0 },
-        { name: '山形県', adjustmentMinutes: 0 },
-        { name: '福島県', adjustmentMinutes: 0 },
-        { name: '茨城県', adjustmentMinutes: 0 },
-        { name: '栃木県', adjustmentMinutes: 0 },
-        { name: '群馬県', adjustmentMinutes: 0 },
-        { name: '埼玉県', adjustmentMinutes: 0 },
-        { name: '千葉県', adjustmentMinutes: 0 },
-        { name: '東京都', adjustmentMinutes: 0 },
-        { name: '神奈川県', adjustmentMinutes: 0 },
-        { name: '新潟県', adjustmentMinutes: 0 },
-        { name: '富山県', adjustmentMinutes: 0 },
-        { name: '石川県', adjustmentMinutes: 0 },
-        { name: '福井県', adjustmentMinutes: 0 },
-        { name: '山梨県', adjustmentMinutes: 0 },
-        { name: '長野県', adjustmentMinutes: 0 },
-        { name: '岐阜県', adjustmentMinutes: 0 },
-        { name: '静岡県', adjustmentMinutes: 0 },
-        { name: '愛知県', adjustmentMinutes: 0 },
-        { name: '三重県', adjustmentMinutes: 0 },
-        { name: '滋賀県', adjustmentMinutes: 0 },
-        { name: '京都府', adjustmentMinutes: 0 },
-        { name: '大阪府', adjustmentMinutes: 0 },
-        { name: '兵庫県', adjustmentMinutes: 0 },
-        { name: '奈良県', adjustmentMinutes: 0 },
-        { name: '和歌山県', adjustmentMinutes: 0 },
-        { name: '鳥取県', adjustmentMinutes: 0 },
-        { name: '島根県', adjustmentMinutes: 0 },
-        { name: '岡山県', adjustmentMinutes: 0 },
-        { name: '広島県', adjustmentMinutes: 0 },
-        { name: '山口県', adjustmentMinutes: 0 },
-        { name: '徳島県', adjustmentMinutes: 0 },
-        { name: '香川県', adjustmentMinutes: 0 },
-        { name: '愛媛県', adjustmentMinutes: 0 },
-        { name: '高知県', adjustmentMinutes: 0 },
-        { name: '福岡県', adjustmentMinutes: 0 },
-        { name: '佐賀県', adjustmentMinutes: 0 },
-        { name: '長崎県', adjustmentMinutes: 0 },
-        { name: '熊本県', adjustmentMinutes: 0 },
-        { name: '大分県', adjustmentMinutes: 0 },
-        { name: '宮崎県', adjustmentMinutes: 0 },
-        { name: '鹿児島県', adjustmentMinutes: 0 },
-        { name: '沖縄県', adjustmentMinutes: 0 },
-      ];
+      // prefecture-data.tsから完全なデータを使用
+      const prefectures: JapanesePrefecture[] = JAPAN_PREFECTURES_DATA;
 
       return { prefectures };
     } catch (error) {

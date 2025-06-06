@@ -11,15 +11,31 @@ import { API_PATHS } from '../../types';
 
 export class StylistService {
   // スタイリスト一覧取得
-  async getStylists(filter?: StylistSearchFilter): Promise<ApiResponse<StylistDetail[]>> {
+  async getStylists(filter?: StylistSearchFilter): Promise<ApiResponse<any>> {
     const params = new URLSearchParams();
     if (filter?.searchTerm) params.append('search', filter.searchTerm);
-    if (filter?.role) params.append('role', filter.role);
+    // フィルターでroleが指定されていない場合のみ、デフォルトでUSERロールを設定
+    if (filter?.role) {
+      params.append('role', filter.role);
+    } else {
+      // スタイリスト（user ロール）のみを取得
+      params.append('role', 'user');
+    }
     if (filter?.riskLevel) params.append('riskLevel', filter.riskLevel);
     if (filter?.isActive !== undefined) params.append('isActive', String(filter.isActive));
 
-    const response = await apiClient.get(`${API_PATHS.USERS.LIST}?${params.toString()}`);
-    return response.data;
+    const url = `${API_PATHS.USERS.LIST}?${params.toString()}`;
+    const response = await apiClient.get(url);
+    // レスポンス形式の正規化
+    // バックエンドの標準レスポンス形式（data.data）を優先し、後方互換性のために直接配列形式もサポート
+    if (response.data && response.data.data) {
+      return response.data;
+    }
+    // 後方互換性: 直接配列形式の場合
+    return {
+      success: true,
+      data: response.data
+    };
   }
 
   // スタイリスト詳細取得

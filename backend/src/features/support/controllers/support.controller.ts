@@ -196,7 +196,7 @@ export class SupportController {
         throw new AppError('チケットIDが必要です', 400);
       }
 
-      const { content, attachments } = req.body;
+      const { message: content, attachments } = req.body;
 
       logger.info('サポートチケット返信リクエスト', {
         senderId: user.id,
@@ -413,7 +413,7 @@ export class SupportController {
         throw new AppError('チケットIDが必要です', 400);
       }
 
-      const { content, attachments } = req.body;
+      const { message: content, attachments } = req.body;
 
       logger.info('SuperAdminサポートチケット返信リクエスト', {
         senderId: user.id,

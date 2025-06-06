@@ -44,6 +44,9 @@
     "sajuengine_package"
   ],
   "ts-node": {
-    "require": ["tsconfig-paths/register"]
+    "require": ["tsconfig-paths/register"],
+    "transpileOnly": true,
+    "files": true,
+    "experimentalSpecifierResolution": "node"
   }
 }

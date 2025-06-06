@@ -147,12 +147,36 @@ export class ChatService {
       // AIメモリコンテキストを取得
       const memoryContext = await this.aiMemoryService.getMemoryContext(aiCharacter.id);
 
+      // ユーザー情報を取得（組織IDとロール取得のため）
+      let organizationId = '';
+      let userRole = '';
+      
+      if (conversation.userId) {
+        const { UserModel } = await import('../../users/models/user.model');
+        const user = await UserModel.findById(conversation.userId);
+        if (user) {
+          organizationId = user.organizationId || '';
+          userRole = user.role || '';
+        }
+      } else if (conversation.clientId) {
+        const { ClientModel } = await import('../../clients/models/client.model');
+        const client = await ClientModel.findById(conversation.clientId);
+        if (client) {
+          organizationId = client.organizationId;
+          userRole = 'client';
+        }
+      }
+
       // OpenAIでAI応答を生成
       const aiResponse = await this.openAIService.generateResponse({
         messages: recentMessages,
         aiCharacter,
         memoryContext,
         contextType: conversation.context,
+        userId: conversation.userId,
+        clientId: conversation.clientId,
+        organizationId,
+        userRole,
       });
 
       // AI応答メッセージを保存

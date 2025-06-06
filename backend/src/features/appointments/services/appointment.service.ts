@@ -53,7 +53,7 @@ export class AppointmentService {
         throw new AppError('指定されたスタイリストが見つかりません', 404);
       }
       if (stylist.organizationId !== organizationId) {
-        throw new AppError('他の組織のスタイリストを指定することはできません', 403);
+        throw new AppError('指定されたスタイリストが見つかりません', 404);
       }
       if (stylist.role !== UserRole.USER) {
         throw new AppError('指定されたユーザーはスタイリストではありません', 400);

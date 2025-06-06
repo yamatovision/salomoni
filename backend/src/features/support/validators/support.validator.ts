@@ -70,7 +70,7 @@ export const ticketIdValidator = [
 export const replyToTicketValidator = [
   ...ticketIdValidator,
   
-  body('content')
+  body('message')
     .trim()
     .notEmpty().withMessage('返信内容は必須です')
     .isLength({ max: 5000 }).withMessage('返信内容は5000文字以内で入力してください'),

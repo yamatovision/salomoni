@@ -32,6 +32,9 @@ export class AuthService {
    */
   async login(request: AuthRequest): Promise<AuthResponse> {
     try {
+      console.log('AuthService login - request:', request);
+      logger.info('Login attempt', { method: request.method, email: request.email });
+      
       if (request.method === AuthMethod.EMAIL) {
         return await this.emailLogin(request);
       } else if (request.method === AuthMethod.LINE) {
@@ -41,6 +44,7 @@ export class AuthService {
       }
     } catch (error) {
       logger.error('Login failed', { error, method: request.method });
+      console.error('Login error details:', error);
       throw error;
     }
   }
@@ -51,12 +55,17 @@ export class AuthService {
   private async emailLogin(request: AuthRequest): Promise<AuthResponse> {
     const { email, password, rememberMe } = request;
     
+    console.log('EmailLogin - email:', email, 'password length:', password?.length);
+    
     if (!email || !password) {
       throw new AppError('メールアドレスとパスワードは必須です', 400, 'AUTH001');
     }
 
     // ユーザー検証
+    console.log('Verifying password for:', email);
     const user = await this.userRepository.verifyPassword(email, password);
+    console.log('User verification result:', user ? 'User found' : 'User not found');
+    
     if (!user) {
       throw new AppError('メールアドレスまたはパスワードが正しくありません', 401, 'AUTH002');
     }

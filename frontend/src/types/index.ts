@@ -125,6 +125,7 @@ export const API_PATHS = {
     UPDATE: (clientId: string) => `/api/clients/${clientId}`,
     DELETE: (clientId: string) => `/api/clients/${clientId}`,
     DAILY: '/api/clients/daily',
+    MY_CLIENTS: '/api/clients/my-clients', // 追加: スタイリスト用クライアント一覧
     VISIT: (clientId: string) => `/api/clients/${clientId}/visit`,
     FORTUNE: (clientId: string) => `/api/clients/${clientId}/fortune`,
     COMPATIBILITY: (clientId: string) => `/api/clients/${clientId}/compatibility`,
@@ -155,7 +156,7 @@ export const API_PATHS = {
     SEND: (conversationId: string) => `/api/chat/conversations/${conversationId}/send`,
     SEND_MESSAGE: (conversationId: string) => `/api/chat/conversations/${conversationId}/send`,
     MEMORY: (characterId: string) => `/api/chat/characters/${characterId}/memory`,
-    START: '/api/chat/conversations/start',
+    START: '/api/chat/start',  // 修正: バックエンドの実装に合わせる
     END_CONVERSATION: (conversationId: string) => `/api/chat/conversations/${conversationId}/end`,
   },
 
@@ -170,6 +171,9 @@ export const API_PATHS = {
     SETUP_STATUS: '/api/ai-characters/setup-status',
     PROCESS_NATURAL_INPUT: '/api/ai-characters/process-natural-input',
     SETUP: '/api/ai-characters/setup',
+    // クライアント用セットアップ
+    CLIENT_SETUP_STATUS: (clientId: string) => `/api/ai-characters/clients/${clientId}/setup-status`,
+    CLIENT_SETUP: (clientId: string) => `/api/ai-characters/clients/${clientId}/setup`,
   },
 
   // 四柱推命関連（セットアップ用追加）
@@ -390,7 +394,7 @@ export interface OrganizationRegisterRequest {
 // スタッフ招待リクエスト
 export interface StaffInviteRequest {
   email: string;
-  role: UserRole.ADMIN | UserRole.USER;
+  role: UserRole.ADMIN | UserRole.USER | UserRole.OWNER;
   name?: string;
   birthDate?: Date | string;
   phone?: string;
@@ -2460,6 +2464,64 @@ export interface DailyClientDisplay {
     date: Date;
     summary: string;
   };
+}
+
+// ==========================================
+// コンテキスト注入システム関連
+// ==========================================
+
+// コンテキスト注入要求
+export interface ContextInjectionRequest {
+  message: string;
+  conversationId: ID;
+  organizationId: ID;
+  requesterId: ID; // リクエストしたユーザーのID
+  requesterRole: UserRole;
+}
+
+// コンテキスト注入応答
+export interface ContextInjectionResponse {
+  type: 'data_injected' | 'clarification_needed' | 'error';
+  injectedData?: {
+    context: string;
+    dataType: 'person' | 'business' | 'analytics';
+    metadata?: Record<string, any>;
+  };
+  clarification?: ClarificationOptions;
+  error?: string;
+}
+
+// 曖昧性解決オプション
+export interface ClarificationOptions {
+  message: string;
+  options: Array<{
+    id: string;
+    name: string;
+    type: 'client' | 'stylist' | 'other';
+    lastContact?: Date;
+    displayText: string;
+    metadata?: Record<string, any>;
+  }>;
+  requiresSelection: boolean;
+}
+
+// プロバイダーインターフェース
+export interface ContextProvider {
+  type: string;
+  patterns: string[];
+  enabled: boolean;
+  process(request: ContextInjectionRequest): Promise<ContextInjectionResponse>;
+}
+
+// 人物検索結果
+export interface PersonSearchResult {
+  id: string;
+  name: string;
+  type: 'client' | 'stylist';
+  organizationId: ID;
+  lastVisitDate?: Date;
+  fourPillarsDataId?: ID;
+  aiCharacterId?: ID;
 }
 
 // ==========================================

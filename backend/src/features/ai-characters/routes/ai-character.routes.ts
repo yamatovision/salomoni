@@ -11,6 +11,7 @@ import {
   setupStatusValidator,
   processNaturalInputValidator,
   setupAICharacterValidator,
+  setupClientAICharacterValidator,
 } from '../validators/ai-character.validator';
 
 const router = Router();
@@ -95,6 +96,22 @@ router.post(
   setupAICharacterValidator,
   handleValidationErrors,
   aiCharacterController.setupAICharacter
+);
+
+// クライアント用AIキャラクター関連
+router.get(
+  '/clients/:clientId/setup-status',
+  authenticate,
+  handleValidationErrors,
+  aiCharacterController.getClientSetupStatus
+);
+
+router.post(
+  '/clients/:clientId/setup',
+  authenticate,
+  setupClientAICharacterValidator,
+  handleValidationErrors,
+  aiCharacterController.setupClientAICharacter
 );
 
 export const aiCharacterRoutes = router;

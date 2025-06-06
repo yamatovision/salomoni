@@ -48,6 +48,7 @@
 | 3.5 | Phase 3 | M-003 | 管理画面ページ | admin-dashboard.html | 2.4 | 設定データ | [x] |
 | 3.6 | Phase 3 | M-004 | 本日の施術クライアント一覧 | beauty-daily-clients.html | 2.4 | クライアントデータ | [x] |
 | 3.7 | Phase 3 | M-005 | クライアント直接入力・結果表示 | beauty-client-input.html | 2.4 | 四柱推命データ | [x] |
+| 3.8 | Phase 3 | CHAT-EXT1 | クライアント専用AIチャット機能 | - | 3.3, 3.6 | - | [ ] |
 | 4.1 | Phase 4 | A-001 | 管理者ダッシュボード | beauty-admin-dashboard.html | 2.4 | 統計データ | [x] |
 | 4.2 | Phase 4 | A-002 | クライアント管理 | beauty-client-management.html | 2.4 | クライアントデータ | [x] |
 | 4.3 | Phase 4 | A-003 | スタイリスト管理 | beauty-stylist-management.html | 2.4 | スタイリストデータ | [x] |
@@ -131,6 +132,7 @@
 | **4.5** | `/api/clients/daily` | GET | 本日の担当クライアント取得 | 必要 | M-004 | [x] | [x] | [x] |
 | **4.6** | `/api/clients/:id` | DELETE | クライアント削除 | 必要 | A-002 | [x] | [x] | [x] |
 | **4.7** | `/api/clients/:id/visit` | POST | クライアント訪問記録 | 必要 | M-004 | [x] | [x] | [x] |
+| **4.8** | `/api/clients/my-clients` | GET | スタイリスト用クライアント一覧 | 必要 | M-001, M-004 | [x] | [x] | [x] |
 | **5.1** | `/api/chat/conversations` | POST | 新規会話セッション作成 | 必要 | M-001, M-006 | [x] | [x] | [x] |
 | **5.2** | `/api/chat/conversations` | GET | 会話セッション一覧取得 | 必要 | M-001, M-003 | [x] | [x] | [x] |
 | **5.3** | `/api/chat/conversations/:id/send` | POST | メッセージ送信 | 必要 | M-001, M-006 | [x] | [x] | [x] |
@@ -148,6 +150,8 @@
 | **5.15** | `/api/ai-characters/process-natural-input` | POST | 自然言語からAI設定データ変換 | 必要 | AIキャラクターセットアップページ | [x] | [x] | [x] |
 | **5.16** | `/api/ai-characters/setup` | POST | セットアップ専用AIキャラクター作成 | 必要 | AIキャラクターセットアップページ | [x] | [x] | [x] |
 | **5.17** | `/api/saju/locations/japan` | GET | 日本47都道府県リスト取得 | 必要 | AIキャラクターセットアップページ | [x] | [x] | [x] |
+| **5.18** | `/api/ai-characters/clients/:clientId/setup-status` | GET | クライアントAIキャラクター設定状況確認 | 必要 | M-004, CHAT-EXT1 | [x] | [ ] | [x] |
+| **5.19** | `/api/ai-characters/clients/:clientId/setup` | POST | クライアント用AIキャラクター作成 | 必要 | M-004, CHAT-EXT1 | [x] | [ ] | [x] |
 | **6.1** | `/api/appointments` | POST | 新規予約作成 | 必要 | A-004: 予約・担当管理 | [x] | [x] | [x] |
 | **6.2** | `/api/admin/appointments` | GET | 予約一覧取得（管理者） | 必要 | A-004: 予約・担当管理 | [x] | [x] | [x] |
 | **6.3** | `/api/appointments/:id` | GET | 予約詳細取得 | 必要 | A-004, M-004 | [x] | [x] | [x] |
@@ -317,12 +321,14 @@ npx ts-node scripts/test-login-api.ts
 | A-002 | クライアント管理 | `/admin/clients` | 要管理者権限 | ✅実装済み |
 | A-003 | スタイリスト管理 | `/admin/stylists` | 要管理者権限 | ✅実装済み |
 | A-004 | 予約・担当管理 | `/admin/appointments` | 要管理者権限 | ✅実装済み |
+| A-004-EXT1 | 予約登録機能の改善 | - | - | ✅実装済み（[詳細](/docs/plans/planning/ext-appointment-client-stylist-2025-05-27.md)） |
 | A-005 | データインポート | `/admin/import` | 要管理者権限 | ✅実装済み |
 | A-006 | サポート管理 | `/admin/support` | 要管理者権限 | ✅実装済み |
 | A-007 | 請求・支払い管理 | `/admin/billing` | 要管理者権限 | ✅実装済み |
 | S-001 | 組織管理画面 | `/superadmin/organizations` | 要SuperAdmin権限 | ✅実装済み |
 | S-002 | 課金・プラン管理画面 | `/superadmin/plans` | 要SuperAdmin権限 | ✅実装済み |
 | S-003 | サポートチケット管理画面 | `/superadmin/support` | 要SuperAdmin権限 | ✅実装済み |
+| CHAT-EXT1 | クライアント専用AIチャット機能 | - | - | ⏳計画済み（[詳細](/docs/plans/planning/ext-chat-personalization-2025-05-28.md)） |
 
 ## 3. 直近の引き継ぎ
 
@@ -355,6 +361,120 @@ npx ts-node scripts/test-login-api.ts
 **参考資料**
 - 要件定義書: `/docs/ai-character-setup-requirements.md`
 - 型定義: `/backend/src/types/index.ts`（AICharacterSetup関連の型）
+
+### ★8バックエンド実装エージェントからの引き継ぎ（2025-05-28更新）
+
+**実装完了機能**
+- A-004-EXT1: 予約登録機能の改善
+  - 既存クライアント選択機能の追加
+  - スタイリスト一覧表示の修正
+
+**統合テスト情報（★9が実行するテスト）**
+- [作成した統合テストファイル]: `/backend/tests/integration/appointments/appointment-ext1.flow.test.ts`
+- [テスト実行コマンド]: `npm test -- tests/integration/appointments/appointment-ext1.flow.test.ts`
+- [マイルストーントラッカーの場所]: `/backend/tests/utils/MilestoneTracker.ts`（既存）
+- [テストユーティリティの場所]: `/backend/tests/utils/`（既存）
+
+**実装内容**
+1. フロントエンド修正
+   - `/frontend/src/services/api/users.ts`: getUsersメソッドのページネーション対応
+   - `/frontend/src/services/api/stylists.ts`: USERロールフィルタリング追加
+   - `/frontend/src/pages/admin/AppointmentManagementPage.tsx`: fetchStylists関数を修正
+
+2. 既存UIの活用
+   - 既存クライアント選択Autocompleteは実装済み
+   - 新規/既存切り替えUIも実装済み
+   - クライアント情報プレビューも実装済み
+
+**★9への注意事項**
+- バックエンドAPIは変更なし（正常動作している）
+- フロントエンドのみの修正
+- モックは一切使用していない（実際のAPIを使用）
+- 新規クライアント作成機能は今回のスコープ外
+
+**参考資料**
+- 拡張計画書: `/docs/plans/planning/ext-appointment-client-stylist-2025-05-27.md`
+
+### ★9統合テスト成功請負人による完了報告（2025-05-27更新）
+
+**テスト完了機能**
+- A-004-EXT1: 予約登録機能の改善の統合テスト
+  - 既存クライアント選択機能
+  - スタイリスト一覧表示機能
+  - エラーケースのハンドリング
+
+**テスト結果**
+- 実行コマンド: `npm test -- tests/integration/appointments/appointment-ext1.flow.test.ts`
+- 結果: Tests: 10 passed, 10 total（100%成功）
+- 処理時間: 6.612秒
+
+**実装修正内容**
+- クライアントコントローラーのレスポンス構造修正（`data.clients`形式）
+- ユーザーコントローラーのレスポンス構造修正（`data.data`形式）
+- 検索クエリパラメータの対応（`search`→`searchTerm`）
+- 他組織スタイリスト選択時のエラーステータスコード統一（404）
+
+### ★8バックエンド実装エージェントからの引き継ぎ（2025-05-28更新）
+
+**実装完了機能**
+- CHAT-EXT1: クライアント専用AIチャット機能（部分実装）
+  - T1: スタイリスト用クライアント取得API（GET /api/clients/my-clients）
+  - T5: コンテキスト注入システム（人物データプロバイダー）
+  - クライアント用AIキャラクター設定API（5.18, 5.19）
+
+**統合テスト情報（★9が実行するテスト）**
+- [作成した統合テストファイル]:
+  - `/backend/tests/integration/clients/client.flow.test.ts`（my-clientsテスト追加）
+  - `/backend/tests/integration/chat/context-injection.test.ts`（新規作成）
+  - `/backend/tests/integration/ai-characters/client-ai-character.test.ts`（新規作成）
+- [テスト実行コマンド]:
+  - `npm test -- tests/integration/clients/client.flow.test.ts --testNamePattern="my-clients"`
+  - `npm test -- tests/integration/chat/context-injection.test.ts`
+  - `npm test -- tests/integration/ai-characters/client-ai-character.test.ts`
+- [マイルストーントラッカーの場所]: `/backend/tests/utils/MilestoneTracker.ts`（既存）
+- [テストユーティリティの場所]: `/backend/tests/utils/`（既存）
+
+**実装内容**
+1. スタイリスト用クライアント取得API
+   - `/api/clients/my-clients`: スタイリストが担当したことのある全クライアントを取得
+   - 予約データを基に関連付け、ページネーション対応
+
+2. コンテキスト注入システム
+   - チャットメッセージから「〜さんについて」などのパターンを検出
+   - 組織内の人物（クライアント・スタイリスト）の四柱推命データを自動注入
+   - 同名人物の場合は確認ダイアログを生成
+   - 拡張可能なプロバイダーパターンで実装
+
+3. クライアント用AIキャラクター設定
+   - `/api/ai-characters/clients/:clientId/setup-status`: 設定状況確認
+   - `/api/ai-characters/clients/:clientId/setup`: AIキャラクター作成
+
+**★9への注意事項**
+- モックは一切使用していない（実際のMongoDB、OpenAI APIを使用）
+- コンテキスト注入システムはChatServiceとOpenAIServiceに統合済み
+- 人物検索時は組織内のデータのみアクセス可能
+- フロントエンド実装（T2, T3, T4）は今回のスコープ外
+
+**参考資料**
+- 拡張計画書: `/docs/plans/planning/ext-chat-personalization-2025-05-28.md`
+
+### ★9統合テスト成功請負人による完了報告（2025-05-28更新）
+
+**テスト完了機能**
+- context-injection（コンテキスト注入システム）の統合テスト
+  - 人物データプロバイダーの全機能
+  - スタイリスト検索機能 
+  - 複数の意図を含むメッセージの処理
+
+**テスト結果**
+- 実行コマンド: `npm test -- tests/integration/chat/context-injection.test.ts`
+- 結果: Tests: 9 passed, 9 total（100%成功）
+- 処理時間: 4.26秒
+
+**実装修正内容**
+- PersonProviderのスタイリスト検索で`roles`→`role`に修正（UserModelのスキーマに合わせて）
+- IntentParserで複数人物の相性パターンを個別に抽出するよう改善
+- 四柱推命データのフォーマット処理で異なるデータ形式に対応（yearPillar/year、elementBalance/elements）
 
 ### ★10 API統合エージェントからの引き継ぎ（2025-05-28更新）
 

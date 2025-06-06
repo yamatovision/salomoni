@@ -217,9 +217,17 @@ export class ChatController {
         context
       );
 
+      // AIキャラクター情報を取得
+      const aiCharacterService = new (await import('../../ai-characters/services/ai-character.service')).AICharacterService();
+      const aiCharacter = await aiCharacterService.getAICharacterById(conversation.aiCharacterId);
+
       res.json({
         success: true,
-        data: conversation,
+        data: {
+          conversation,
+          aiCharacter,
+          isNew: !conversation.messageCount || conversation.messageCount === 0,
+        },
       });
     } catch (error) {
       logger.error('チャット開始エラー:', error);

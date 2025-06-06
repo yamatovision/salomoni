@@ -26,6 +26,11 @@ import {
   Alert,
   Divider,
   Snackbar,
+  Select,
+  MenuItem,
+  InputLabel,
+  LinearProgress,
+  CircularProgress,
 } from '@mui/material';
 import {
   Search,
@@ -39,9 +44,14 @@ import {
   CheckCircle,
   Warning,
   Favorite,
+  Visibility,
+  AutoAwesomeOutlined,
+  LocationOn,
+  AccessTime,
 } from '@mui/icons-material';
-import { clientService } from '../../services';
-import type { Client, ClientCreateRequest, ClientSearchFilter } from '../../types';
+import { clientService, sajuService } from '../../services';
+import type { Client, ClientCreateRequest, ClientSearchFilter, JapanesePrefecture } from '../../types';
+import { SajuProfileDisplay } from '../../components/features/saju/SajuProfileDisplay';
 
 export const ClientManagementPage: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -56,6 +66,12 @@ export const ClientManagementPage: React.FC = () => {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [openImportDialog, setOpenImportDialog] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [openSajuProfileDialog, setOpenSajuProfileDialog] = useState(false);
+  const [sajuProfileData, setSajuProfileData] = useState<any>(null);
+  const [sajuLoading, setSajuLoading] = useState(false);
+  const [prefectures, setPrefectures] = useState<JapanesePrefecture[]>([]);
+  const [compatibilityData, setCompatibilityData] = useState<any>(null);
+  const [compatibilityLoading, setCompatibilityLoading] = useState(false);
   
   // 新規クライアントフォームの状態
   const [newClientForm, setNewClientForm] = useState({
@@ -66,8 +82,12 @@ export const ClientManagementPage: React.FC = () => {
     birthYear: '',
     birthMonth: '',
     birthDay: '',
-    birthHour: '',
-    birthMinute: '',
+    birthTime: '',
+    birthLocation: {
+      name: '',
+      longitude: 0,
+      latitude: 0,
+    },
     memo: '',
   });
 
@@ -80,8 +100,12 @@ export const ClientManagementPage: React.FC = () => {
     birthYear: '',
     birthMonth: '',
     birthDay: '',
-    birthHour: '',
-    birthMinute: '',
+    birthTime: '',
+    birthLocation: {
+      name: '',
+      longitude: 0,
+      latitude: 0,
+    },
     memo: '',
   });
 
@@ -107,6 +131,10 @@ export const ClientManagementPage: React.FC = () => {
       setTotalPages(response.pagination.totalPages);
     } catch (err) {
       console.error('Failed to fetch clients:', err);
+      console.error('Error details:', {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        stack: err instanceof Error ? err.stack : undefined
+      });
     } finally {
       setLoading(false);
     }
@@ -116,6 +144,21 @@ export const ClientManagementPage: React.FC = () => {
   useEffect(() => {
     fetchClients();
   }, [fetchClients]);
+
+  // 都道府県データを取得
+  useEffect(() => {
+    const fetchPrefectures = async () => {
+      try {
+        const response = await sajuService.getJapanesePrefectures();
+        console.log('[ClientManagementPage] Prefectures response:', response);
+        setPrefectures(response.data?.prefectures || []);
+      } catch (error) {
+        console.error('Failed to fetch prefectures:', error);
+        setPrefectures([]); // エラー時は空配列を設定
+      }
+    };
+    fetchPrefectures();
+  }, []);
 
   const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
     setPage(value);
@@ -141,8 +184,38 @@ export const ClientManagementPage: React.FC = () => {
       const detailedClient = await clientService.getClient(client.id);
       setSelectedClient(detailedClient);
       setOpenClientDetailDialog(true);
+      
+      // 相性データを取得
+      setCompatibilityLoading(true);
+      try {
+        const compatibility = await clientService.getClientCompatibility(client.id);
+        setCompatibilityData(compatibility);
+      } catch (error) {
+        console.error('相性データの取得に失敗しました', error);
+        // エラーでも詳細画面は表示する
+      } finally {
+        setCompatibilityLoading(false);
+      }
     } catch (err) {
       setSnackbar({ open: true, message: 'クライアント情報の取得に失敗しました', severity: 'error' });
+    }
+  };
+
+  // 四柱推命プロフィールを表示
+  const handleViewSajuProfile = async (client: Client) => {
+    setSajuLoading(true);
+    try {
+      const profile = await clientService.getClientSajuProfile(client.id);
+      setSajuProfileData(profile);
+      setOpenSajuProfileDialog(true);
+    } catch (err) {
+      setSnackbar({ 
+        open: true, 
+        message: '四柱推命プロフィールの取得に失敗しました。生年月日が登録されていない可能性があります。', 
+        severity: 'error' 
+      });
+    } finally {
+      setSajuLoading(false);
     }
   };
 
@@ -176,6 +249,8 @@ export const ClientManagementPage: React.FC = () => {
         email: newClientForm.email || undefined,
         gender: newClientForm.gender as 'male' | 'female' | 'other' | undefined,
         birthDate,
+        birthTime: newClientForm.birthTime || undefined,
+        birthLocation: newClientForm.birthLocation.name ? newClientForm.birthLocation : undefined,
         memo: newClientForm.memo || undefined,
       };
 
@@ -193,8 +268,12 @@ export const ClientManagementPage: React.FC = () => {
         birthYear: '',
         birthMonth: '',
         birthDay: '',
-        birthHour: '',
-        birthMinute: '',
+        birthTime: '',
+        birthLocation: {
+          name: '',
+          longitude: 0,
+          latitude: 0,
+        },
         memo: '',
       });
       
@@ -222,7 +301,9 @@ export const ClientManagementPage: React.FC = () => {
         email: editClientForm.email || undefined,
         gender: editClientForm.gender as 'male' | 'female' | 'other' | undefined,
         birthDate,
-        notes: editClientForm.memo || undefined,
+        birthTime: editClientForm.birthTime || undefined,
+        birthLocation: editClientForm.birthLocation.name ? editClientForm.birthLocation : undefined,
+        memo: editClientForm.memo || undefined,
       };
 
       await clientService.updateClient(selectedClient.id, updateRequest);
@@ -263,8 +344,12 @@ export const ClientManagementPage: React.FC = () => {
       birthYear,
       birthMonth,
       birthDay,
-      birthHour: '',
-      birthMinute: '',
+      birthTime: selectedClient.birthTime || '',
+      birthLocation: selectedClient.birthLocation || {
+        name: '',
+        longitude: 0,
+        latitude: 0,
+      },
       memo: selectedClient.memo || '',
     });
 
@@ -363,8 +448,9 @@ export const ClientManagementPage: React.FC = () => {
 
         {/* クライアントリスト */}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 3 }}>
-          {clients.map((client) => (
+          {clients.map((client, index) => (
               <Card
+                key={client._id || client.id || `client-${index}`}
                 sx={{
                   cursor: 'pointer',
                   transition: 'all 0.3s',
@@ -518,6 +604,48 @@ export const ClientManagementPage: React.FC = () => {
                 </Box>
               </Box>
 
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+                <TextField
+                  fullWidth
+                  label="出生時刻 (オプショナル)"
+                  type="time"
+                  value={newClientForm.birthTime}
+                  onChange={(e) => setNewClientForm({ ...newClientForm, birthTime: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  helperText="四柱推命の計算に使用されます"
+                />
+                <FormControl fullWidth>
+                  <InputLabel>出生地 (オプショナル)</InputLabel>
+                  <Select
+                    value={newClientForm.birthLocation.name || ''}
+                    onChange={(e) => {
+                      const prefecture = prefectures.find(p => p.name === e.target.value);
+                      setNewClientForm({ 
+                        ...newClientForm, 
+                        birthLocation: prefecture ? {
+                          name: prefecture.name,
+                          longitude: prefecture.longitude || 0,
+                          latitude: prefecture.latitude || 0,
+                        } : {
+                          name: '',
+                          longitude: 0,
+                          latitude: 0,
+                        }
+                      });
+                    }}
+                  >
+                    <MenuItem value="">
+                      <em>選択してください</em>
+                    </MenuItem>
+                    {prefectures && prefectures.map((prefecture) => (
+                      <MenuItem key={prefecture.code} value={prefecture.name}>
+                        {prefecture.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+
               <TextField
                 fullWidth
                 label="メモ"
@@ -549,7 +677,10 @@ export const ClientManagementPage: React.FC = () => {
         {/* クライアント詳細ダイアログ */}
         <Dialog
           open={openClientDetailDialog}
-          onClose={() => setOpenClientDetailDialog(false)}
+          onClose={() => {
+            setOpenClientDetailDialog(false);
+            setCompatibilityData(null);
+          }}
           maxWidth="sm"
           fullWidth
         >
@@ -610,6 +741,18 @@ export const ClientManagementPage: React.FC = () => {
                           : '記録なし'}
                       </Typography>
                     </Box>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">出生時刻</Typography>
+                      <Typography variant="body1">
+                        {selectedClient.birthTime || '未設定'}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">出生地</Typography>
+                      <Typography variant="body1">
+                        {selectedClient.birthLocation?.name || '未設定'}
+                      </Typography>
+                    </Box>
                   </Box>
                 </Box>
 
@@ -631,9 +774,29 @@ export const ClientManagementPage: React.FC = () => {
                   <Typography variant="subtitle2" gutterBottom>
                     相性の良いスタイリスト
                   </Typography>
-                  <Typography variant="body2">
-                    山本 健太（相性 95%）、中村 美香（相性 88%）
-                  </Typography>
+                  {compatibilityLoading ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={16} />
+                      <Typography variant="body2">相性を計算中...</Typography>
+                    </Box>
+                  ) : compatibilityData ? (
+                    compatibilityData.message ? (
+                      <Typography variant="body2" color="text.secondary">
+                        {compatibilityData.message}
+                      </Typography>
+                    ) : compatibilityData.compatibilities.length > 0 ? (
+                      <Typography variant="body2">
+                        {compatibilityData.compatibilities
+                          .slice(0, 3)
+                          .map((comp: any) => `${comp.stylistName}（相性 ${comp.compatibilityScore}%）`)
+                          .join('、')}
+                      </Typography>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        相性データがありません
+                      </Typography>
+                    )
+                  ) : null}
                 </Alert>
               </Stack>
             )}
@@ -647,6 +810,13 @@ export const ClientManagementPage: React.FC = () => {
             </Button>
             <Button startIcon={<Edit />} onClick={handleEditClick}>
               編集
+            </Button>
+            <Button 
+              onClick={() => selectedClient && handleViewSajuProfile(selectedClient)}
+              disabled={!selectedClient?.birthDate || sajuLoading}
+              startIcon={<AutoAwesomeOutlined />}
+            >
+              四柱推命
             </Button>
             <Button variant="contained" onClick={() => setOpenClientDetailDialog(false)}>
               閉じる
@@ -791,6 +961,48 @@ export const ClientManagementPage: React.FC = () => {
                 </Box>
               </Box>
 
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+                <TextField
+                  fullWidth
+                  label="出生時刻 (オプショナル)"
+                  type="time"
+                  value={editClientForm.birthTime}
+                  onChange={(e) => setEditClientForm({ ...editClientForm, birthTime: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  helperText="四柱推命の計算に使用されます"
+                />
+                <FormControl fullWidth>
+                  <InputLabel>出生地 (オプショナル)</InputLabel>
+                  <Select
+                    value={editClientForm.birthLocation.name || ''}
+                    onChange={(e) => {
+                      const prefecture = prefectures.find(p => p.name === e.target.value);
+                      setEditClientForm({ 
+                        ...editClientForm, 
+                        birthLocation: prefecture ? {
+                          name: prefecture.name,
+                          longitude: prefecture.longitude || 0,
+                          latitude: prefecture.latitude || 0,
+                        } : {
+                          name: '',
+                          longitude: 0,
+                          latitude: 0,
+                        }
+                      });
+                    }}
+                  >
+                    <MenuItem value="">
+                      <em>選択してください</em>
+                    </MenuItem>
+                    {prefectures && prefectures.map((prefecture) => (
+                      <MenuItem key={prefecture.code} value={prefecture.name}>
+                        {prefecture.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+
               <TextField
                 fullWidth
                 label="メモ"
@@ -822,6 +1034,42 @@ export const ClientManagementPage: React.FC = () => {
             {snackbar.message}
           </Alert>
         </Snackbar>
+
+        {/* 四柱推命プロフィールダイアログ */}
+        <Dialog
+          open={openSajuProfileDialog}
+          onClose={() => setOpenSajuProfileDialog(false)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>
+            四柱推命プロフィール
+            <IconButton
+              onClick={() => setOpenSajuProfileDialog(false)}
+              sx={{ position: 'absolute', right: 8, top: 8 }}
+            >
+              <Close />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent>
+            {sajuLoading ? (
+              <Box sx={{ py: 4, textAlign: 'center' }}>
+                <Typography variant="body1" sx={{ mb: 2 }}>四柱推命データを計算中...</Typography>
+                <LinearProgress />
+              </Box>
+            ) : sajuProfileData ? (
+              <SajuProfileDisplay 
+                profile={sajuProfileData} 
+                userName={sajuProfileData.client?.name || ''}
+              />
+            ) : null}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenSajuProfileDialog(false)}>
+              閉じる
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </Container>
   );

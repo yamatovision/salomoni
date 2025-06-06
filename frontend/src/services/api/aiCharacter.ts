@@ -132,4 +132,19 @@ export class AICharacterService {
       };
     }
   }
+
+  // クライアント用AIキャラクター設定状況確認
+  async getClientSetupStatus(clientId: string): Promise<ApiResponse<{ hasAICharacter: boolean }>> {
+    try {
+      const response = await apiClient.get<ApiResponse<{ hasAICharacter: boolean }>>(
+        API_PATHS.AI_CHARACTERS.CLIENT_SETUP_STATUS(clientId)
+      );
+      return response.data;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.error?.message || 'AIキャラクター設定状況の確認に失敗しました',
+      };
+    }
+  }
 }

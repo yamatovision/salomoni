@@ -24,6 +24,8 @@ export class AppointmentController {
         organizationId,
         userId,
         clientId: appointmentData.clientId,
+        scheduledAt: appointmentData.scheduledAt,
+        fullBody: appointmentData,
       });
 
       const appointment = await this.appointmentService.createAppointment(

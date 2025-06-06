@@ -12,6 +12,14 @@ import {
   Divider,
   IconButton,
   InputAdornment,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip,
 } from '@mui/material';
 import { 
   Visibility, 
@@ -434,6 +442,121 @@ export const LoginPage: React.FC = () => {
             >
               組織を新規登録
             </Link>
+          </Box>
+        </Box>
+
+        {/* 動作確認用アカウント情報 */}
+        <Box sx={{ mt: 4 }}>
+          <TableContainer component={Paper} sx={{ borderRadius: '12px', boxShadow: 3 }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell colSpan={3} sx={{ backgroundColor: '#F26A8D', color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
+                    🧪 動作確認用アカウント情報
+                  </TableCell>
+                </TableRow>
+                <TableRow sx={{ backgroundColor: '#fce7f3' }}>
+                  <TableCell sx={{ fontWeight: 'bold' }}>ロール</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>メールアドレス</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>パスワード</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow sx={{ '&:hover': { backgroundColor: '#fdf2f8' } }}>
+                  <TableCell>
+                    <Chip label="SuperAdmin" size="small" sx={{ backgroundColor: '#dc2626', color: 'white' }} />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', cursor: 'pointer' }} onClick={() => setFormData({ email: 'superadmin@salomoni.jp', password: 'superadmin123' })}>
+                      superadmin@salomoni.jp
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                      superadmin123
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+                <TableRow sx={{ '&:hover': { backgroundColor: '#fdf2f8' } }}>
+                  <TableCell>
+                    <Chip label="Owner" size="small" sx={{ backgroundColor: '#f97316', color: 'white' }} />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', cursor: 'pointer' }} onClick={() => setFormData({ email: 'owner@salon.com', password: 'owner123' })}>
+                      owner@salon.com
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                      owner123
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+                <TableRow sx={{ '&:hover': { backgroundColor: '#fdf2f8' } }}>
+                  <TableCell>
+                    <Chip label="Admin" size="small" sx={{ backgroundColor: '#3b82f6', color: 'white' }} />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', cursor: 'pointer' }} onClick={() => setFormData({ email: 'admin@salon.com', password: 'admin123' })}>
+                      admin@salon.com
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                      admin123
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+                <TableRow sx={{ '&:hover': { backgroundColor: '#fdf2f8' } }}>
+                  <TableCell>
+                    <Chip label="Stylist" size="small" sx={{ backgroundColor: '#10b981', color: 'white' }} />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', cursor: 'pointer' }} onClick={() => setFormData({ email: 'stylist1@salon.com', password: 'stylist123' })}>
+                      stylist1@salon.com
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                      stylist123
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={3} sx={{ backgroundColor: '#f9fafb' }}>
+                    <Typography variant="caption" sx={{ color: '#6b7280' }}>
+                      💡 メールアドレスをクリックすると自動入力されます
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="h6" sx={{ mb: 1, color: '#374151', fontWeight: 'bold' }}>
+              📱 アクセス可能なページ
+            </Typography>
+            <Stack spacing={1}>
+              <Box>
+                <Chip label="SuperAdmin" size="small" sx={{ backgroundColor: '#dc2626', color: 'white', mr: 1 }} />
+                <Typography variant="caption" sx={{ color: '#6b7280' }}>
+                  /superadmin/organizations, /superadmin/plans, /superadmin/support
+                </Typography>
+              </Box>
+              <Box>
+                <Chip label="Admin/Owner" size="small" sx={{ backgroundColor: '#3b82f6', color: 'white', mr: 1 }} />
+                <Typography variant="caption" sx={{ color: '#6b7280' }}>
+                  /admin, /admin/clients, /admin/stylists, /admin/appointments, /admin/import, /admin/support, /admin/billing
+                </Typography>
+              </Box>
+              <Box>
+                <Chip label="Stylist" size="small" sx={{ backgroundColor: '#10b981', color: 'white', mr: 1 }} />
+                <Typography variant="caption" sx={{ color: '#6b7280' }}>
+                  /chat, /dashboard, /settings, /clients/today, /clients/new
+                </Typography>
+              </Box>
+            </Stack>
           </Box>
         </Box>
       </Container>

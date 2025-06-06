@@ -12,7 +12,8 @@ import {
   AICharacterSetupResponse,
   PersonalityScore,
   JapanesePrefecture,
-  JapanesePrefecturesResponse
+  JapanesePrefecturesResponse,
+  FourPillarsData
 } from '../../../types';
 import { logger } from '../../../common/utils/logger';
 import { AppError } from '../../../common/middleware/errorHandler';
@@ -375,13 +376,13 @@ export class AICharacterService {
         personalityScore: request.processedPersonality,
       });
 
-      // 四柱推命データ計算
+      // 四柱推命データ計算・保存
       const sajuData = await this.sajuService.calculateFourPillars({
         birthDate: request.birthDate,
         birthTime: request.birthTime || '00:00',
         timezone: 'Asia/Tokyo',
         location: birthLocation,
-      });
+      }, userId); // userIdを渡して保存
 
       return {
         success: true,
@@ -460,6 +461,109 @@ export class AICharacterService {
       return { prefectures };
     } catch (error) {
       logger.error('都道府県リスト取得エラー:', error);
+      throw error;
+    }
+  }
+
+  // クライアント用AIキャラクターセットアップ状態確認
+  async getClientSetupStatus(clientId: string): Promise<AICharacterSetupStatus> {
+    try {
+      logger.info(`クライアントAIキャラクター状態確認: clientId=${clientId}`);
+      
+      const aiCharacter = await this.aiCharacterRepository.findByClientId(clientId);
+      
+      if (aiCharacter) {
+        logger.info(`クライアントAIキャラクター存在: ${aiCharacter.name}`);
+        return {
+          hasCharacter: true,
+          needsSetup: false,
+        };
+      }
+      
+      logger.info('クライアントAIキャラクター未設定');
+      return {
+        hasCharacter: false,
+        needsSetup: true,
+      };
+    } catch (error) {
+      logger.error('クライアントセットアップ状態確認エラー:', error);
+      throw error;
+    }
+  }
+
+  // クライアント用AIキャラクターセットアップ
+  async setupClientAICharacter(
+    clientId: string,
+    data: AICharacterSetupRequest
+  ): Promise<AICharacterSetupResponse> {
+    try {
+      logger.info('クライアントAIキャラクターセットアップ開始', { clientId, data });
+
+      // クライアント情報を取得
+      const { ClientModel } = await import('../../clients/models/client.model');
+      const client = await ClientModel.findById(clientId);
+      
+      if (!client) {
+        throw new Error('クライアントが見つかりません');
+      }
+
+      // AIキャラクター作成
+      const aiCharacter = await this.createAICharacter({
+        name: data.name || `${client.name}さんのAIアシスタント`,
+        clientId,
+        styleFlags: data.processedStyle || [],
+        personalityScore: data.processedPersonality || {
+          softness: 50,
+          energy: 50,
+          formality: 50,
+        },
+      });
+
+      // 四柱推命データを保存/更新（クライアントの生年月日が既にある場合）
+      if (client.birthDate) {
+        try {
+          const fourPillarsData = await this.sajuService.calculateFourPillars({
+            birthDate: client.birthDate?.toISOString().split('T')[0] || data.birthDate,
+            birthTime: data.birthTime || '12:00',
+            timezone: 'Asia/Tokyo',
+            location: {
+              name: data.birthPlace || 'Tokyo',
+              longitude: 139.6917,
+              latitude: 35.6895,
+            },
+          });
+
+          // クライアントの四柱推命データIDを更新
+          await ClientModel.findByIdAndUpdate(clientId, {
+            fourPillarsDataId: fourPillarsData._id,
+          });
+
+          logger.info('クライアント四柱推命データ更新完了', {
+            clientId,
+            fourPillarsDataId: fourPillarsData._id,
+          });
+        } catch (error) {
+          logger.error('クライアント四柱推命計算エラー:', error);
+        }
+      }
+
+      return {
+        success: true,
+        character: aiCharacter,
+        sajuData: {} as FourPillarsData, // TODO: 実際の四柱推命データを返す
+        setupData: {
+          name: data.name,
+          birthDate: data.birthDate,
+          birthPlace: data.birthPlace,
+          birthTime: data.birthTime,
+          personalityInput: data.personalityInput,
+          styleInput: data.styleInput,
+          processedPersonality: data.processedPersonality,
+          processedStyle: data.processedStyle,
+        },
+      };
+    } catch (error) {
+      logger.error('クライアントAIキャラクターセットアップエラー:', error);
       throw error;
     }
   }

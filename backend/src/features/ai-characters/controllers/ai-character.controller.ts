@@ -279,6 +279,9 @@ export class AICharacterController {
         field,
       });
 
+      // デバッグ用ログ
+      logger.info('processNaturalInput レスポンス:', JSON.stringify(result, null, 2));
+
       res.json({
         success: true,
         data: result,
@@ -299,6 +302,9 @@ export class AICharacterController {
         });
       }
 
+      // デバッグ用ログ
+      logger.info('setupAICharacter リクエストボディ:', JSON.stringify(req.body, null, 2));
+
       const result = await this.aiCharacterService.setupAICharacter(
         req.user.id,
         req.body
@@ -310,6 +316,63 @@ export class AICharacterController {
       });
     } catch (error) {
       logger.error('AIキャラクターセットアップエラー:', error);
+      next(error);
+    }
+  };
+
+  // クライアント用AIキャラクターセットアップ状態確認
+  getClientSetupStatus = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { clientId } = req.params;
+
+      if (!clientId) {
+        return res.status(400).json({
+          success: false,
+          error: 'クライアントIDが必要です',
+        });
+      }
+
+      const status = await this.aiCharacterService.getClientSetupStatus(clientId);
+
+      res.json({
+        success: true,
+        data: status,
+      });
+    } catch (error) {
+      logger.error('クライアントセットアップ状態確認エラー:', error);
+      next(error);
+    }
+  };
+
+  // クライアント用AIキャラクターセットアップ
+  setupClientAICharacter = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { clientId } = req.params;
+
+      if (!clientId) {
+        return res.status(400).json({
+          success: false,
+          error: 'クライアントIDが必要です',
+        });
+      }
+
+      // デバッグ用ログ
+      logger.info('setupClientAICharacter リクエスト:', {
+        clientId,
+        body: req.body,
+      });
+
+      const result = await this.aiCharacterService.setupClientAICharacter(
+        clientId,
+        req.body
+      );
+
+      res.status(201).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      logger.error('クライアントAIキャラクターセットアップエラー:', error);
       next(error);
     }
   };

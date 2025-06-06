@@ -196,8 +196,8 @@ describe('クライアント管理 統合テスト', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
-      expect(response.body.data).toHaveLength(3);
-      expect(response.body.meta.pagination).toMatchObject({
+      expect(response.body.data.clients).toHaveLength(3);
+      expect(response.body.data.pagination).toMatchObject({
         currentPage: 1,
         totalItems: 3,
       });
@@ -210,8 +210,8 @@ describe('クライアント管理 統合テスト', () => {
         .query({ searchTerm: '佐藤' });
 
       expect(response.status).toBe(200);
-      expect(response.body.data).toHaveLength(1);
-      expect(response.body.data[0].name).toBe('佐藤一郎');
+      expect(response.body.data.clients).toHaveLength(1);
+      expect(response.body.data.clients[0].name).toBe('佐藤一郎');
     });
 
     it('性別でフィルタリングできる', async () => {
@@ -221,8 +221,8 @@ describe('クライアント管理 統合テスト', () => {
         .query({ gender: 'female' });
 
       expect(response.status).toBe(200);
-      expect(response.body.data).toHaveLength(1);
-      expect(response.body.data[0].name).toBe('伊藤三子');
+      expect(response.body.data.clients).toHaveLength(1);
+      expect(response.body.data.clients[0].name).toBe('伊藤三子');
     });
 
     it('ページネーションが正しく動作する', async () => {
@@ -232,8 +232,8 @@ describe('クライアント管理 統合テスト', () => {
         .query({ page: 1, limit: 2 });
 
       expect(response.status).toBe(200);
-      expect(response.body.data).toHaveLength(2);
-      expect(response.body.meta.pagination).toMatchObject({
+      expect(response.body.data.clients).toHaveLength(2);
+      expect(response.body.data.pagination).toMatchObject({
         currentPage: 1,
         itemsPerPage: 2,
         hasNext: true,
@@ -255,8 +255,8 @@ describe('クライアント管理 統合テスト', () => {
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(response.status).toBe(200);
-      expect(response.body.data).toHaveLength(3); // 自組織の3件のみ
-      expect(response.body.data.every((c: any) => c.organizationId === organizationId)).toBe(true);
+      expect(response.body.data.clients).toHaveLength(3); // 自組織の3件のみ
+      expect(response.body.data.clients.every((c: any) => c.organizationId === organizationId)).toBe(true);
     });
   });
 
@@ -579,10 +579,180 @@ describe('クライアント管理 統合テスト', () => {
       tracker.mark('レスポンス受信');
 
       expect(response.status).toBe(200);
-      expect(response.body.data).toHaveLength(20);
+      expect(response.body.data.clients).toHaveLength(20);
       expect(endTime - startTime).toBeLessThan(1000); // 1秒以内
 
       tracker.summary();
+    });
+  });
+
+  describe('GET /api/clients/my-clients - スタイリストの担当クライアント取得', () => {
+    let stylistId: string;
+    let clientIds: string[] = [];
+
+    beforeEach(async () => {
+      // スタイリストユーザーを作成
+      const stylistData = await createTestUserWithToken({
+        email: 'stylist-test@test.com',
+        password: 'password123',
+        role: UserRole.USER,
+        organizationId,
+      });
+      stylistId = stylistData.user.id;
+      userToken = stylistData.token;
+
+      // テストクライアントを作成
+      const clients = await Promise.all([
+        ClientModel.create({
+          name: 'クライアントA',
+          organizationId,
+          gender: 'female',
+          birthDate: new Date('1990-01-01'),
+        }),
+        ClientModel.create({
+          name: 'クライアントB',
+          organizationId,
+          gender: 'male',
+          birthDate: new Date('1985-05-05'),
+        }),
+        ClientModel.create({
+          name: 'クライアントC',
+          organizationId,
+          gender: 'female',
+          birthDate: new Date('1995-10-10'),
+        }),
+      ]);
+      clientIds = clients.map(c => c._id.toString());
+
+      // 予約データを作成してスタイリストとクライアントを関連付け
+      const { AppointmentModel } = await import('../../../src/features/appointments/models/appointment.model');
+      await Promise.all([
+        AppointmentModel.create({
+          organizationId,
+          clientId: clientIds[0],
+          stylistId,
+          scheduledAt: new Date(),
+          duration: 60,
+          services: ['カット'],
+          status: 'completed',
+        }),
+        AppointmentModel.create({
+          organizationId,
+          clientId: clientIds[1],
+          stylistId,
+          scheduledAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1週間前
+          duration: 90,
+          services: ['カラー'],
+          status: 'completed',
+        }),
+        // クライアントCは別のスタイリストが担当
+        AppointmentModel.create({
+          organizationId,
+          clientId: clientIds[2],
+          stylistId: 'other-stylist-id',
+          scheduledAt: new Date(),
+          duration: 120,
+          services: ['パーマ'],
+          status: 'scheduled',
+        }),
+      ]);
+    });
+
+    it('スタイリストが自分の担当クライアント一覧を取得できる', async () => {
+      const response = await request(app)
+        .get('/api/clients/my-clients')
+        .set('Authorization', `Bearer ${userToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.clients).toHaveLength(2); // クライアントAとBのみ
+      expect(response.body.data.clients[0].name).toBe('クライアントA');
+      expect(response.body.data.clients[1].name).toBe('クライアントB');
+      expect(response.body.data.pagination).toBeDefined();
+    });
+
+    it('管理者はアクセスできない', async () => {
+      const response = await request(app)
+        .get('/api/clients/my-clients')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe('このAPIはスタイリストのみ利用可能です');
+    });
+
+    it('オーナーはアクセスできない', async () => {
+      const response = await request(app)
+        .get('/api/clients/my-clients')
+        .set('Authorization', `Bearer ${ownerToken}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe('このAPIはスタイリストのみ利用可能です');
+    });
+
+    it('ページネーションが機能する', async () => {
+      // 多数のクライアントを追加
+      const moreClients = await Promise.all(
+        Array(10).fill(null).map((_, i) => 
+          ClientModel.create({
+            name: `追加クライアント${i + 1}`,
+            organizationId,
+          })
+        )
+      );
+
+      // 全てのクライアントに予約を作成
+      const { AppointmentModel } = await import('../../../src/features/appointments/models/appointment.model');
+      await Promise.all(
+        moreClients.map((client, index) => 
+          AppointmentModel.create({
+            organizationId,
+            clientId: client._id,
+            stylistId,
+            scheduledAt: new Date(Date.now() + (index + 1) * 60 * 60 * 1000), // 1時間ずつずらす
+            duration: 60,
+            services: ['カット'],
+            status: 'scheduled',
+          })
+        )
+      );
+
+      // 1ページ目を取得（5件ずつ）
+      const response1 = await request(app)
+        .get('/api/clients/my-clients?page=1&limit=5')
+        .set('Authorization', `Bearer ${userToken}`);
+
+      expect(response1.status).toBe(200);
+      expect(response1.body.data.clients).toHaveLength(5);
+      expect(response1.body.data.pagination.hasNext).toBe(true);
+      expect(response1.body.data.pagination.totalItems).toBe(12); // 2 + 10
+
+      // 2ページ目を取得
+      const response2 = await request(app)
+        .get('/api/clients/my-clients?page=2&limit=5')
+        .set('Authorization', `Bearer ${userToken}`);
+
+      expect(response2.status).toBe(200);
+      expect(response2.body.data.clients).toHaveLength(5);
+      expect(response2.body.data.pagination.hasPrev).toBe(true);
+    });
+
+    it('担当クライアントがいない場合は空の配列を返す', async () => {
+      // 新しいスタイリストを作成
+      const newStylistData = await createTestUserWithToken({
+        email: 'new-stylist@test.com',
+        password: 'password123',
+        role: UserRole.USER,
+        organizationId,
+      });
+
+      const response = await request(app)
+        .get('/api/clients/my-clients')
+        .set('Authorization', `Bearer ${newStylistData.token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.clients).toHaveLength(0);
+      expect(response.body.data.pagination.totalItems).toBe(0);
     });
   });
 });

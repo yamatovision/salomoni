@@ -2,10 +2,13 @@ import React, { createContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { UserProfile, AuthResponse } from '../types';
 import { authService } from '../services';
+import { checkSetupStatus } from '../services/api/aiCharacterSetup';
 
 interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
+  hasAICharacter: boolean;
+  checkingAICharacter: boolean;
   login: (email: string, password: string) => Promise<AuthResponse>;
   lineLogin: () => Promise<void>;
   handleLineCallback: (code: string, state?: string) => Promise<void>;
@@ -13,6 +16,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   refreshAuth: () => Promise<void>;
   completeInitialSetup: (data: any) => Promise<void>;
+  checkAICharacterStatus: () => Promise<boolean>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,6 +24,8 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasAICharacter, setHasAICharacter] = useState(false);
+  const [checkingAICharacter, setCheckingAICharacter] = useState(false);
 
   useEffect(() => {
     // 初回マウント時に認証状態を確認
@@ -118,17 +124,48 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log('Completing initial setup:', data);
   };
 
+  const checkAICharacterStatus = async (): Promise<boolean> => {
+    console.log('[AuthContext] checkAICharacterStatus - 開始');
+    try {
+      setCheckingAICharacter(true);
+      const response = await checkSetupStatus();
+      console.log('[AuthContext] checkAICharacterStatus - レスポンス:', response);
+      // バックエンドは data.hasCharacter を返す
+      const hasCharacter = response.data?.hasCharacter === true;
+      setHasAICharacter(hasCharacter);
+      console.log('[AuthContext] checkAICharacterStatus - hasAICharacter:', hasCharacter);
+      return hasCharacter;
+    } catch (error) {
+      console.error('[AuthContext] checkAICharacterStatus - エラー:', error);
+      setHasAICharacter(false);
+      return false;
+    } finally {
+      setCheckingAICharacter(false);
+      console.log('[AuthContext] checkAICharacterStatus - 完了');
+    }
+  };
+
+  // ユーザーが変更されたときにAIキャラクターのステータスもチェック
+  useEffect(() => {
+    if (user && user.role === 'user') {
+      checkAICharacterStatus();
+    }
+  }, [user]);
+
   return (
     <AuthContext.Provider value={{ 
       user, 
       loading, 
+      hasAICharacter,
+      checkingAICharacter,
       login, 
       lineLogin, 
       handleLineCallback,
       registerOrganization,
       logout, 
       refreshAuth, 
-      completeInitialSetup 
+      completeInitialSetup,
+      checkAICharacterStatus
     }}>
       {children}
     </AuthContext.Provider>

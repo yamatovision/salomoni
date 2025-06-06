@@ -48,16 +48,18 @@ import {
   Park as WoodIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
+import { SajuProfileDisplay } from '../../components/features/saju/SajuProfileDisplay';
 // import { useTheme } from '@mui/material/styles';
 import type { 
-  StylistDetail
+  StylistDetail,
+  JapanesePrefecture
 } from '../../types';
 import { 
   TurnoverRiskLevel,
   UserRole,
   FiveElements
 } from '../../types';
-import { stylistService } from '../../services';
+import { stylistService, sajuService } from '../../services';
 
 // 役職リスト
 const positionOptions = [
@@ -71,7 +73,8 @@ const positionOptions = [
 // 権限レベルリスト
 const permissionOptions = [
   { value: UserRole.USER, label: '基本権限（顧客管理・チャット）' },
-  { value: UserRole.ADMIN, label: '管理者権限（全機能）' }
+  { value: UserRole.ADMIN, label: '管理者権限（全機能）' },
+  { value: UserRole.OWNER, label: 'オーナー権限（請求管理含む）' }
 ];
 
 // 離職リスクレベルの色設定
@@ -141,6 +144,7 @@ const StylistManagementPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [riskSummary, setRiskSummary] = useState<any>(null);
+  const [prefectures, setPrefectures] = useState<JapanesePrefecture[]>([]);
   
   // モーダル状態
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -154,6 +158,12 @@ const StylistManagementPage: React.FC = () => {
     name: '',
     email: '',
     birthDate: '',
+    birthTime: '',
+    birthLocation: {
+      name: '',
+      longitude: null as number | null,
+      latitude: null as number | null
+    },
     position: '',
     role: UserRole.USER,
     phone: '',
@@ -163,7 +173,28 @@ const StylistManagementPage: React.FC = () => {
   // データ読み込み
   useEffect(() => {
     loadData();
+    loadPrefectures();
   }, []);
+
+  const loadPrefectures = async () => {
+    try {
+      const response = await sajuService.getJapanesePrefectures();
+      console.log('都道府県APIレスポンス:', response);
+      
+      if (response.success && response.data) {
+        // dataが配列の場合はそのまま、オブジェクトの場合はprefectures属性を探す
+        const prefecturesData = Array.isArray(response.data) 
+          ? response.data 
+          : response.data.prefectures || [];
+        
+        console.log('都道府県データ:', prefecturesData);
+        setPrefectures(prefecturesData);
+      }
+    } catch (error) {
+      console.error('都道府県データの取得に失敗:', error);
+      setPrefectures([]); // エラー時は空配列を設定
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -172,11 +203,11 @@ const StylistManagementPage: React.FC = () => {
       console.log('スタイリストレスポンス:', stylistsResponse);
       
       if (stylistsResponse.success && stylistsResponse.data) {
-        // dataがページネーション付きレスポンスの場合
-        if ('users' in stylistsResponse.data && Array.isArray(stylistsResponse.data.users)) {
-          setStylists(stylistsResponse.data.users);
+        // dataがページネーション付きレスポンスの場合（バックエンドの標準形式）
+        if (stylistsResponse.data.data && Array.isArray(stylistsResponse.data.data)) {
+          setStylists(stylistsResponse.data.data);
         } 
-        // dataが直接配列の場合
+        // dataが直接配列の場合（後方互換性）
         else if (Array.isArray(stylistsResponse.data)) {
           setStylists(stylistsResponse.data);
         } 
@@ -222,6 +253,12 @@ const StylistManagementPage: React.FC = () => {
         name: stylist.name,
         email: stylist.email,
         birthDate: stylist.birthDate ? new Date(stylist.birthDate).toISOString().split('T')[0] : '',
+        birthTime: stylist.birthTime || '',
+        birthLocation: stylist.birthLocation || {
+          name: '',
+          longitude: null,
+          latitude: null
+        },
         position: stylist.position,
         role: stylist.role,
         phone: stylist.phone || '',
@@ -233,6 +270,12 @@ const StylistManagementPage: React.FC = () => {
         name: '',
         email: '',
         birthDate: '',
+        birthTime: '',
+        birthLocation: {
+          name: '',
+          longitude: null,
+          latitude: null
+        },
         position: '',
         role: UserRole.USER,
         phone: '',
@@ -267,6 +310,12 @@ const StylistManagementPage: React.FC = () => {
         const updateData: any = {
           name: data.name,
           birthDate: data.birthDate,
+          birthTime: formData.birthTime || undefined,
+          birthLocation: formData.birthLocation.name ? {
+            name: formData.birthLocation.name,
+            longitude: formData.birthLocation.longitude,
+            latitude: formData.birthLocation.latitude
+          } : undefined,
           position: data.position,
           role: data.role,
           phone: data.phone
@@ -285,7 +334,7 @@ const StylistManagementPage: React.FC = () => {
         // 新規作成時も全てのデータを送信するように修正
         const inviteData = {
           email: data.email,
-          role: data.role as UserRole.ADMIN | UserRole.USER,
+          role: data.role as UserRole.ADMIN | UserRole.USER | UserRole.OWNER,
           name: data.name,
           birthDate: formData.birthDate || undefined,
           phone: data.phone,
@@ -341,7 +390,17 @@ const StylistManagementPage: React.FC = () => {
     setSelectedStylist(stylist);
     try {
       const response = await stylistService.getStylistFourPillars(stylist.id);
+      console.log('四柱推命APIレスポンス:', response);
+      
       if (response.success && response.data) {
+        console.log('四柱推命データ詳細:', {
+          fullData: response.data,
+          fourPillars: response.data.fourPillars,
+          yearPillar: response.data.fourPillars?.yearPillar,
+          monthPillar: response.data.fourPillars?.monthPillar,
+          dayPillar: response.data.fourPillars?.dayPillar,
+          hourPillar: response.data.fourPillars?.hourPillar,
+        });
         setSajuData(response.data);
         setSajuModalOpen(true);
       }
@@ -372,7 +431,7 @@ const StylistManagementPage: React.FC = () => {
             名前: stylist.name,
             役職: stylist.position,
             勤続年数: stylist.yearsOfService + '年',
-            専門分野: stylist.specialties.join(', ')
+            専門分野: stylist.specialties ? stylist.specialties.join(', ') : '設定なし'
           },
           期間: {
             開始: startDate,
@@ -587,11 +646,14 @@ const StylistManagementPage: React.FC = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     {stylist.role === UserRole.ADMIN ? (
                       <AdminIcon sx={{ fontSize: 20, color: 'primary.main' }} />
+                    ) : stylist.role === UserRole.OWNER ? (
+                      <AdminIcon sx={{ fontSize: 20, color: 'secondary.main' }} />
                     ) : (
                       <PersonIcon sx={{ fontSize: 20, color: 'primary.main' }} />
                     )}
                     <Typography variant="body2" color="text.secondary">
-                      {stylist.role === UserRole.ADMIN ? '管理者権限' : '基本権限'}
+                      {stylist.role === UserRole.ADMIN ? '管理者権限' : 
+                       stylist.role === UserRole.OWNER ? 'オーナー権限' : '基本権限'}
                     </Typography>
                   </Box>
                 </Stack>
@@ -678,6 +740,49 @@ const StylistManagementPage: React.FC = () => {
               InputLabelProps={{ shrink: true }}
               helperText="スタイリストが後から設定できます"
             />
+            <TextField
+              label="出生時間 (オプショナル)"
+              type="time"
+              fullWidth
+              value={formData.birthTime}
+              onChange={(e) => setFormData({ ...formData, birthTime: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              helperText="四柱推命の計算に使用されます (例: 12:30)"
+            />
+            <FormControl fullWidth>
+              <InputLabel>出生地 (オプショナル)</InputLabel>
+              <Select
+                value={formData.birthLocation.name || ''}
+                onChange={(e) => {
+                  const prefecture = prefectures.find(p => p.name === e.target.value);
+                  setFormData({ 
+                    ...formData, 
+                    birthLocation: prefecture ? {
+                      name: prefecture.name,
+                      longitude: prefecture.longitude,
+                      latitude: prefecture.latitude
+                    } : {
+                      name: e.target.value,
+                      longitude: null,
+                      latitude: null
+                    }
+                  });
+                }}
+                label="出生地 (オプショナル)"
+              >
+                <MenuItem value="">
+                  <em>選択なし</em>
+                </MenuItem>
+                {prefectures && Array.isArray(prefectures) && prefectures.map((prefecture) => (
+                  <MenuItem key={prefecture.code} value={prefecture.name}>
+                    {prefecture.name}
+                  </MenuItem>
+                ))}
+              </Select>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.5 }}>
+                より正確な四柱推命計算のため
+              </Typography>
+            </FormControl>
             <FormControl fullWidth required>
               <InputLabel>役職</InputLabel>
               <Select
@@ -774,108 +879,19 @@ const StylistManagementPage: React.FC = () => {
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent>
-          {sajuData && (
-            <>
-              {/* 生年月日情報 */}
-              <Paper sx={{ p: 2, mb: 3, bgcolor: 'primary.50' }}>
-                <Grid container spacing={2}>
-                  <Grid size={{ xs: 6, sm: 3 }}>
-                    <Typography variant="caption" color="text.secondary">生年月日</Typography>
-                    <Typography variant="body1">
-                      {selectedStylist?.birthDate ? new Date(selectedStylist.birthDate).toLocaleDateString('ja-JP') : '未設定'}
-                    </Typography>
-                  </Grid>
-                  <Grid size={{ xs: 6, sm: 3 }}>
-                    <Typography variant="caption" color="text.secondary">生まれた時間</Typography>
-                    <Typography variant="body1">12:30</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 6, sm: 3 }}>
-                    <Typography variant="caption" color="text.secondary">生まれた場所</Typography>
-                    <Typography variant="body1">東京都</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 6, sm: 3 }}>
-                    <Typography variant="caption" color="text.secondary">最終更新日</Typography>
-                    <Typography variant="body1">
-                      {new Date().toLocaleDateString('ja-JP')}
-                    </Typography>
-                  </Grid>
-                </Grid>
-              </Paper>
-
-              {/* 五行バランス */}
-              {sajuData.elementBalance && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" sx={{ mb: 2 }}>五行バランス</Typography>
-                  <Grid container spacing={2}>
-                    {Object.entries(sajuData.elementBalance).map(([element, percent]) => {
-                      if (element === 'mainElement' || element === 'isBalanced') return null;
-                      return (
-                        <Grid key={element}>
-                          <Paper
-                            sx={{
-                              p: 2,
-                              textAlign: 'center',
-                              bgcolor: `${getElementColor(element as FiveElements)}20`,
-                              color: getElementColor(element as FiveElements)
-                            }}
-                          >
-                            <Box sx={{ fontSize: '2rem', mb: 1 }}>
-                              {getElementIcon(element as FiveElements)}
-                            </Box>
-                            <Typography variant="h6">
-                              {element === 'fire' ? '火' : element === 'earth' ? '土' : element === 'metal' ? '金' : element === 'water' ? '水' : '木'}
-                            </Typography>
-                            <Typography variant="body2">{percent as number}%</Typography>
-                          </Paper>
-                        </Grid>
-                      );
-                    })}
-                  </Grid>
-                </Box>
-              )}
-
-              {/* 四柱データ */}
-              {sajuData.fourPillars && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" sx={{ mb: 2 }}>四柱命式</Typography>
-                  <Grid container spacing={2}>
-                    {['year', 'month', 'day', 'hour'].map((pillar) => {
-                      const data = sajuData.fourPillars[`${pillar}Pillar`];
-                      return (
-                        <Grid size={{ xs: 6, sm: 3 }} key={pillar}>
-                          <Card variant="outlined">
-                            <CardContent sx={{ textAlign: 'center' }}>
-                              <Typography variant="caption" color="text.secondary">
-                                {pillar === 'year' ? '年柱' : pillar === 'month' ? '月柱' : pillar === 'day' ? '日柱' : '時柱'}
-                              </Typography>
-                              <Typography variant="h5" sx={{ color: 'primary.main', my: 1 }}>
-                                {data.stem}{data.branch}
-                              </Typography>
-                              <Typography variant="caption">
-                                {data.yinYang === 'yang' ? '陽' : '陰'}{data.element === 'fire' ? '火' : data.element === 'earth' ? '土' : data.element === 'metal' ? '金' : data.element === 'water' ? '水' : '木'}
-                              </Typography>
-                            </CardContent>
-                          </Card>
-                        </Grid>
-                      );
-                    })}
-                  </Grid>
-                </Box>
-              )}
-
-              {/* 分析結果 */}
-              {sajuData.analysis && (
-                <Box>
-                  <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
-                    命式の特徴
-                  </Typography>
-                  <Typography paragraph>{sajuData.analysis.characteristics}</Typography>
-                  <Typography paragraph>{sajuData.analysis.advice}</Typography>
-                  <Typography>{sajuData.analysis.stylingAdvice}</Typography>
-                </Box>
-              )}
-            </>
+        <DialogContent sx={{ pt: 2 }}>
+          {sajuData ? (
+            <SajuProfileDisplay 
+              sajuData={sajuData} 
+              userName={selectedStylist?.name}
+              birthDate={selectedStylist?.birthDate}
+            />
+          ) : (
+            <Box sx={{ textAlign: 'center', py: 5 }}>
+              <Typography color="text.secondary">
+                四柱推命データを読み込み中...
+              </Typography>
+            </Box>
           )}
         </DialogContent>
       </Dialog>

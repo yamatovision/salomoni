@@ -1,7 +1,9 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+// 開発環境ではプロキシを使用するため、ベースURLを変更
+const isDevelopment = import.meta.env.DEV;
+const API_BASE_URL = isDevelopment ? '' : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001');
 
 // Axios インスタンスの作成
 export const apiClient: AxiosInstance = axios.create({
@@ -37,7 +39,8 @@ apiClient.interceptors.response.use(
 
       try {
         // refreshTokenはHttpOnly Cookieで送信されるため、明示的な送信不要
-        const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {}, {
+        const refreshUrl = isDevelopment ? '/api/auth/refresh' : `${API_BASE_URL}/api/auth/refresh`;
+        const response = await axios.post(refreshUrl, {}, {
           withCredentials: true, // Cookieを含めてリクエスト
         });
 

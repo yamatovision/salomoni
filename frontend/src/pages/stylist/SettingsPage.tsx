@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -64,13 +64,27 @@ export const SettingsPage: React.FC = () => {
 
   // プロフィール状態
   const [profile, setProfile] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    birthDate: user?.birthDate ? new Date(user.birthDate).toISOString().split('T')[0] : '',
-    gender: user?.gender || '',
-    profileImage: user?.profileImage || '',
+    name: '',
+    email: '',
+    phone: '',
+    birthDate: '',
+    gender: '',
+    profileImage: '',
   });
+
+  // ユーザーデータが変更されたらプロフィールを更新
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        birthDate: user.birthDate ? new Date(user.birthDate).toISOString().split('T')[0] : '',
+        gender: user.gender || '',
+        profileImage: user.profileImage || '',
+      });
+    }
+  }, [user]);
 
   // 通知設定状態
   const [notifications, setNotifications] = useState({

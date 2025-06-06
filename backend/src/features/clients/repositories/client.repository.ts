@@ -100,10 +100,19 @@ export class ClientRepository {
         ClientModel.countDocuments(query),
       ]);
 
+      // デバッグ：取得したデータの詳細を確認
       logger.info('Clients retrieved successfully', {
         organizationId,
         count: clients.length,
         total,
+        firstClient: clients[0] ? {
+          id: clients[0].id,
+          name: clients[0].name,
+          email: clients[0].email,
+          collection: clients[0].collection.name,
+          hasRole: 'role' in clients[0],
+          keys: Object.keys(clients[0].toJSON()),
+        } : null,
       });
 
       return { clients, total };
@@ -246,8 +255,7 @@ export class ClientRepository {
   }
 
   /**
-   * 本日の担当クライアントを取得（予約データとの結合が必要）
-   * ※ この実装は予約機能実装後に拡張される予定
+   * 本日の担当クライアントを取得（予約データから取得）
    */
   async findDailyClients(
     organizationId: string,
@@ -256,8 +264,10 @@ export class ClientRepository {
   ): Promise<IClientDocument[]> {
     try {
       const targetDate = date || new Date();
-      const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
-      const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
+      const startOfDay = new Date(targetDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(targetDate);
+      endOfDay.setHours(23, 59, 59, 999);
 
       logger.debug('Finding daily clients', {
         organizationId,
@@ -265,20 +275,46 @@ export class ClientRepository {
         date: startOfDay,
       });
 
-      // TODO: 予約データとの結合処理を実装
-      // 現時点では最近訪問したクライアントを返す暫定実装
-      const clients = await ClientModel.find({
+      // 予約データから本日の予約のあるクライアントIDを取得
+      const { AppointmentModel } = await import('../../appointments/models/appointment.model');
+      
+      const appointmentQuery: any = {
         organizationId,
-        lastVisitDate: {
+        scheduledAt: {
           $gte: startOfDay,
           $lte: endOfDay,
         },
-      })
-        .sort({ lastVisitDate: -1 })
-        .limit(10);
+      };
+
+      // スタイリストIDが指定されている場合はフィルタリング
+      if (stylistId) {
+        appointmentQuery.stylistId = stylistId;
+      }
+
+      // 今日の予約を取得
+      const appointments = await AppointmentModel.find(appointmentQuery);
+      
+      // 予約のあるクライアントIDを取得
+      const clientIds = [...new Set(appointments.map(apt => apt.clientId))];
+
+      logger.debug('Found appointments for daily clients', {
+        appointmentCount: appointments.length,
+        uniqueClientCount: clientIds.length,
+      });
+
+      if (clientIds.length === 0) {
+        return [];
+      }
+
+      // クライアント情報を取得
+      const clients = await ClientModel.find({
+        _id: { $in: clientIds },
+        organizationId,
+      }).sort({ name: 1 });
 
       logger.info('Daily clients retrieved', {
         organizationId,
+        stylistId,
         count: clients.length,
       });
 
@@ -307,6 +343,71 @@ export class ClientRepository {
       return client;
     } catch (error) {
       logger.error('Failed to update client visit info', { error, clientId: id });
+      throw error;
+    }
+  }
+
+  /**
+   * スタイリストの担当クライアント一覧を取得
+   */
+  async findStylistClients(
+    organizationId: string,
+    stylistId: string,
+    pagination: PaginationParams = { page: 1, limit: 50 }
+  ): Promise<{ clients: IClientDocument[]; total: number }> {
+    try {
+      const page = pagination.page ?? 1;
+      const limit = pagination.limit ?? 50;
+      const skip = (page - 1) * limit;
+
+      logger.debug('Finding stylist clients', { organizationId, stylistId, pagination: { page, limit } });
+
+      // 予約データからスタイリストが担当したことのあるクライアントIDを取得
+      const { AppointmentModel } = await import('../../appointments/models/appointment.model');
+      
+      // スタイリストが担当した予約を全て取得（過去・現在・未来問わず）
+      const appointments = await AppointmentModel.find({
+        organizationId,
+        stylistId,
+      }).select('clientId');
+      
+      // 重複を除いたクライアントIDリストを作成
+      const uniqueClientIds = [...new Set(appointments.map(apt => apt.clientId.toString()))];
+
+      logger.debug('Found appointments for stylist', {
+        appointmentCount: appointments.length,
+        uniqueClientCount: uniqueClientIds.length,
+      });
+
+      if (uniqueClientIds.length === 0) {
+        return { clients: [], total: 0 };
+      }
+
+      // クライアント情報を取得（ページネーション付き）
+      const [clients, total] = await Promise.all([
+        ClientModel.find({
+          _id: { $in: uniqueClientIds },
+          organizationId,
+        })
+        .sort({ name: 1 })
+        .skip(skip)
+        .limit(limit),
+        ClientModel.countDocuments({
+          _id: { $in: uniqueClientIds },
+          organizationId,
+        }),
+      ]);
+
+      logger.info('Stylist clients retrieved', {
+        organizationId,
+        stylistId,
+        count: clients.length,
+        total,
+      });
+
+      return { clients, total };
+    } catch (error) {
+      logger.error('Failed to find stylist clients', { error, organizationId, stylistId });
       throw error;
     }
   }

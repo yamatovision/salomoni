@@ -22,6 +22,24 @@ export class ClientService {
   }
 
   /**
+   * 組織内のスタイリストを取得
+   */
+  async getOrganizationStylists(organizationId: ID): Promise<any[]> {
+    const UserRepository = require('../../users/repositories/user.repository').UserRepository;
+    const userRepository = new UserRepository();
+    
+    // 組織内の全ユーザーを取得してからスタイリスト（role='user'）のみフィルタ
+    const users = await userRepository.findByOrganization(organizationId);
+    const stylists = users.filter(user => user.role === 'user');
+
+    return stylists.map(stylist => ({
+      id: stylist._id?.toString() || stylist.id,
+      name: stylist.name,
+      profileImage: stylist.profileImage,
+    }));
+  }
+
+  /**
    * 新規クライアントを作成
    */
   async createClient(
@@ -330,6 +348,45 @@ export class ClientService {
       return updatedClient.toJSON() as Client;
     } catch (error) {
       logger.error('Failed to record client visit', { error, clientId });
+      throw error;
+    }
+  }
+
+  /**
+   * スタイリストの担当クライアント一覧を取得
+   */
+  async getMyClients(
+    organizationId: string,
+    stylistId: string,
+    pagination: PaginationParams = { page: 1, limit: 50 }
+  ): Promise<{
+    clients: Client[];
+    pagination: PaginationInfo;
+  }> {
+    try {
+      logger.info('Getting stylist clients', { organizationId, stylistId, pagination });
+
+      const { clients, total } = await this.clientRepository.findStylistClients(
+        organizationId,
+        stylistId,
+        pagination
+      );
+      
+      const paginationInfo: PaginationInfo = {
+        currentPage: pagination.page ?? 1,
+        totalPages: Math.ceil(total / (pagination.limit ?? 50)),
+        totalItems: total,
+        itemsPerPage: pagination.limit ?? 50,
+        hasNext: (pagination.page ?? 1) * (pagination.limit ?? 50) < total,
+        hasPrev: (pagination.page ?? 1) > 1,
+      };
+
+      return {
+        clients: clients.map((client) => client.toJSON() as Client),
+        pagination: paginationInfo,
+      };
+    } catch (error) {
+      logger.error('Failed to get stylist clients', { error, organizationId, stylistId });
       throw error;
     }
   }

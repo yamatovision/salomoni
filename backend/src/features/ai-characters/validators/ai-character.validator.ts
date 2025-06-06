@@ -205,3 +205,43 @@ export const setupAICharacterValidator = [
       return value.every(style => Object.values(AICharacterStyle).includes(style as AICharacterStyle));
     }).withMessage('無効なスタイルフラグが含まれています'),
 ];
+
+// クライアント用AIキャラクターセットアップ
+export const setupClientAICharacterValidator = [
+  param('clientId')
+    .isMongoId().withMessage('有効なクライアントIDを指定してください'),
+  
+  body('name')
+    .optional()
+    .isString().withMessage('AIキャラクター名は文字列で入力してください')
+    .trim()
+    .isLength({ max: 50 }).withMessage('AIキャラクター名は50文字以下で入力してください'),
+  
+  body('birthTime')
+    .optional()
+    .matches(/^([01]\d|2[0-3]):([0-5]\d)$/).withMessage('出生時間はHH:mm形式で入力してください'),
+  
+  body('birthLocation')
+    .optional()
+    .isObject().withMessage('出生地は適切なオブジェクト形式で指定してください'),
+  
+  body('birthLocation.name')
+    .optional()
+    .isString().withMessage('出生地名は文字列で入力してください'),
+  
+  body('birthLocation.longitude')
+    .optional()
+    .isFloat({ min: -180, max: 180 }).withMessage('経度は-180から180の範囲で指定してください'),
+  
+  body('birthLocation.latitude')
+    .optional()
+    .isFloat({ min: -90, max: 90 }).withMessage('緯度は-90から90の範囲で指定してください'),
+  
+  body('styleFlags')
+    .optional()
+    .isObject().withMessage('スタイルフラグはオブジェクトで指定してください'),
+  
+  body('personalityScore')
+    .optional()
+    .isObject().withMessage('性格スコアはオブジェクトで指定してください'),
+];

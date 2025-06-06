@@ -23,10 +23,12 @@ export const processNaturalInput = async (
   field: 'personality' | 'style'
 ) => {
   try {
+    console.log('[processNaturalInput] 送信データ:', { input, field });
     const response = await apiClient.post(API_PATHS.AI_CHARACTERS.PROCESS_NATURAL_INPUT, {
       input,
       field,
     });
+    console.log('[processNaturalInput] レスポンス:', response.data);
     return response.data;
   } catch (error) {
     console.error('Failed to process natural input:', error);
@@ -39,13 +41,29 @@ export const processNaturalInput = async (
  */
 export const setupAICharacter = async (setupData: SetupData) => {
   try {
+    console.log('[setupAICharacter] セットアップデータ:', setupData);
+    
     // First, process natural language inputs
     const [personalityResult, styleResult] = await Promise.all([
       processNaturalInput(setupData.personality, 'personality'),
       processNaturalInput(setupData.style, 'style'),
     ]);
 
-    // Then create the AI character
+    console.log('[setupAICharacter] 処理結果:', {
+      personalityResult,
+      styleResult
+    });
+
+    // Extract processedData from the response
+    const processedPersonality = personalityResult.data?.processedData || personalityResult.processedData;
+    const processedStyle = styleResult.data?.processedData || styleResult.processedData;
+
+    console.log('[setupAICharacter] 抽出された処理済みデータ:', {
+      processedPersonality,
+      processedStyle
+    });
+
+    // Then create the AI character with the correct data structure
     const response = await apiClient.post(API_PATHS.AI_CHARACTERS.SETUP, {
       name: setupData.name,
       birthDate: setupData.birthDate,
@@ -53,8 +71,8 @@ export const setupAICharacter = async (setupData: SetupData) => {
       birthTime: setupData.birthTime,
       personalityInput: setupData.personality,
       styleInput: setupData.style,
-      processedPersonality: personalityResult.processedData,
-      processedStyle: styleResult.processedData,
+      processedPersonality: processedPersonality,
+      processedStyle: processedStyle,
     });
 
     return response.data;
@@ -73,6 +91,52 @@ export const getJapanPrefectures = async () => {
     return response.data;
   } catch (error) {
     console.error('Failed to get Japan prefectures:', error);
+    throw error;
+  }
+};
+
+/**
+ * Setup AI character for a client
+ */
+export const setupClientAICharacter = async (clientId: string, setupData: SetupData) => {
+  try {
+    console.log('[setupClientAICharacter] クライアント用セットアップデータ:', { clientId, setupData });
+    
+    // First, process natural language inputs
+    const [personalityResult, styleResult] = await Promise.all([
+      processNaturalInput(setupData.personality, 'personality'),
+      processNaturalInput(setupData.style, 'style'),
+    ]);
+
+    console.log('[setupClientAICharacter] 処理結果:', {
+      personalityResult,
+      styleResult
+    });
+
+    // Extract processedData from the response
+    const processedPersonality = personalityResult.data?.processedData || personalityResult.processedData;
+    const processedStyle = styleResult.data?.processedData || styleResult.processedData;
+
+    console.log('[setupClientAICharacter] 抽出された処理済みデータ:', {
+      processedPersonality,
+      processedStyle
+    });
+
+    // Then create the AI character for the client with the correct data structure
+    const response = await apiClient.post(API_PATHS.AI_CHARACTERS.CLIENT_SETUP(clientId), {
+      name: setupData.name,
+      birthDate: setupData.birthDate,
+      birthPlace: setupData.birthPlace,
+      birthTime: setupData.birthTime,
+      personalityInput: setupData.personality,
+      styleInput: setupData.style,
+      processedPersonality: processedPersonality,
+      processedStyle: processedStyle,
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Failed to setup client AI character:', error);
     throw error;
   }
 };

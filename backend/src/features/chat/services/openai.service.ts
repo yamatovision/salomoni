@@ -1,12 +1,15 @@
 import OpenAI from 'openai';
-import { AICharacter, AICharacterStyle, ChatMessage, MessageType } from '../../../types';
+import { AICharacter, AICharacterStyle, ChatMessage, MessageType, FourPillarsData, ID } from '../../../types';
 import { logger } from '../../../common/utils/logger';
+import { SajuService } from '../../saju/services/saju.service';
+import { contextInjectionManager } from './context-injection';
 
 export class OpenAIService {
   private openai: OpenAI;
   private model: string;
   private maxTokens: number;
   private temperature: number;
+  private sajuService: SajuService;
 
   constructor() {
     this.openai = new OpenAI({
@@ -15,6 +18,7 @@ export class OpenAIService {
     this.model = process.env.OPENAI_MODEL || 'gpt-4o';
     this.maxTokens = parseInt(process.env.OPENAI_MAX_TOKENS || '4096');
     this.temperature = parseFloat(process.env.OPENAI_TEMPERATURE || '0.6');
+    this.sajuService = new SajuService();
   }
 
   async generateResponse(params: {
@@ -22,17 +26,53 @@ export class OpenAIService {
     aiCharacter: AICharacter;
     memoryContext: string;
     contextType: 'personal' | 'stylist_consultation' | 'client_direct';
+    userId?: ID;
+    clientId?: ID;
+    organizationId: string;
+    userRole: string;
   }): Promise<string> {
     try {
-      const systemPrompt = this.buildSystemPrompt(
+      // 四柱推命データを取得
+      const fourPillarsData = await this.getFourPillarsData(params.userId, params.clientId);
+      
+      const systemPrompt = await this.buildSystemPrompt(
         params.aiCharacter,
         params.memoryContext,
-        params.contextType
+        params.contextType,
+        fourPillarsData
       );
+
+      // 最新のユーザーメッセージにコンテキストを注入
+      let processedMessages = [...params.messages];
+      if (processedMessages.length > 0) {
+        const lastMessage = processedMessages[processedMessages.length - 1];
+        if (lastMessage && lastMessage.type === MessageType.USER) {
+          const { enhancedMessage, injectedContexts } = await contextInjectionManager.injectContext(
+            lastMessage.content,
+            {
+              organizationId: params.organizationId,
+              userId: params.userId?.toString() || '',
+              userRole: params.userRole,
+            }
+          );
+
+          // 確認が必要な場合は特別な応答を生成
+          const clarificationNeeded = injectedContexts.find(ctx => ctx.type === 'clarification_needed');
+          if (clarificationNeeded && clarificationNeeded.type === 'clarification_needed') {
+            return this.formatClarificationResponse(clarificationNeeded);
+          }
+
+          // メッセージを強化版に置き換え
+          processedMessages[processedMessages.length - 1] = {
+            ...lastMessage,
+            content: enhancedMessage,
+          } as ChatMessage;
+        }
+      }
 
       const openAIMessages = [
         { role: 'system' as const, content: systemPrompt },
-        ...this.convertToOpenAIMessages(params.messages),
+        ...this.convertToOpenAIMessages(processedMessages),
       ];
 
       const completion = await this.openai.chat.completions.create({
@@ -56,16 +96,18 @@ export class OpenAIService {
     }
   }
 
-  private buildSystemPrompt(
+  private async buildSystemPrompt(
     aiCharacter: AICharacter,
     memoryContext: string,
-    contextType: string
-  ): string {
+    contextType: string,
+    fourPillarsData?: FourPillarsData | null
+  ): Promise<string> {
     const basePrompt = this.getBasePrompt(aiCharacter);
     const contextPrompt = this.getContextPrompt(contextType);
     const memoryPrompt = memoryContext ? `\n\n【記憶情報】\n${memoryContext}` : '';
+    const fourPillarsPrompt = this.getFourPillarsPrompt(fourPillarsData);
     
-    return `${basePrompt}\n\n${contextPrompt}${memoryPrompt}`;
+    return `${basePrompt}\n\n${contextPrompt}${memoryPrompt}${fourPillarsPrompt}`;
   }
 
   private getBasePrompt(aiCharacter: AICharacter): string {
@@ -198,5 +240,78 @@ JSONフォーマットで、抽出した情報を配列として返してくだ�
       logger.error('OpenAIメモリ抽出エラー:', error);
       return [];
     }
+  }
+
+  /**
+   * 四柱推命データを取得する
+   */
+  private async getFourPillarsData(userId?: ID, clientId?: ID): Promise<FourPillarsData | null> {
+    try {
+      if (userId) {
+        return await this.sajuService.getSavedFourPillarsByUserId(userId);
+      } else if (clientId) {
+        return await this.sajuService.getSavedFourPillarsByClientId(clientId);
+      }
+      return null;
+    } catch (error) {
+      logger.error('四柱推命データ取得エラー:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 四柱推命情報をシステムプロンプトに組み込む
+   */
+  private getFourPillarsPrompt(fourPillarsData?: FourPillarsData | null): string {
+    if (!fourPillarsData) {
+      return '';
+    }
+
+    const { yearPillar, monthPillar, dayPillar, hourPillar, elementBalance, tenGods } = fourPillarsData;
+
+    const fourPillarsPrompt = `
+
+【四柱推命情報】
+あなたは以下のユーザーの四柱推命情報を参考にして、よりパーソナライズされたアドバイスを提供してください。
+
+■ 四柱（年柱・月柱・日柱・時柱）
+- 年柱: ${yearPillar.heavenlyStem}${yearPillar.earthlyBranch} (${yearPillar.element}・${yearPillar.yinYang})
+- 月柱: ${monthPillar.heavenlyStem}${monthPillar.earthlyBranch} (${monthPillar.element}・${monthPillar.yinYang})
+- 日柱: ${dayPillar.heavenlyStem}${dayPillar.earthlyBranch} (${dayPillar.element}・${dayPillar.yinYang})
+- 時柱: ${hourPillar.heavenlyStem}${hourPillar.earthlyBranch} (${hourPillar.element}・${hourPillar.yinYang})
+
+■ 五行バランス
+- 木: ${elementBalance.wood}%
+- 火: ${elementBalance.fire}%
+- 土: ${elementBalance.earth}%
+- 金: ${elementBalance.metal}%
+- 水: ${elementBalance.water}%
+${elementBalance.mainElement ? `- 主要五行: ${elementBalance.mainElement}` : ''}
+
+■ 十神
+- 年柱: ${tenGods.year}
+- 月柱: ${tenGods.month}
+- 日柱: ${tenGods.day}
+- 時柱: ${tenGods.hour}
+
+【重要】
+- この四柱推命情報を基に、ユーザーの性格特性、運勢、適性などを考慮したアドバイスを提供してください
+- 美容やライフスタイルの提案では、五行バランスや十神の特性を活かした内容にしてください
+- 占い結果を押し付けるのではなく、自然に会話に織り込んでください
+- ユーザーが四柱推命について質問した場合は、この情報を詳しく説明してください`;
+
+    return fourPillarsPrompt;
+  }
+
+  private formatClarificationResponse(clarification: any): string {
+    let response = clarification.message + '\n\n';
+    
+    clarification.options.forEach((option: any) => {
+      response += option.displayText + '\n';
+    });
+    
+    response += '\n番号で選択するか、フルネームでお答えください。';
+    
+    return response;
   }
 }

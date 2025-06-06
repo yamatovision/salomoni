@@ -8,10 +8,10 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRoles = [] }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, hasAICharacter, checkingAICharacter } = useAuth();
 
-  if (loading) {
-    // ローディング中はスピナーを表示（1.5で実装）
+  if (loading || checkingAICharacter) {
+    // ローディング中はスピナーを表示
     return <div>Loading...</div>;
   }
 
@@ -33,6 +33,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRoles = 
       default:
         return <Navigate to={ROUTES.public.login} replace />;
     }
+  }
+
+  // USER/STYLISTロールの場合、AIキャラクターが設定されているかチェック
+  if ((user.role === UserRole.USER || user.role === UserRole.STYLIST) && !hasAICharacter) {
+    console.log('[ProtectedRoute] AIキャラクター未設定を検出 - /ai-character-setup へリダイレクト');
+    return <Navigate to={ROUTES.public.aiCharacterSetup} replace />;
   }
 
   return <Outlet />;

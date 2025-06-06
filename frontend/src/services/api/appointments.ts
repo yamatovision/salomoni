@@ -36,8 +36,19 @@ export class AppointmentService {
     } = {},
     pagination: PaginationParams = { page: 1, limit: 20 }
   ): Promise<AppointmentsResponse> {
+    // dateパラメータをfrom/toパラメータに変換
+    const apiFilters: any = {};
+    if (filters.date) {
+      // 指定した日付の00:00:00から23:59:59までを指定
+      apiFilters.from = `${filters.date}T00:00:00.000Z`;
+      apiFilters.to = `${filters.date}T23:59:59.999Z`;
+    }
+    if (filters.stylistId) apiFilters.stylistId = filters.stylistId;
+    if (filters.clientId) apiFilters.clientId = filters.clientId;
+    if (filters.status) apiFilters.status = filters.status;
+
     const params = {
-      ...filters,
+      ...apiFilters,
       ...pagination,
     };
 

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CORS Test</title>
+</head>
+<body>
+    <h1>CORS Test</h1>
+    <button onclick="testCORS()">Test CORS Request</button>
+    <pre id="output"></pre>
+    
+    <script>
+        async function testCORS() {
+            const output = document.getElementById('output');
+            output.textContent = 'Testing CORS...\n\n';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/ai-characters/setup-status', {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Authorization': 'Bearer test-token',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                output.textContent += `Status: ${response.status}\n`;
+                output.textContent += `Headers:\n`;
+                
+                for (const [key, value] of response.headers.entries()) {
+                    output.textContent += `  ${key}: ${value}\n`;
+                }
+                
+                const data = await response.text();
+                output.textContent += `\nResponse: ${data}\n`;
+                
+            } catch (error) {
+                output.textContent += `Error: ${error.message}\n`;
+                console.error('CORS Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

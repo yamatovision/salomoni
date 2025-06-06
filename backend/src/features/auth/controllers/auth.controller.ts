@@ -25,11 +25,15 @@ export class AuthController {
     next: NextFunction
   ): Promise<void> => {
     try {
+      console.log('Login request received:', req.body);
+      
       const authRequest: AuthRequest = {
         ...req.body,
         platform: req.get('x-platform') || 'web',
         userAgent: req.get('user-agent'),
       };
+
+      console.log('Auth request:', authRequest);
 
       const result = await this.authService.login(authRequest);
 

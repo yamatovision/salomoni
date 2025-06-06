@@ -357,6 +357,19 @@ export class UserRepository {
         status: UserStatus.ACTIVE,
         role: { $ne: 'client' as UserRole }
       });
+      
+      logger.info('Users found by organization', {
+        organizationId,
+        userCount: users.length,
+        users: users.map(u => ({ 
+          id: u._id, 
+          name: u.name, 
+          role: u.role,
+          status: u.status,
+          hasBirthDate: !!u.birthDate
+        }))
+      });
+      
       return users.map(user => user.toJSON() as UserProfile);
     } catch (error) {
       logger.error('Failed to find users by organization', { error, organizationId });

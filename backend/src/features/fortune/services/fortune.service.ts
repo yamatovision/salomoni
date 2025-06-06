@@ -1,5 +1,5 @@
 import { FortuneRepository } from '../repositories/fortune.repository';
-import { sajuService } from '../../saju/services/saju.service';
+import { SajuService } from '../../saju/services/saju.service';
 import { OpenAIService } from '../../chat/services/openai.service';
 import { UserRepository } from '../../users/repositories/user.repository';
 // import { ClientRepository } from '../../clients/repositories/client.repository';
@@ -21,6 +21,7 @@ import { logger } from '../../../common/utils/logger';
 
 export class FortuneService {
   private fortuneRepository: FortuneRepository;
+  private sajuService: SajuService;
   private openAIService: OpenAIService;
   private userRepository: UserRepository;
   // private clientRepository: ClientRepository;
@@ -28,6 +29,7 @@ export class FortuneService {
 
   constructor() {
     this.fortuneRepository = new FortuneRepository();
+    this.sajuService = new SajuService();
     this.openAIService = new OpenAIService();
     this.userRepository = new UserRepository();
     // this.clientRepository = new ClientRepository();
@@ -184,16 +186,24 @@ export class FortuneService {
       // 各スタイリストとの相性を計算
       const compatibilityPromises = otherStylists.map(async (stylist: any) => {
         try {
-          // 簡易的な相性スコア計算（実際はsajuServiceを使用）
-          const score = Math.floor(Math.random() * 5) + 1;
+          // 実際の四柱推命ベースの相性計算を使用
+          const compatibilityResult = await this.sajuService.calculateTwoPersonCompatibility(
+            userId,
+            stylist.id
+          );
+          
+          // 相性スコアを1-5の範囲に正規化（0-100% -> 1-5）
+          const normalizedScore = Math.ceil(compatibilityResult.score / 20);
           
           return {
             stylistId: stylist.id,
             stylistName: stylist.name,
             profileImage: stylist.profileImage,
-            compatibilityScore: score,
-            reason: this.generateCompatibilityReason(score),
-            advice: this.generateCompatibilityAdvice(score),
+            compatibilityScore: normalizedScore,
+            compatibilityPercentage: compatibilityResult.score, // パーセンテージも保持
+            reason: this.generateCompatibilityReason(normalizedScore),
+            advice: this.generateCompatibilityAdvice(normalizedScore),
+            details: compatibilityResult.details, // 詳細な相性情報
           };
         } catch (error) {
           logger.error(`スタイリスト${stylist.id}との相性計算エラー:`, error);
@@ -438,6 +448,9 @@ export class FortuneService {
         aiCharacter,
         memoryContext: `ユーザー名: ${_user.name}`,
         contextType: 'personal',
+        organizationId: _user.organizationId || '',
+        userRole: _user.role,
+        userId: _user.id,
       });
 
       return response;

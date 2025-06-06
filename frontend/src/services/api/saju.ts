@@ -68,4 +68,10 @@ export class SajuService {
     const response = await apiClient.get(`/api/fortune/compatibility/today?clientId=${clientId}`);
     return response.data;
   }
+
+  // 日本の都道府県データ取得
+  async getJapanesePrefectures(): Promise<ApiResponse<any>> {
+    const response = await apiClient.get(API_PATHS.SAJU.LOCATIONS_JAPAN);
+    return response.data;
+  }
 }

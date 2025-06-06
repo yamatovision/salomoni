@@ -10,6 +10,7 @@ export const ROUTES = {
     lineCallback: '/auth/line-callback',
     initialSetup: '/auth/initial-setup',
     aiCharacterSetup: '/ai-character/setup',
+    aiCharacterSetupClient: '/ai-character-setup/client/:clientId',
   },
   
   // スタイリストルート（要認証）

@@ -1,11 +1,48 @@
 import { apiClient } from './apiClient';
 import { API_PATHS } from '../../types';
-import type { UserProfile, ApiResponse } from '../../types';
+import type { UserProfile, ApiResponse, PaginationParams, PaginationInfo, UserRole, UserStatus } from '../../types';
 
 export class UserService {
-  async getUsers(): Promise<UserProfile[]> {
-    const response = await apiClient.get<UserProfile[]>(API_PATHS.USERS.LIST);
-    return response.data;
+  async getUsers(params?: PaginationParams & {
+    organizationId?: string;
+    role?: UserRole;
+    status?: UserStatus;
+    search?: string;
+  }): Promise<{
+    users: UserProfile[];
+    pagination: PaginationInfo;
+  }> {
+    const response = await apiClient.get<ApiResponse<{
+      data: UserProfile[];
+      pagination: PaginationInfo;
+    }>>(API_PATHS.USERS.LIST, { params });
+    
+    // APIレスポンスの形式に応じて処理
+    if (response.data.data && 'data' in response.data.data) {
+      // ページネーション付きレスポンスの場合
+      return {
+        users: (response.data.data as any).data,
+        pagination: (response.data.data as any).pagination
+      };
+    } else if (Array.isArray(response.data.data)) {
+      // 配列直接返却の場合（後方互換性）
+      return {
+        users: response.data.data as UserProfile[],
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: (response.data.data as UserProfile[]).length,
+          itemsPerPage: (response.data.data as UserProfile[]).length,
+          hasNext: false,
+          hasPrev: false
+        }
+      };
+    }
+    
+    return {
+      users: response.data.data!.data,
+      pagination: response.data.data!.pagination
+    };
   }
 
   async getUser(id: string): Promise<UserProfile> {

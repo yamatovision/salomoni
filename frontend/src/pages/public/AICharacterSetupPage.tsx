@@ -8,7 +8,7 @@ import {
   Paper,
   Fade,
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { WelcomeCard } from '../../components/features/ai-character-setup/WelcomeCard';
 import { StepIndicator } from '../../components/features/ai-character-setup/StepIndicator';
 import { ChatInterface } from '../../components/features/ai-character-setup/ChatInterface';
@@ -16,10 +16,13 @@ import { BirthDateForm } from '../../components/features/ai-character-setup/form
 import { BirthPlaceForm } from '../../components/features/ai-character-setup/forms/BirthPlaceForm';
 import { BirthTimeForm } from '../../components/features/ai-character-setup/forms/BirthTimeForm';
 import { useAICharacterSetup } from '../../hooks/useAICharacterSetup';
+import { useAuth } from '../../hooks/useAuth';
 import type { SetupStep } from '../../components/features/ai-character-setup/types';
 
 const AICharacterSetupPage: React.FC = () => {
   const navigate = useNavigate();
+  const { clientId } = useParams<{ clientId?: string }>();
+  const { hasAICharacter, checkingAICharacter } = useAuth();
   const {
     currentStep,
     setupData,
@@ -30,7 +33,7 @@ const AICharacterSetupPage: React.FC = () => {
     handleDateInput,
     handlePlaceInput,
     handleTimeInput,
-  } = useAICharacterSetup();
+  } = useAICharacterSetup(clientId);
 
   const [inputValue, setInputValue] = useState('');
   const [showWelcome, setShowWelcome] = useState(true);
@@ -77,6 +80,17 @@ const AICharacterSetupPage: React.FC = () => {
       inputType: 'text',
     },
   ];
+  
+  console.log('[AICharacterSetupPage] 現在のステップ:', currentStep, 'ステップID:', steps[currentStep]?.id);
+  console.log('[AICharacterSetupPage] hasAICharacter:', hasAICharacter, 'checkingAICharacter:', checkingAICharacter);
+
+  // AIキャラクターが既に設定されている場合はリダイレクト（クライアント用を除く）
+  useEffect(() => {
+    if (!clientId && !checkingAICharacter && hasAICharacter) {
+      console.log('[AICharacterSetupPage] AIキャラクター設定済み - ダッシュボードへリダイレクト');
+      navigate('/dashboard');
+    }
+  }, [hasAICharacter, checkingAICharacter, navigate, clientId]);
 
   useEffect(() => {
     // スクロール制御
@@ -165,6 +179,23 @@ const AICharacterSetupPage: React.FC = () => {
         return null;
     }
   };
+
+  // AIキャラクターのチェック中はローディング表示
+  if (checkingAICharacter) {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'linear-gradient(135deg, #fce7f3 0%, #fdf2f8 100%)',
+        }}
+      >
+        <Typography>読み込み中...</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -279,7 +310,10 @@ const AICharacterSetupPage: React.FC = () => {
                   <Button
                     variant="contained"
                     size="large"
-                    onClick={() => navigate('/stylist/chat')}
+                    onClick={() => {
+                      console.log('[AICharacterSetupPage] ダッシュボードへ移動');
+                      window.location.href = '/dashboard';
+                    }}
                     sx={{
                       bgcolor: '#F26A8D',
                       color: 'white',

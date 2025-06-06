@@ -41,6 +41,13 @@ router.get(
   clientController.getDailyClients
 );
 
+// GET /api/clients/my-clients - スタイリストの担当クライアント一覧取得
+router.get(
+  '/clients/my-clients',
+  authenticate,
+  clientController.getMyClients
+);
+
 // GET /api/clients/:id - クライアント詳細取得
 router.get(
   '/clients/:id',
@@ -74,6 +81,23 @@ router.post(
   authenticate,
   checkClientAccess,
   clientController.recordVisit
+);
+
+// GET /api/clients/:id/saju-profile - クライアント四柱推命プロフィール取得
+router.get(
+  '/clients/:id/saju-profile',
+  authenticate,
+  checkClientAccess,
+  clientController.getClientSajuProfile
+);
+
+// GET /api/admin/clients/:id/compatibility - クライアントとスタイリストの相性取得
+router.get(
+  '/admin/clients/:id/compatibility',
+  authenticate,
+  authorize(UserRole.OWNER, UserRole.ADMIN),
+  checkClientAccess,
+  clientController.getClientCompatibility
 );
 
 export const clientRoutes = router;

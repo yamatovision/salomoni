@@ -96,23 +96,61 @@ const DailyAdvicePage: React.FC = () => {
   const [adviceData, setAdviceData] = useState<DailyAdviceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  
+  console.log('[DailyAdvicePage] コンポーネント初期化', { 
+    user, 
+    currentPath: window.location.pathname,
+    userRole: user?.role 
+  });
 
   useEffect(() => {
+    let mounted = true;
+    
     // APIからデータを取得
     const loadAdviceData = async () => {
+      console.log('[DailyAdvicePage] loadAdviceData - 開始', { userId: user?.id, mounted });
       try {
-        if (!user?.id) return;
+        if (!user?.id) {
+          console.log('[DailyAdvicePage] loadAdviceData - ユーザーIDが無効');
+          return;
+        }
         
+        if (!mounted) {
+          console.log('[DailyAdvicePage] loadAdviceData - コンポーネントがアンマウントされています');
+          return;
+        }
+        
+        console.log('[DailyAdvicePage] loadAdviceData - API呼び出し前');
         const advice = await fortuneService.getDailyAdvice(user.id);
-        setAdviceData(advice);
-      } catch (error) {
-        console.error('Failed to load advice data:', error);
+        console.log('[DailyAdvicePage] loadAdviceData - API呼び出し成功', advice);
+        
+        if (mounted) {
+          setAdviceData(advice);
+        }
+      } catch (error: any) {
+        console.error('[DailyAdvicePage] loadAdviceData - エラー発生:', {
+          error,
+          status: error?.response?.status,
+          code: error?.response?.data?.code,
+          message: error?.response?.data?.message
+        });
+        // エラーが発生してもリダイレクトは行わない
+        // RoleBasedRedirectがAIキャラクターのチェックとリダイレクトを担当する
       } finally {
-        setLoading(false);
+        console.log('[DailyAdvicePage] loadAdviceData - 完了', { mounted });
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadAdviceData();
+    
+    // クリーンアップ関数
+    return () => {
+      mounted = false;
+      console.log('[DailyAdvicePage] useEffect - クリーンアップ');
+    };
   }, [user?.id]);
 
   const handleCardClick = (cardId: string) => {
@@ -127,14 +165,15 @@ const DailyAdvicePage: React.FC = () => {
     });
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
     const options: Intl.DateTimeFormatOptions = { 
       year: 'numeric', 
       month: 'long', 
       day: 'numeric',
       weekday: 'long'
     };
-    return date.toLocaleDateString('ja-JP', options);
+    return dateObj.toLocaleDateString('ja-JP', options);
   };
 
   if (loading) {

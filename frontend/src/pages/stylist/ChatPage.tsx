@@ -31,7 +31,7 @@ import {
   Add as AddIcon
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import type { ChatMessage, Client, Conversation, AICharacter, ConversationContextType } from '../../types';
 import { MessageType } from '../../types';
@@ -73,7 +73,9 @@ const MessagesArea = styled(Box)(({ theme }: { theme: any }) => ({
   },
 }));
 
-const MessageBubble = styled(Paper)<{ messageType: 'user' | 'ai' }>(({ theme, messageType }: { theme: any; messageType: 'user' | 'ai' }) => ({
+const MessageBubble = styled(Paper, {
+  shouldForwardProp: (prop) => prop !== 'messageType',
+})<{ messageType: 'user' | 'ai' }>(({ theme, messageType }) => ({
   padding: theme.spacing(1.5, 2),
   borderRadius: '20px',
   maxWidth: '85%',
@@ -117,9 +119,10 @@ const QuickActionButton = styled(Button)(({ theme }: { theme: any }) => ({
 }));
 
 const ChatPage: React.FC = () => {
-  const { } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { clientId: urlClientId } = useParams<{ clientId?: string }>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -135,43 +138,67 @@ const ChatPage: React.FC = () => {
   useEffect(() => {
     // クライアントリストとチャットデータを読み込み
     const loadData = async () => {
+      console.log('[ChatPage] loadData - 開始');
       try {
+        // URLパラメータまたはstateからclientIdを取得
+        const clientId = urlClientId || location.state?.clientId;
+        
         // AIキャラクターを取得
+        console.log('[ChatPage] loadData - AIキャラクター取得開始');
         const characterResponse = await aiCharacterService.getMyAICharacter();
+        console.log('[ChatPage] loadData - AIキャラクター取得レスポンス:', characterResponse);
         if (characterResponse.success && characterResponse.data) {
+          console.log('[ChatPage] loadData - AIキャラクター取得成功');
           setAiCharacter(characterResponse.data);
         } else if (!characterResponse.success) {
-          // AIキャラクターが未作成の場合、初回設定ページへ
-          navigate(ROUTES.public.initialSetup);
+          // AIキャラクターが未作成の場合、AIキャラクターセットアップページへ
+          console.log('[ChatPage] AIキャラクター未設定 - セットアップページへリダイレクト');
+          setError('AIキャラクターが設定されていません。初期設定を行います...');
+          setTimeout(() => {
+            navigate('/ai-character-setup');
+          }, 1000);
           return;
         }
         
-        // クライアントリストを取得
-        const clientsResponse = await clientService.getClients();
-        if (clientsResponse.clients) {
-          setAvailableClients(clientsResponse.clients);
-          
-          // NewClientPageから遷移してきた場合
-          if (location.state?.clientId) {
-            const client = clientsResponse.clients.find((c: Client) => c.id === location.state.clientId);
-            if (client) {
-              setSelectedClient(client);
+        // ユーザーロールの場合、クライアントリストの取得をスキップ
+        // 管理者用APIのため、一般ユーザーはアクセスできない
+        if (user?.role === 'admin' || user?.role === 'owner') {
+          try {
+            const clientsResponse = await clientService.getClients();
+            if (clientsResponse.clients) {
+              setAvailableClients(clientsResponse.clients);
+              
+              // NewClientPageから遷移してきた場合
+              if (location.state?.clientId) {
+                const client = clientsResponse.clients.find((c: Client) => c.id === location.state.clientId);
+                if (client) {
+                  setSelectedClient(client);
+                }
+              }
             }
+          } catch (error) {
+            console.log('[ChatPage] クライアントリスト取得エラー（権限不足の可能性）:', error);
           }
+        } else {
+          console.log('[ChatPage] ユーザーロールのため、クライアントリスト取得をスキップ');
         }
         
-        // 会話を開始または取得
-        const context: ConversationContextType = selectedClient ? 'client_direct' : 'personal';
+        // 会話を開始または取得（初期ロード時にclientIdがある場合は'client_direct'コンテキストを使用）
+        const context: ConversationContextType = clientId ? 'client_direct' : 'personal';
         const chatResponse = await chatService.startChat({
           context,
-          clientId: selectedClient?.id,
+          clientId: clientId || undefined,
         });
         
-        if (chatResponse.success && chatResponse.data) {
+        if (chatResponse.success && chatResponse.data?.conversation) {
           setCurrentConversation(chatResponse.data.conversation);
           
           // 既存の会話がある場合はメッセージ履歴を取得
-          if (!chatResponse.data.isNew) {
+          // isNewフラグがある場合はそれを優先、ない場合はmessageCountで判定
+          const isExistingConversation = chatResponse.data.isNew === false || 
+            (chatResponse.data.isNew === undefined && (chatResponse.data.conversation?.messageCount || 0) > 0);
+          
+          if (isExistingConversation) {
             const messagesResponse = await chatService.getMessages(
               chatResponse.data.conversation.id,
               { order: 'asc' }
@@ -180,6 +207,9 @@ const ChatPage: React.FC = () => {
               setMessages(messagesResponse.data);
             }
           }
+        } else {
+          console.warn('チャット開始レスポンスが不正です:', chatResponse);
+          setError('チャットを開始できませんでした');
         }
       } catch (error) {
         console.error('Failed to load data:', error);
@@ -190,7 +220,7 @@ const ChatPage: React.FC = () => {
     };
 
     loadData();
-  }, [location.state, navigate]);
+  }, [location.state, navigate, urlClientId, user?.role]);
   
   // クライアント選択時に新しい会話を開始
   useEffect(() => {
@@ -208,11 +238,15 @@ const ChatPage: React.FC = () => {
           clientId: selectedClient?.id,
         });
         
-        if (chatResponse.success && chatResponse.data) {
+        if (chatResponse.success && chatResponse.data?.conversation) {
           setCurrentConversation(chatResponse.data.conversation);
           
           // 既存の会話がある場合はメッセージ履歴を取得
-          if (!chatResponse.data.isNew) {
+          // isNewフラグがある場合はそれを優先、ない場合はmessageCountで判定
+          const isExistingConversation = chatResponse.data.isNew === false || 
+            (chatResponse.data.isNew === undefined && (chatResponse.data.conversation?.messageCount || 0) > 0);
+          
+          if (isExistingConversation) {
             const messagesResponse = await chatService.getMessages(
               chatResponse.data.conversation.id,
               { order: 'asc' }
@@ -221,6 +255,9 @@ const ChatPage: React.FC = () => {
               setMessages(messagesResponse.data);
             }
           }
+        } else {
+          console.warn('チャット開始レスポンスが不正です:', chatResponse);
+          setError('チャットを開始できませんでした');
         }
       } catch (error) {
         console.error('Failed to switch conversation:', error);
@@ -301,8 +338,10 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('ja-JP', { 
+  const formatTime = (date: Date | string | undefined) => {
+    if (!date) return '';
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return dateObj.toLocaleTimeString('ja-JP', { 
       hour: '2-digit', 
       minute: '2-digit' 
     });
@@ -313,7 +352,7 @@ const ChatPage: React.FC = () => {
     const richContent = message.metadata?.richContent;
 
     return (
-      <Fade in key={message.id}>
+      <Fade in>
         <Box
           display="flex"
           flexDirection="column"
@@ -362,7 +401,7 @@ const ChatPage: React.FC = () => {
               >
                 {richContent.fortuneCard.items.map((item: { label: string; value: string; color?: string }, index: number) => (
                   <Box
-                    key={index}
+                    key={`fortune-item-${message.id}-${index}`}
                     bgcolor="rgba(255,255,255,0.8)"
                     p={2}
                     borderRadius={2}
@@ -490,7 +529,7 @@ const ChatPage: React.FC = () => {
                   </Typography>
                 </Box>
                 {selectedClient && (
-                  <>
+                  <React.Fragment key="client-info">
                     <Typography variant="caption" color="text.secondary">•</Typography>
                     <Chip
                       size="small"
@@ -501,7 +540,7 @@ const ChatPage: React.FC = () => {
                       color="primary"
                       variant="outlined"
                     />
-                  </>
+                  </React.Fragment>
                 )}
               </Box>
             </Box>
@@ -514,7 +553,11 @@ const ChatPage: React.FC = () => {
 
         {/* メッセージエリア */}
         <MessagesArea>
-          {messages.map(message => renderMessage(message))}
+          {messages.map((message) => (
+            <Box key={message.id}>
+              {renderMessage(message)}
+            </Box>
+          ))}
           
           {/* タイピングインジケーター */}
           {isTyping && (

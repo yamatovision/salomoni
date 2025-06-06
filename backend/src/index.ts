@@ -32,29 +32,39 @@ import { logger } from './common/utils/logger';
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// ミドルウェアの設定
-app.use(helmet());
-
-// CORS設定のデバッグログ
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || '*';
+// CORS設定
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()) || ['http://localhost:5173'];
 logger.info('CORS設定:', { allowedOrigins, credentials: true });
 
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
+  optionsSuccessStatus: 200
 }));
+
+// ミドルウェアの設定
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(requestLogger);
 
-// レート制限
-app.use('/api/', rateLimiter);
-
 // ヘルスチェック
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// テストエンドポイント（レート制限前に配置）
+app.get('/api/test', (_req, res) => {
+  console.log('Test endpoint hit');
+  res.json({ message: 'API is working', timestamp: new Date().toISOString() });
+});
+
+// レート制限（一時的にコメントアウト）
+// app.use('/api/', rateLimiter);
 
 // APIルート
 app.use('/api/auth', authRoutes);
@@ -108,6 +118,18 @@ const startServer = async (): Promise<void> => {
     app.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV}`);
+      
+      // デバッグ：登録されているミドルウェアを確認
+      if (process.env.NODE_ENV !== 'production') {
+        logger.debug('Registered middleware stack:');
+        (app as any)._router.stack.forEach((layer: any, index: number) => {
+          if (layer.route) {
+            logger.debug(`  ${index}: Route ${layer.route.path}`);
+          } else if (layer.name) {
+            logger.debug(`  ${index}: Middleware ${layer.name}`);
+          }
+        });
+      }
     });
   } catch (error) {
     logger.error('Failed to start server:', error);

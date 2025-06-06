@@ -51,7 +51,10 @@ export const AppRouter = () => {
         <Route path={ROUTES.public.organizationRegister} element={<OrganizationRegisterPage />} />
         <Route path={ROUTES.public.lineCallback} element={<LineCallbackPage />} />
         <Route path={ROUTES.public.initialSetup} element={<InitialSetupPage />} />
+        
+        {/* AIキャラクターセットアップ（認証済みユーザーもアクセス可能） */}
         <Route path={ROUTES.public.aiCharacterSetup} element={<AICharacterSetupPage />} />
+        <Route path={ROUTES.public.aiCharacterSetupClient} element={<AICharacterSetupPage />} />
 
         {/* スタイリストルート（要認証） */}
         <Route element={<ProtectedRoute requiredRoles={[UserRole.USER, UserRole.STYLIST, UserRole.ADMIN, UserRole.OWNER]} />}>

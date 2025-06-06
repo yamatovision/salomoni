@@ -18,8 +18,12 @@ export class FortuneService {
   }
 
   async getDailyAdvice(userId: string): Promise<DailyAdviceData> {
+    // ユーザーのローカルタイムゾーンを取得
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
     const response = await apiClient.get<{ success: boolean; data: DailyAdviceData }>(
-      API_PATHS.FORTUNE.DAILY_ADVICE(userId)
+      API_PATHS.FORTUNE.DAILY_ADVICE(userId),
+      { params: { timezone } }
     );
     return response.data.data;
   }

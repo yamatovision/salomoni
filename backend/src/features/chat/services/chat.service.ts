@@ -59,11 +59,12 @@ export class ChatService {
         throw new AppError('指定されたAIキャラクターが存在しません', 400, 'AI_CHARACTER_NOT_FOUND');
       }
 
-      // アクティブな会話がある場合は終了する
+      // アクティブな会話がある場合は終了する（同じcontextの会話のみ）
       const activeConversation = await this.conversationRepository.getActiveConversation(
         data.userId,
         data.clientId,
-        data.aiCharacterId
+        data.aiCharacterId,
+        data.context
       );
       
       if (activeConversation) {
@@ -98,9 +99,13 @@ export class ChatService {
     pagination?: PaginationParams
   ): Promise<{ conversations: Conversation[]; pagination: any }> {
     try {
+      logger.info(`[DEBUG] ChatService.getConversations呼び出し: userId=${userId}, clientId=${clientId}, filters=${JSON.stringify(filters)}`);
+      
       if (userId) {
+        logger.info(`[DEBUG] userIdベースで会話取得: ${userId}`);
         return await this.conversationRepository.findByUserId(userId, filters, pagination);
       } else if (clientId) {
+        logger.info(`[DEBUG] clientIdベースで会話取得: ${clientId}`);
         return await this.conversationRepository.findByClientId(clientId, filters, pagination);
       } else {
         throw new Error('userIdまたはclientIdが必要です');
@@ -286,11 +291,12 @@ export class ChatService {
       // AIキャラクターを取得または作成
       const aiCharacter = await this.aiCharacterService.getOrCreateAICharacter(user, client);
       
-      // アクティブな会話を検索
+      // アクティブな会話を検索（contextも考慮）
       let conversation = await this.conversationRepository.getActiveConversation(
         user?.id,
         client?.id,
-        aiCharacter.id
+        aiCharacter.id,
+        context
       );
       
       // アクティブな会話がない場合は新規作成
@@ -301,6 +307,15 @@ export class ChatService {
           aiCharacterId: aiCharacter.id,
           context,
         });
+      } else {
+        // 既存の会話の場合、実際のメッセージ数を取得して更新
+        try {
+          const messageCount = await this.chatMessageRepository.getMessageCount(conversation.id);
+          conversation.messageCount = messageCount;
+        } catch (error) {
+          logger.error('メッセージ数取得エラー（フォールバック）:', error);
+          // エラーの場合は、messagecountをそのまま使用
+        }
       }
       
       return conversation;

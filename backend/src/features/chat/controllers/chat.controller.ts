@@ -67,13 +67,28 @@ export class ChatController {
       const userId = req.user.id;
       const clientId = req.query.clientId as string;
 
+      logger.info(`[DEBUG] getConversations呼び出し: userId=${userId}, clientId=${clientId}, context=${context}`);
+
       const filters: any = {};
       if (context) filters.context = context as string;
       if (aiCharacterId) filters.aiCharacterId = aiCharacterId as string;
 
+      // **重要**: userIdとclientIdの排他的な処理が必要
+      // client_directコンテキストの場合はclientIdのみ、それ以外はuserIdのみを使用
+      let finalUserId: string | undefined = undefined;
+      let finalClientId: string | undefined = undefined;
+      
+      if (context === 'client_direct' && clientId) {
+        finalClientId = clientId;
+        logger.info(`[DEBUG] client_directコンテキストのためclientIdを使用: ${finalClientId}`);
+      } else {
+        finalUserId = userId;
+        logger.info(`[DEBUG] 通常コンテキストのためuserIdを使用: ${finalUserId}`);
+      }
+
       const result = await this.chatService.getConversations(
-        userId,
-        clientId,
+        finalUserId,
+        finalClientId,
         filters,
         {
           page: parseInt(page as string),
@@ -199,12 +214,24 @@ export class ChatController {
       }
       
       const user = req.user;
-      const { context = 'personal' } = req.body;
+      const { context = 'personal', clientId } = req.body;
 
-      // TODO: クライアント情報の取得処理を追加
+      let client = undefined;
+      if (clientId) {
+        // クライアント情報を取得
+        const { ClientModel } = await import('../../clients/models/client.model');
+        const clientData = await ClientModel.findById(clientId);
+        if (clientData) {
+          client = {
+            id: clientData.id,
+            organizationId: clientData.organizationId,
+            name: clientData.name,
+          } as any;
+        }
+      }
 
       // JWTPayloadから必要な情報を抽出してUserProfileライクなオブジェクトを作成
-      const userProfile = {
+      const userProfile = context === 'client_direct' ? undefined : {
         id: user.id,
         email: user.email,
         roles: user.roles,
@@ -213,7 +240,7 @@ export class ChatController {
 
       const conversation = await this.chatService.getOrCreateConversation(
         userProfile,
-        undefined, // client
+        client,
         context
       );
 

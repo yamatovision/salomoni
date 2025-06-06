@@ -3,7 +3,7 @@
  * lunarConverter-newを使用した実装
  */
 import { LunarDate, CalendarDay } from './types';
-import { getLunarDate as convertLunarDate, getSolarTerm } from './lunarConverter-new';
+import { getLunarDate as convertLunarDate } from './lunarConverter-new';
 
 /**
  * 旧暦日付を計算する
@@ -47,7 +47,7 @@ export function getNextNewMoon(date: Date): Date {
  * @param isLeapMonth 閏月かどうか
  * @returns 月の日数（大の月=30日、小の月=29日）
  */
-export function getLunarMonthLength(year: number, month: number, isLeapMonth: boolean): number {
+export function getLunarMonthLength(_year: number, month: number, _isLeapMonth: boolean): number {
   // 仮の実装（実際には天文計算による新月～新月の計算が必要）
   // ここでは単純に奇数月=30日、偶数月=29日とする
   return month % 2 === 1 ? 30 : 29;
@@ -68,7 +68,7 @@ export function generateLunarCalendar(year: number, month: number): CalendarDay[
   
   for (let day = 1; day <= daysInMonth; day++) {
     const solarDate = new Date(year, month - 1, day);
-    const lunar = getLunarDate(solarDate);
+    getLunarDate(solarDate);
     
     result.push({
       year: year,

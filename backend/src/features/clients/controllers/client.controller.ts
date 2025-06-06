@@ -28,15 +28,22 @@ export class ClientController {
   getClientCompatibility = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const clientId = req.params.id;
-      const organizationId = req.user!.organizationId as string;
+      if (!clientId) {
+        throw new AppError('クライアントIDが必要です', 400);
+      }
+      const user = req.user!;
+      const organizationId = user.organizationId;
 
       logger.info('Getting client compatibility', {
         clientId,
         organizationId,
-        userId: req.user!.userId,
+        userId: user.userId,
       });
 
       // クライアントの存在確認とアクセス権限チェック
+      if (!organizationId) {
+        throw new AppError('組織情報が取得できません', 400);
+      }
       const client = await this.clientService.getClient(clientId, organizationId);
       if (!client) {
         throw new AppError('クライアントが見つかりません', 404);
@@ -71,7 +78,11 @@ export class ClientController {
       const compatibilityResults = await Promise.all(
         stylists.map(async (stylist) => {
           try {
-            const result = await this.sajuService.calculateTwoPersonCompatibility(clientId, stylist.id);
+            if (!stylist.id) {
+              logger.warn('Stylist has no ID, skipping compatibility calculation', { stylistName: stylist.name });
+              return null;
+            }
+            const result = await this.sajuService.calculateTwoPersonCompatibility(clientId!, stylist.id);
             return {
               stylistId: stylist.id,
               stylistName: stylist.name,
@@ -650,12 +661,30 @@ export class ClientController {
    */
   getClientSajuProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { organizationId, userId } = req.user!;
+      const user = req.user!;
+      const organizationId = user.organizationId;
+      const userId = user.userId;
       const clientId = req.params.id;
+      if (!clientId) {
+        res.status(400).json({
+          success: false,
+          error: 'クライアントIDが必要です',
+          code: 'CLIENT_ID_REQUIRED',
+        });
+        return;
+      }
 
       logger.info('Getting client saju profile', { clientId, userId, organizationId });
 
       // クライアントの存在確認とアクセス権限チェック
+      if (!organizationId) {
+        res.status(400).json({
+          success: false,
+          error: '組織情報が取得できません',
+          code: 'ORGANIZATION_REQUIRED',
+        });
+        return;
+      }
       const client = await this.clientService.getClient(clientId, organizationId);
       if (!client) {
         res.status(404).json({
@@ -667,7 +696,7 @@ export class ClientController {
       }
 
       // 四柱推命プロフィールを取得
-      const sajuProfile = await this.sajuService.getClientFourPillars(clientId);
+      const sajuProfile = await this.sajuService.getClientFourPillars(clientId!);
 
       const response: ApiResponse<any> = {
         success: true,

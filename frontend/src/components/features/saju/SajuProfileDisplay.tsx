@@ -3,10 +3,10 @@ import {
   Box,
   Typography,
   Paper,
-  Grid,
   Chip,
   LinearProgress,
   Divider,
+  Grid,
 } from '@mui/material';
 import {
   AutoAwesome,
@@ -24,7 +24,7 @@ interface SajuProfileDisplayProps {
 
 // 五行のアイコンと色を取得
 const getElementIcon = (element: string) => {
-  const icons: Record<string, JSX.Element> = {
+  const icons: Record<string, React.ReactElement> = {
     '木': <Park />,
     '火': <LocalFireDepartment />,
     '土': <AccountBalance />,
@@ -57,29 +57,29 @@ export const SajuProfileDisplay: React.FC<SajuProfileDisplayProps> = ({ profile,
           基本情報
         </Typography>
         <Grid container spacing={2} sx={{ mt: 1 }}>
-          <Grid item xs={6}>
+          <Grid size={{ xs: 6 }}>
             <Typography variant="body2" color="text.secondary">氏名</Typography>
             <Typography variant="body1">{userName}</Typography>
           </Grid>
-          <Grid item xs={6}>
+          <Grid size={{ xs: 6 }}>
             <Typography variant="body2" color="text.secondary">生年月日</Typography>
             <Typography variant="body1">
-              {profile.client?.birthDate || profile.user?.birthDate 
-                ? new Date(profile.client?.birthDate || profile.user?.birthDate).toLocaleDateString('ja-JP')
+              {profile.birthDate 
+                ? new Date(profile.birthDate).toLocaleDateString('ja-JP')
                 : '未設定'}
             </Typography>
           </Grid>
-          {(profile.client?.birthTime || profile.user?.birthTime) && (
-            <Grid item xs={6}>
+          {profile.birthTime && (
+            <Grid size={{ xs: 6 }}>
               <Typography variant="body2" color="text.secondary">出生時刻</Typography>
-              <Typography variant="body1">{profile.client?.birthTime || profile.user?.birthTime}</Typography>
+              <Typography variant="body1">{profile.birthTime}</Typography>
             </Grid>
           )}
-          {(profile.client?.birthLocation?.name || profile.user?.birthLocation?.name) && (
-            <Grid item xs={6}>
+          {profile.location && (
+            <Grid size={{ xs: 6 }}>
               <Typography variant="body2" color="text.secondary">出生地</Typography>
               <Typography variant="body1">
-                {profile.client?.birthLocation?.name || profile.user?.birthLocation?.name}
+                {typeof profile.location === 'string' ? profile.location : profile.location.name || profile.location}
               </Typography>
             </Grid>
           )}
@@ -123,15 +123,30 @@ export const SajuProfileDisplay: React.FC<SajuProfileDisplayProps> = ({ profile,
           <Typography variant="h6" gutterBottom>格局・用神</Typography>
           <Grid container spacing={2}>
             {profile.kakukyoku && (
-              <Grid item xs={6}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="body2" color="text.secondary">格局</Typography>
-                <Typography variant="body1">{profile.kakukyoku}</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  {typeof profile.kakukyoku === 'object' ? profile.kakukyoku.type : profile.kakukyoku}
+                </Typography>
+                {typeof profile.kakukyoku === 'object' && profile.kakukyoku.description && (
+                  <Typography variant="body2" color="text.secondary">
+                    {profile.kakukyoku.description}
+                  </Typography>
+                )}
               </Grid>
             )}
             {profile.yojin && (
-              <Grid item xs={6}>
+              <Grid size={{ xs: 12 }} sx={{ mt: 2 }}>
                 <Typography variant="body2" color="text.secondary">用神</Typography>
-                <Typography variant="body1">{Array.isArray(profile.yojin) ? profile.yojin.join('、') : profile.yojin}</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  {typeof profile.yojin === 'object' ? profile.yojin.tenGod : Array.isArray(profile.yojin) ? profile.yojin.join('、') : profile.yojin}
+                  {typeof profile.yojin === 'object' && profile.yojin.element && ` (${profile.yojin.element})`}
+                </Typography>
+                {typeof profile.yojin === 'object' && profile.yojin.description && (
+                  <Typography variant="body2" color="text.secondary">
+                    {profile.yojin.description}
+                  </Typography>
+                )}
               </Grid>
             )}
           </Grid>
@@ -152,7 +167,7 @@ export const SajuProfileDisplay: React.FC<SajuProfileDisplayProps> = ({ profile,
                                 pillarType === 'day' ? '日柱' : '時柱';
               
               return (
-                <Grid item xs={3} key={pillarType}>
+                <Grid size={{ xs: 3 }} key={pillarType}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Typography variant="body2" color="text.secondary" gutterBottom>
                       {pillarName}
@@ -204,11 +219,11 @@ export const SajuProfileDisplay: React.FC<SajuProfileDisplayProps> = ({ profile,
                       {getElementIcon(elementName)}
                       {elementName}
                     </Typography>
-                    <Typography variant="body2">{value}%</Typography>
+                    <Typography variant="body2">{typeof value === 'number' ? value : (typeof value === 'string' ? value : '0')}%</Typography>
                   </Box>
                   <LinearProgress 
                     variant="determinate" 
-                    value={Number(value)} 
+                    value={typeof value === 'number' ? value : (typeof value === 'string' ? Number(value) : 0)} 
                     sx={{ 
                       height: 8, 
                       borderRadius: 4,

@@ -25,6 +25,10 @@ export const errorHandler = (
       success: false,
       error: error.message,
       ...(error.code && { code: error.code }),
+      // バリデーションエラーの詳細を含める
+      ...((error as any).validationErrors && { 
+        details: { validationErrors: (error as any).validationErrors }
+      }),
     };
     res.status(error.statusCode).json(response);
     return;

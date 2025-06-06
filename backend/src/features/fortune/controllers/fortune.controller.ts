@@ -52,7 +52,7 @@ export class FortuneController {
   ): Promise<void> => {
     try {
       const { userId } = req.params;
-      const { date, regenerate } = req.query;
+      const { date, regenerate, timezone } = req.query;
 
       if (!userId) {
         throw new AppError('ユーザーIDは必須です', 400, 'USER_ID_REQUIRED');
@@ -60,11 +60,13 @@ export class FortuneController {
 
       const targetDate = date ? new Date(date as string) : new Date();
       const shouldRegenerate = regenerate === 'true';
+      const userTimezone = timezone as string | undefined;
 
       const advice = await this.fortuneService.getDailyAdvice(
         userId,
         targetDate,
-        shouldRegenerate
+        shouldRegenerate,
+        userTimezone
       );
 
       const response: ApiResponse<any> = {

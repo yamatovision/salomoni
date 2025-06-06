@@ -9,7 +9,6 @@ import cookieParser from 'cookie-parser';
 import { connectDatabase } from './config/database';
 import { errorHandler } from './common/middleware/errorHandler';
 import { requestLogger } from './common/middleware/requestLogger';
-import { rateLimiter } from './common/middleware/rateLimiter';
 import authRoutes from './features/auth/routes/auth.routes';
 import userRoutes from './features/users/routes/user.routes';
 import adminStylistRoutes from './features/users/routes/admin-stylist.routes';

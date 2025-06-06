@@ -63,7 +63,7 @@ export class ClientService {
       console.warn('Received legacy response format - data.data is an array');
       return {
         clients: response.data.data as Client[],
-        pagination: response.data.pagination || {
+        pagination: (response.data as any).pagination || {
           currentPage: 1,
           totalPages: 1,
           totalItems: response.data.data.length,

@@ -143,4 +143,14 @@ export class ChatMessageRepository {
       throw error;
     }
   }
+
+  async getMessageCount(conversationId: string): Promise<number> {
+    try {
+      const count = await ChatMessageModel.countDocuments({ conversationId });
+      return count;
+    } catch (error) {
+      logger.error('メッセージ数取得エラー:', error);
+      throw error;
+    }
+  }
 }

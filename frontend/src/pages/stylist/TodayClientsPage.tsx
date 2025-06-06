@@ -15,20 +15,27 @@ import {
   CircularProgress,
   AppBar,
   Toolbar,
-  Alert
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  LinearProgress
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   AccessTime as AccessTimeIcon,
   ChatBubble as ChatBubbleIcon,
-  Person as PersonIcon
+  Person as PersonIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import type { Client } from '../../types';
 import { clientService, aiCharacterService } from '../../services';
+import { SajuProfileDisplay } from '../../components/features/saju/SajuProfileDisplay';
 
 // ページID: M-004
 
@@ -114,6 +121,12 @@ const TodayClientsPage: React.FC = () => {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // 四柱推命プロフィール表示用の状態
+  const [openSajuProfileDialog, setOpenSajuProfileDialog] = useState(false);
+  const [sajuProfileData, setSajuProfileData] = useState<any>(null);
+  const [sajuLoading, setSajuLoading] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   useEffect(() => {
     // 本日のクライアントデータを取得
@@ -159,18 +172,47 @@ const TodayClientsPage: React.FC = () => {
     try {
       // クライアントのAIキャラクター設定状況を確認
       const setupStatus = await aiCharacterService.getClientSetupStatus(clientId);
+      console.log('[TodayClientsPage] handleChatClick - setupStatus:', setupStatus);
+      console.log('[TodayClientsPage] hasCharacter check:', {
+        success: setupStatus.success,
+        data: setupStatus.data,
+        hasCharacter: setupStatus.data?.hasCharacter
+      });
       
-      if (setupStatus.success && setupStatus.data?.hasAICharacter) {
+      // hasCharacterをチェック
+      if (setupStatus.success && setupStatus.data?.hasCharacter) {
         // 設定済みの場合：チャット画面へ遷移
+        console.log('[TodayClientsPage] AIキャラクター設定済み - チャット画面へ遷移');
         navigate('/chat', { state: { clientId } });
       } else {
         // 未設定の場合：AIキャラクター設定画面へ遷移
+        console.log('[TodayClientsPage] AIキャラクター未設定 - 設定画面へ遷移');
         navigate(`/ai-character-setup/client/${clientId}`);
       }
     } catch (error) {
       console.error('AIキャラクター設定状況の確認に失敗しました:', error);
       // エラーの場合はとりあえずチャット画面へ
       navigate('/chat', { state: { clientId } });
+    }
+  };
+
+  // 四柱推命プロフィールを表示
+  const handleViewSajuProfile = async (client: Client) => {
+    console.log('[TodayClients] Fetching saju profile for client:', client.id);
+    setSelectedClient(client);
+    setSajuLoading(true);
+    setOpenSajuProfileDialog(true);
+    
+    try {
+      const profile = await clientService.getClientSajuProfile(client.id);
+      console.log('[TodayClients] Saju profile response:', profile);
+      setSajuProfileData(profile);
+    } catch (err) {
+      console.error('[TodayClients] Error fetching saju profile:', err);
+      setError('四柱推命プロフィールの取得に失敗しました。生年月日が登録されていない可能性があります。');
+      setOpenSajuProfileDialog(false);
+    } finally {
+      setSajuLoading(false);
     }
   };
 
@@ -397,7 +439,7 @@ const TodayClientsPage: React.FC = () => {
                             startIcon={<PersonIcon />}
                             onClick={(e) => {
                               e.stopPropagation();
-                              // クライアント詳細へ
+                              handleViewSajuProfile(client);
                             }}
                             fullWidth
                           >
@@ -428,6 +470,54 @@ const TodayClientsPage: React.FC = () => {
             )}
           </Box>
         </Container>
+
+        {/* 四柱推命プロフィールダイアログ */}
+        <Dialog
+          open={openSajuProfileDialog}
+          onClose={() => {
+            setOpenSajuProfileDialog(false);
+            setSajuProfileData(null);
+            setSelectedClient(null);
+          }}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>
+            四柱推命プロフィール
+            <IconButton
+              onClick={() => {
+                setOpenSajuProfileDialog(false);
+                setSajuProfileData(null);
+                setSelectedClient(null);
+              }}
+              sx={{ position: 'absolute', right: 8, top: 8 }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent>
+            {sajuLoading ? (
+              <Box sx={{ py: 4, textAlign: 'center' }}>
+                <Typography variant="body1" sx={{ mb: 2 }}>四柱推命データを計算中...</Typography>
+                <LinearProgress />
+              </Box>
+            ) : sajuProfileData ? (
+              <SajuProfileDisplay 
+                profile={sajuProfileData} 
+                userName={selectedClient?.name || ''}
+              />
+            ) : null}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => {
+              setOpenSajuProfileDialog(false);
+              setSajuProfileData(null);
+              setSelectedClient(null);
+            }}>
+              閉じる
+            </Button>
+          </DialogActions>
+        </Dialog>
     </PageContainer>
   );
 };

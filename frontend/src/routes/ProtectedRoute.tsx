@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRoles = [] }) => {
-  const { user, loading, hasAICharacter, checkingAICharacter } = useAuth();
+  const { user, loading, hasCharacter, checkingAICharacter } = useAuth();
 
   if (loading || checkingAICharacter) {
     // ローディング中はスピナーを表示
@@ -36,7 +36,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRoles = 
   }
 
   // USER/STYLISTロールの場合、AIキャラクターが設定されているかチェック
-  if ((user.role === UserRole.USER || user.role === UserRole.STYLIST) && !hasAICharacter) {
+  if ((user.role === UserRole.USER || user.role === UserRole.STYLIST) && !hasCharacter) {
     console.log('[ProtectedRoute] AIキャラクター未設定を検出 - /ai-character-setup へリダイレクト');
     return <Navigate to={ROUTES.public.aiCharacterSetup} replace />;
   }

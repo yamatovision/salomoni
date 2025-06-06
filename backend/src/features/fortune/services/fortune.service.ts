@@ -18,6 +18,7 @@ import {
 } from '../../../types';
 import { AppError } from '../../../common/utils/errors';
 import { logger } from '../../../common/utils/logger';
+import { DayPillarMasterModel } from '../models/day-pillar-master.model';
 
 export class FortuneService {
   private fortuneRepository: FortuneRepository;
@@ -42,14 +43,16 @@ export class FortuneService {
   async getDailyFortune(
     userId?: ID,
     clientId?: ID,
-    date = new Date()
+    date = new Date(),
+    timezone?: string
   ): Promise<DailyFortune> {
     try {
       // 既存の日運データを検索
       const existingFortune = await this.fortuneRepository.findDailyFortune(
         userId,
         clientId,
-        date
+        date,
+        timezone
       );
 
       if (existingFortune) {
@@ -89,12 +92,13 @@ export class FortuneService {
   async getDailyAdvice(
     userId: ID,
     date = new Date(),
-    regenerate = false
+    regenerate = false,
+    timezone?: string
   ): Promise<DailyAdviceData> {
     try {
       // 既存のアドバイスを検索（再生成でない場合）
       if (!regenerate) {
-        const existingAdvice = await this.fortuneRepository.findDailyAdvice(userId, date);
+        const existingAdvice = await this.fortuneRepository.findDailyAdvice(userId, date, timezone);
         if (existingAdvice) {
           return existingAdvice;
         }
@@ -116,7 +120,7 @@ export class FortuneService {
       }
 
       // 日運データを取得
-      const dailyFortune = await this.getDailyFortune(userId, undefined, date);
+      const dailyFortune = await this.getDailyFortune(userId, undefined, date, timezone);
 
       // 運勢カードを生成
       const fortuneCards = await this.generateFortuneCards(dailyFortune, user);
@@ -232,14 +236,37 @@ export class FortuneService {
     clientId?: ID
   ): Promise<FourPillarsData | null> {
     try {
+      // まず保存済みの四柱推命データを検索
+      if (userId) {
+        logger.info('[FortuneService] 保存済み四柱推命データを検索中:', { userId });
+        const savedData = await this.sajuService.getSavedFourPillarsByUserId(userId);
+        if (savedData) {
+          logger.info('[FortuneService] 保存済み四柱推命データが見つかりました');
+          return savedData;
+        }
+        logger.info('[FortuneService] 保存済み四柱推命データが見つかりません、新規計算を実行します');
+      } else if (clientId) {
+        logger.info('[FortuneService] 保存済み四柱推命データを検索中:', { clientId });
+        const savedData = await this.sajuService.getSavedFourPillarsByClientId(clientId);
+        if (savedData) {
+          logger.info('[FortuneService] 保存済み四柱推命データが見つかりました');
+          return savedData;
+        }
+        logger.info('[FortuneService] 保存済み四柱推命データが見つかりません、新規計算を実行します');
+      }
+
+      // 保存されていない場合は新規計算
       // ユーザーまたはクライアントの生年月日時を取得
       let birthDate: string | undefined;
       let birthTime = '12:00'; // デフォルト時刻
+      let birthLocation = undefined;
 
       if (userId) {
         const user = await this.userRepository.findById(userId);
         if (user?.birthDate) {
           birthDate = user.birthDate.toISOString().split('T')[0];
+          birthTime = user.birthTime || '12:00';
+          birthLocation = user.birthLocation;
         }
       } else if (clientId) {
         // クライアントの場合、現在はorganizationIdが不明なのでスキップ
@@ -249,19 +276,23 @@ export class FortuneService {
       }
 
       if (!birthDate) {
+        logger.error('[FortuneService] 生年月日が設定されていません');
         return null;
       }
 
-      // 四柱推命を計算
-      const fourPillarsData = await sajuService.calculateFourPillars({
+      // 四柱推命を計算（userIdまたはclientIdを渡して自動保存）
+      const fourPillarsData = await this.sajuService.calculateFourPillars({
         birthDate,
         birthTime,
         timezone: 'Asia/Tokyo',
-      });
-
-      // ユーザー/クライアントIDを設定
-      if (userId) fourPillarsData.userId = userId;
-      if (clientId) fourPillarsData.clientId = clientId;
+        location: birthLocation && birthLocation.name && birthLocation.longitude !== undefined && birthLocation.latitude !== undefined
+          ? {
+              name: birthLocation.name,
+              longitude: birthLocation.longitude,
+              latitude: birthLocation.latitude
+            }
+          : undefined,
+      }, userId, clientId);
 
       return fourPillarsData;
     } catch (error) {
@@ -303,6 +334,26 @@ export class FortuneService {
     const advice = this.generateDailyAdvice(overallLuck, elementBalance);
     const warnings = overallLuck <= 2 ? ['今日は慎重に行動しましょう'] : [];
 
+    // 今日の日柱情報を取得
+    const dateString = date.toISOString().split('T')[0];
+    let dayPillar = undefined;
+    
+    try {
+      const masterData = await DayPillarMasterModel.findOne({ dateString });
+      if (masterData) {
+        dayPillar = {
+          heavenlyStem: masterData.heavenlyStem,
+          earthlyBranch: masterData.earthlyBranch,
+          element: masterData.element,
+          yinYang: masterData.yinYang,
+          ganZhi: masterData.ganZhi
+        };
+        logger.info('[FortuneService] 日柱マスターデータから取得:', dateString);
+      }
+    } catch (error) {
+      logger.error('[FortuneService] 日柱データ取得エラー:', error);
+    }
+
     return {
       id: '',
       userId,
@@ -316,6 +367,7 @@ export class FortuneService {
       luckyDirection,
       advice,
       warnings,
+      dayPillar, // 日柱情報を追加
     };
   }
 

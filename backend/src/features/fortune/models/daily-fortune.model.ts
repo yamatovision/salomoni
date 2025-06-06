@@ -57,6 +57,17 @@ const DailyFortuneSchema = new Schema<DailyFortuneDocument>(
       required: true,
     },
     warnings: [String],
+    // 日柱情報（daily-pillar-implementation-plan.mdに基づく追加）
+    dayPillar: {
+      type: {
+        heavenlyStem: String,      // 天干
+        earthlyBranch: String,     // 地支
+        element: String,           // 五行
+        yinYang: String,           // 陰陽
+        ganZhi: String,            // 干支（例：癸巳）
+      },
+      required: false
+    }
   },
   {
     timestamps: true,

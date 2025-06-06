@@ -55,11 +55,26 @@ export class FourPillarsDataRepository {
           dataId: data._id,
           calculatedAt: data.calculatedAt
         });
+        
+        // データ構造を正規化
+        const jsonData = data.toJSON() as any;
+        
+        // fourPillarsオブジェクトを構築
+        if (!jsonData.fourPillars && (jsonData.yearPillar || jsonData.monthPillar || jsonData.dayPillar || jsonData.hourPillar)) {
+          jsonData.fourPillars = {
+            yearPillar: jsonData.yearPillar,
+            monthPillar: jsonData.monthPillar,
+            dayPillar: jsonData.dayPillar,
+            hourPillar: jsonData.hourPillar
+          };
+        }
+        
+        return jsonData as FourPillarsData;
       } else {
         logger.info('ユーザーの四柱推命データが見つかりません', { userId });
       }
       
-      return data ? (data.toJSON() as unknown as FourPillarsData) : null;
+      return null;
     } catch (error) {
       logger.error('ユーザーの四柱推命データ取得エラー:', error);
       throw new Error('ユーザーの四柱推命データの取得に失敗しました');
@@ -81,11 +96,26 @@ export class FourPillarsDataRepository {
           dataId: data._id,
           calculatedAt: data.calculatedAt
         });
+        
+        // データ構造を正規化
+        const jsonData = data.toJSON() as any;
+        
+        // fourPillarsオブジェクトを構築
+        if (!jsonData.fourPillars && (jsonData.yearPillar || jsonData.monthPillar || jsonData.dayPillar || jsonData.hourPillar)) {
+          jsonData.fourPillars = {
+            yearPillar: jsonData.yearPillar,
+            monthPillar: jsonData.monthPillar,
+            dayPillar: jsonData.dayPillar,
+            hourPillar: jsonData.hourPillar
+          };
+        }
+        
+        return jsonData as FourPillarsData;
       } else {
         logger.info('クライアントの四柱推命データが見つかりません', { clientId });
       }
       
-      return data ? (data.toJSON() as unknown as FourPillarsData) : null;
+      return null;
     } catch (error) {
       logger.error('クライアントの四柱推命データ取得エラー:', error);
       throw new Error('クライアントの四柱推命データの取得に失敗しました');

@@ -123,7 +123,7 @@ export const setupClientAICharacter = async (clientId: string, setupData: SetupD
     });
 
     // Then create the AI character for the client with the correct data structure
-    const response = await apiClient.post(API_PATHS.AI_CHARACTERS.CLIENT_SETUP(clientId), {
+    const requestData = {
       name: setupData.name,
       birthDate: setupData.birthDate,
       birthPlace: setupData.birthPlace,
@@ -132,11 +132,23 @@ export const setupClientAICharacter = async (clientId: string, setupData: SetupD
       styleInput: setupData.style,
       processedPersonality: processedPersonality,
       processedStyle: processedStyle,
-    });
+    };
+    
+    console.log('[setupClientAICharacter] リクエストデータ:', requestData);
+    console.log('[setupClientAICharacter] リクエストURL:', API_PATHS.AI_CHARACTERS.CLIENT_SETUP(clientId));
+    
+    const response = await apiClient.post(API_PATHS.AI_CHARACTERS.CLIENT_SETUP(clientId), requestData);
 
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to setup client AI character:', error);
+    if (error.response) {
+      console.error('[setupClientAICharacter] エラーレスポンス:', {
+        status: error.response.status,
+        data: error.response.data,
+        headers: error.response.headers
+      });
+    }
     throw error;
   }
 };

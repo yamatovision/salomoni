@@ -23,8 +23,7 @@ import {
   Link,
   Tooltip,
   LinearProgress,
-  Stack,
-  Paper
+  Stack
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -41,11 +40,6 @@ import {
   AdminPanelSettings as AdminIcon,
   Person as PersonIcon,
   Psychology as PsychologyIcon,
-  LocalFireDepartment as FireIcon,
-  Landscape as EarthIcon,
-  Toll as MetalIcon,
-  WaterDrop as WaterIcon,
-  Park as WoodIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
 import { SajuProfileDisplay } from '../../components/features/saju/SajuProfileDisplay';
@@ -56,8 +50,7 @@ import type {
 } from '../../types';
 import { 
   TurnoverRiskLevel,
-  UserRole,
-  FiveElements
+  UserRole
 } from '../../types';
 import { stylistService, sajuService } from '../../services';
 
@@ -107,37 +100,6 @@ const getRiskLabel = (level: TurnoverRiskLevel) => {
   }
 };
 
-// 五行の色設定
-const getElementColor = (element: FiveElements) => {
-  switch (element) {
-    case FiveElements.FIRE:
-      return '#ff5252';
-    case FiveElements.EARTH:
-      return '#ff9800';
-    case FiveElements.METAL:
-      return '#9e9e9e';
-    case FiveElements.WATER:
-      return '#2196f3';
-    case FiveElements.WOOD:
-      return '#4caf50';
-  }
-};
-
-// 五行のアイコン取得
-const getElementIcon = (element: FiveElements) => {
-  switch (element) {
-    case FiveElements.FIRE:
-      return <FireIcon />;
-    case FiveElements.EARTH:
-      return <EarthIcon />;
-    case FiveElements.METAL:
-      return <MetalIcon />;
-    case FiveElements.WATER:
-      return <WaterIcon />;
-    case FiveElements.WOOD:
-      return <WoodIcon />;
-  }
-};
 
 const StylistManagementPage: React.FC = () => {
   const [stylists, setStylists] = useState<StylistDetail[]>([]);
@@ -154,15 +116,29 @@ const StylistManagementPage: React.FC = () => {
   const [sajuData, setSajuData] = useState<any>(null);
   
   // フォーム状態
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    email: string;
+    birthDate: string;
+    birthTime: string;
+    birthLocation: {
+      name: string;
+      longitude: number | null;
+      latitude: number | null;
+    };
+    position: string;
+    role: UserRole;
+    phone: string;
+    password: string;
+  }>({
     name: '',
     email: '',
     birthDate: '',
     birthTime: '',
     birthLocation: {
       name: '',
-      longitude: null as number | null,
-      latitude: null as number | null
+      longitude: null,
+      latitude: null
     },
     position: '',
     role: UserRole.USER,
@@ -254,10 +230,10 @@ const StylistManagementPage: React.FC = () => {
         email: stylist.email,
         birthDate: stylist.birthDate ? new Date(stylist.birthDate).toISOString().split('T')[0] : '',
         birthTime: stylist.birthTime || '',
-        birthLocation: stylist.birthLocation || {
-          name: '',
-          longitude: null,
-          latitude: null
+        birthLocation: {
+          name: stylist.birthLocation?.name || '',
+          longitude: stylist.birthLocation?.longitude ?? null,
+          latitude: stylist.birthLocation?.latitude ?? null,
         },
         position: stylist.position,
         role: stylist.role,
@@ -882,9 +858,8 @@ const StylistManagementPage: React.FC = () => {
         <DialogContent sx={{ pt: 2 }}>
           {sajuData ? (
             <SajuProfileDisplay 
-              sajuData={sajuData} 
-              userName={selectedStylist?.name}
-              birthDate={selectedStylist?.birthDate}
+              profile={sajuData} 
+              userName={selectedStylist?.name || ''}
             />
           ) : (
             <Box sx={{ textAlign: 'center', py: 5 }}>

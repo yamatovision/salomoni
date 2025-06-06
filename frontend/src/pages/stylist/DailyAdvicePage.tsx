@@ -14,8 +14,10 @@ import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { useAuth } from '../../hooks/useAuth';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
+import DayPillarCard from '../../components/features/fortune/DayPillarCard';
 import type { 
-  DailyAdviceData
+  DailyAdviceData,
+  DailyFortune
 } from '../../types';
 import { FortuneCardCategory } from '../../types';
 import { fortuneService } from '../../services';
@@ -94,6 +96,7 @@ const ExpandIcon = styled(ExpandMoreIcon)<{ expanded: boolean }>(({ expanded }) 
 const DailyAdvicePage: React.FC = () => {
   const { user } = useAuth();
   const [adviceData, setAdviceData] = useState<DailyAdviceData | null>(null);
+  const [dailyFortune, setDailyFortune] = useState<DailyFortune | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   
@@ -121,11 +124,18 @@ const DailyAdvicePage: React.FC = () => {
         }
         
         console.log('[DailyAdvicePage] loadAdviceData - API呼び出し前');
-        const advice = await fortuneService.getDailyAdvice(user.id);
-        console.log('[DailyAdvicePage] loadAdviceData - API呼び出し成功', advice);
+        
+        // 日運データと今日のアドバイスを並行して取得
+        const [advice, fortune] = await Promise.all([
+          fortuneService.getDailyAdvice(user.id),
+          fortuneService.getDailyFortune(user.id)
+        ]);
+        
+        console.log('[DailyAdvicePage] loadAdviceData - API呼び出し成功', { advice, fortune });
         
         if (mounted) {
           setAdviceData(advice);
+          setDailyFortune(fortune);
         }
       } catch (error: any) {
         console.error('[DailyAdvicePage] loadAdviceData - エラー発生:', {
@@ -223,6 +233,18 @@ const DailyAdvicePage: React.FC = () => {
         {/* メインコンテンツ */}
         <Container sx={{ pt: 5, pb: 10, position: 'relative', zIndex: 1 }}>
           <Stack spacing={2}>
+            {/* 日柱カード（日運データがある場合） */}
+            {dailyFortune?.dayPillar && (
+              <Fade in timeout={800}>
+                <Box>
+                  <DayPillarCard 
+                    dayPillar={dailyFortune.dayPillar}
+                    date={dailyFortune.date}
+                  />
+                </Box>
+              </Fade>
+            )}
+            
             {/* 通常のアドバイスカード */}
             {otherCards.map((card, index) => (
               <Fade in timeout={1000 + index * 100} key={card.id}>

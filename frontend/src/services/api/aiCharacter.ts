@@ -134,9 +134,9 @@ export class AICharacterService {
   }
 
   // クライアント用AIキャラクター設定状況確認
-  async getClientSetupStatus(clientId: string): Promise<ApiResponse<{ hasAICharacter: boolean }>> {
+  async getClientSetupStatus(clientId: string): Promise<ApiResponse<{ hasCharacter: boolean; needsSetup: boolean }>> {
     try {
-      const response = await apiClient.get<ApiResponse<{ hasAICharacter: boolean }>>(
+      const response = await apiClient.get<ApiResponse<{ hasCharacter: boolean; needsSetup: boolean }>>(
         API_PATHS.AI_CHARACTERS.CLIENT_SETUP_STATUS(clientId)
       );
       return response.data;

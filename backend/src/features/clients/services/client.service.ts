@@ -6,6 +6,8 @@ import {
   PaginationParams,
   PaginationInfo,
   FourPillarsCalculateRequest,
+  ID,
+  UserProfile,
 } from '../../../types';
 import { ClientRepository } from '../repositories/client.repository';
 import { IClientDocument } from '../models/client.model';
@@ -30,10 +32,10 @@ export class ClientService {
     
     // 組織内の全ユーザーを取得してからスタイリスト（role='user'）のみフィルタ
     const users = await userRepository.findByOrganization(organizationId);
-    const stylists = users.filter(user => user.role === 'user');
+    const stylists = users.filter((user: UserProfile) => user.role === 'user');
 
-    return stylists.map(stylist => ({
-      id: stylist._id?.toString() || stylist.id,
+    return stylists.map((stylist: UserProfile) => ({
+      id: stylist.id,
       name: stylist.name,
       profileImage: stylist.profileImage,
     }));

@@ -2,8 +2,7 @@
  * 日柱計算モジュール
  * タイムゾーン非依存の堅牢な実装
  */
-import { Pillar, STEMS, BRANCHES, STEM_BRANCHES, SajuOptions } from './types';
-import { getLunarDate } from './lunarDateCalculator';
+import { Pillar, STEMS, BRANCHES, SajuOptions, StemName, BranchName } from './types';
 
 /**
  * 日柱計算のオプション拡張
@@ -98,7 +97,7 @@ function formatDateKey(date: Date): string {
     if (isNaN(date.getTime())) {
       return 'invalid-date';
     }
-    return normalizeToUTCDate(date).toISOString().split('T')[0];
+    return normalizeToUTCDate(date).toISOString().split('T')[0] || 'invalid-date';
   } catch (error) {
     console.error('日付フォーマットエラー:', error);
     return 'format-error';
@@ -285,8 +284,8 @@ export function calculateKoreanDayPillar(date: Date, options: DayPillarOptions =
     const branchIndex = (referenceBranchIndex + branchOffset) % 12;
     
     // 7. 干支情報の取得
-    const stem = STEMS[stemIndex];
-    const branch = BRANCHES[branchIndex];
+    const stem = (STEMS[stemIndex] || STEMS[0]) as StemName;
+    const branch = (BRANCHES[branchIndex] || BRANCHES[0]) as BranchName;
     const fullStemBranch = `${stem}${branch}`;
     
     // 8. 蔵干の取得
@@ -388,7 +387,7 @@ export function verifyDayPillarCalculation(): boolean {
   const testCases = Object.entries(DAY_PILLAR_SAMPLES).map(([dateStr, expected]) => {
     const [year, month, day] = dateStr.split('-').map(Number);
     return {
-      date: new Date(Date.UTC(year, month - 1, day)), // JavaScriptの月は0始まり
+      date: new Date(Date.UTC(year || 2023, (month || 1) - 1, day || 1)), // JavaScriptの月は0始まり
       expected
     };
   });

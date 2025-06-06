@@ -189,9 +189,12 @@ export class ConversationRepository {
   async getActiveConversation(
     userId: string | undefined,
     clientId: string | undefined,
-    aiCharacterId: string
+    aiCharacterId: string,
+    context?: string
   ): Promise<Conversation | null> {
     try {
+      logger.info(`[DEBUG] getActiveConversation呼び出し: userId=${userId}, clientId=${clientId}, aiCharacterId=${aiCharacterId}, context=${context}`);
+      
       const query: any = {
         aiCharacterId,
         endedAt: { $exists: false },
@@ -199,12 +202,23 @@ export class ConversationRepository {
       
       if (userId) {
         query.userId = userId;
+        logger.info(`[DEBUG] userId条件設定: ${userId}`);
       } else if (clientId) {
         query.clientId = clientId;
+        logger.info(`[DEBUG] clientId条件設定: ${clientId}`);
       }
+
+      // contextが指定されている場合は、それも条件に含める
+      if (context) {
+        query.context = context;
+      }
+
+      logger.info(`[DEBUG] クエリ条件:`, JSON.stringify(query));
 
       const conversation = await ConversationModel.findOne(query)
         .sort({ startedAt: -1 });
+      
+      logger.info(`[DEBUG] 検索結果: ${conversation ? `見つかった(ID: ${conversation.id}, userId: ${conversation.userId}, clientId: ${conversation.clientId})` : '見つからない'}`);
         
       return conversation ? conversation.toJSON() as Conversation : null;
     } catch (error) {

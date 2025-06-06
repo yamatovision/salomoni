@@ -2,12 +2,12 @@
  * 旧暦変換モジュール
  * lunar-javascriptライブラリを使用した旧暦変換と節気計算の実装
  */
-import { LunarDate, CalendarDay } from './types';
+import { LunarDate } from './types';
 // @ts-ignore
 import * as Lunar from 'lunar-javascript';
 
 // lunar-javascriptを初期化
-const { Solar, LunarUtil, SolarUtil } = Lunar;
+const { Solar, SolarUtil } = Lunar;
 
 /**
  * 旧暦日付を計算する
@@ -115,7 +115,7 @@ export function getSolarTermPeriod(date: Date): { name: string, index: number } 
     const index = ((month - 1) * 2) % 24;
     
     return {
-      name: SOLAR_TERMS[index],
+      name: SOLAR_TERMS[index] || SOLAR_TERMS[0],
       index: index
     };
   }

@@ -6,7 +6,7 @@ import { ROUTES } from './routes';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 
 export const RoleBasedRedirect: React.FC = () => {
-  const { user, loading, hasAICharacter, checkingAICharacter } = useAuth();
+  const { user, loading, hasCharacter, checkingAICharacter } = useAuth();
 
   // ローディング中は待機
   if (loading || checkingAICharacter) {
@@ -21,7 +21,7 @@ export const RoleBasedRedirect: React.FC = () => {
   }
 
   // ロールに応じたダッシュボードへリダイレクト
-  console.log('[RoleBasedRedirect] 認証済みユーザー:', user.email, user.role, 'hasAICharacter:', hasAICharacter);
+  console.log('[RoleBasedRedirect] 認証済みユーザー:', user.email, user.role, 'hasCharacter:', hasCharacter);
   
   switch (user.role) {
     case UserRole.SUPER_ADMIN:
@@ -36,7 +36,7 @@ export const RoleBasedRedirect: React.FC = () => {
     case UserRole.USER:
     case UserRole.STYLIST:
       // AIキャラクターが未設定の場合は設定ページへ
-      if (!hasAICharacter) {
+      if (!hasCharacter) {
         console.log('[RoleBasedRedirect] USER/STYLIST: AIキャラクター未設定 - /ai-character-setup へリダイレクト');
         return <Navigate to={ROUTES.public.aiCharacterSetup} replace />;
       }

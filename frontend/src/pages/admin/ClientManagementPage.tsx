@@ -44,10 +44,7 @@ import {
   CheckCircle,
   Warning,
   Favorite,
-  Visibility,
   AutoAwesomeOutlined,
-  LocationOn,
-  AccessTime,
 } from '@mui/icons-material';
 import { clientService, sajuService } from '../../services';
 import type { Client, ClientCreateRequest, ClientSearchFilter, JapanesePrefecture } from '../../types';
@@ -92,7 +89,22 @@ export const ClientManagementPage: React.FC = () => {
   });
 
   // 編集フォームの状態
-  const [editClientForm, setEditClientForm] = useState({
+  const [editClientForm, setEditClientForm] = useState<{
+    name: string;
+    phoneNumber: string;
+    email: string;
+    gender: string;
+    birthYear: string;
+    birthMonth: string;
+    birthDay: string;
+    birthTime: string;
+    birthLocation: {
+      name: string;
+      longitude: number;
+      latitude: number;
+    };
+    memo: string;
+  }>({
     name: '',
     phoneNumber: '',
     email: '',
@@ -345,10 +357,10 @@ export const ClientManagementPage: React.FC = () => {
       birthMonth,
       birthDay,
       birthTime: selectedClient.birthTime || '',
-      birthLocation: selectedClient.birthLocation || {
-        name: '',
-        longitude: 0,
-        latitude: 0,
+      birthLocation: {
+        name: selectedClient.birthLocation?.name || '',
+        longitude: selectedClient.birthLocation?.longitude ?? 0,
+        latitude: selectedClient.birthLocation?.latitude ?? 0,
       },
       memo: selectedClient.memo || '',
     });
@@ -450,7 +462,7 @@ export const ClientManagementPage: React.FC = () => {
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 3 }}>
           {clients.map((client, index) => (
               <Card
-                key={client._id || client.id || `client-${index}`}
+                key={client.id || `client-${index}`}
                 sx={{
                   cursor: 'pointer',
                   transition: 'all 0.3s',

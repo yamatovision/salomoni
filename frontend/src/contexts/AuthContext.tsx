@@ -7,7 +7,7 @@ import { checkSetupStatus } from '../services/api/aiCharacterSetup';
 interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
-  hasAICharacter: boolean;
+  hasCharacter: boolean;
   checkingAICharacter: boolean;
   login: (email: string, password: string) => Promise<AuthResponse>;
   lineLogin: () => Promise<void>;
@@ -24,7 +24,7 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [hasAICharacter, setHasAICharacter] = useState(false);
+  const [hasCharacter, setHasCharacter] = useState(false);
   const [checkingAICharacter, setCheckingAICharacter] = useState(false);
 
   useEffect(() => {
@@ -132,12 +132,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('[AuthContext] checkAICharacterStatus - レスポンス:', response);
       // バックエンドは data.hasCharacter を返す
       const hasCharacter = response.data?.hasCharacter === true;
-      setHasAICharacter(hasCharacter);
-      console.log('[AuthContext] checkAICharacterStatus - hasAICharacter:', hasCharacter);
+      setHasCharacter(hasCharacter);
+      console.log('[AuthContext] checkAICharacterStatus - hasCharacter:', hasCharacter);
       return hasCharacter;
     } catch (error) {
       console.error('[AuthContext] checkAICharacterStatus - エラー:', error);
-      setHasAICharacter(false);
+      setHasCharacter(false);
       return false;
     } finally {
       setCheckingAICharacter(false);
@@ -156,7 +156,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     <AuthContext.Provider value={{ 
       user, 
       loading, 
-      hasAICharacter,
+      hasCharacter,
       checkingAICharacter,
       login, 
       lineLogin, 

@@ -19,7 +19,11 @@ export const handleValidationErrors = (
     // 最初のエラーメッセージを主要メッセージとして使用
     const primaryMessage = errorMessages[0]?.message || 'Validation failed';
 
-    next(new AppError(primaryMessage, 400, 'VALIDATION_ERROR'));
+    const validationError = new AppError(primaryMessage, 400, 'VALIDATION_ERROR');
+    // バリデーションエラーの詳細を追加
+    (validationError as any).validationErrors = errorMessages;
+
+    next(validationError);
     return;
   }
   

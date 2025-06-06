@@ -11,7 +11,6 @@ import {
   AICharacterSetupRequest,
   AICharacterSetupResponse,
   PersonalityScore,
-  JapanesePrefecture,
   JapanesePrefecturesResponse,
   FourPillarsData
 } from '../../../types';
@@ -20,6 +19,7 @@ import { AppError } from '../../../common/middleware/errorHandler';
 import OpenAI from 'openai';
 import { UserRepository } from '../../users/repositories/user.repository';
 import { SajuService } from '../../saju/services/saju.service';
+import { JAPAN_PREFECTURES_DATA } from '../../saju/services/prefecture-data';
 
 export class AICharacterService {
   private aiCharacterRepository: AICharacterRepository;
@@ -407,58 +407,8 @@ export class AICharacterService {
 
   async getJapanesePrefectures(): Promise<JapanesePrefecturesResponse> {
     try {
-      // 日本の47都道府県と時差調整データ
-      const prefectures: JapanesePrefecture[] = [
-        { name: '北海道', adjustmentMinutes: 0 },
-        { name: '青森県', adjustmentMinutes: 0 },
-        { name: '岩手県', adjustmentMinutes: 0 },
-        { name: '宮城県', adjustmentMinutes: 0 },
-        { name: '秋田県', adjustmentMinutes: 0 },
-        { name: '山形県', adjustmentMinutes: 0 },
-        { name: '福島県', adjustmentMinutes: 0 },
-        { name: '茨城県', adjustmentMinutes: 0 },
-        { name: '栃木県', adjustmentMinutes: 0 },
-        { name: '群馬県', adjustmentMinutes: 0 },
-        { name: '埼玉県', adjustmentMinutes: 0 },
-        { name: '千葉県', adjustmentMinutes: 0 },
-        { name: '東京都', adjustmentMinutes: 0 },
-        { name: '神奈川県', adjustmentMinutes: 0 },
-        { name: '新潟県', adjustmentMinutes: 0 },
-        { name: '富山県', adjustmentMinutes: 0 },
-        { name: '石川県', adjustmentMinutes: 0 },
-        { name: '福井県', adjustmentMinutes: 0 },
-        { name: '山梨県', adjustmentMinutes: 0 },
-        { name: '長野県', adjustmentMinutes: 0 },
-        { name: '岐阜県', adjustmentMinutes: 0 },
-        { name: '静岡県', adjustmentMinutes: 0 },
-        { name: '愛知県', adjustmentMinutes: 0 },
-        { name: '三重県', adjustmentMinutes: 0 },
-        { name: '滋賀県', adjustmentMinutes: 0 },
-        { name: '京都府', adjustmentMinutes: 0 },
-        { name: '大阪府', adjustmentMinutes: 0 },
-        { name: '兵庫県', adjustmentMinutes: 0 },
-        { name: '奈良県', adjustmentMinutes: 0 },
-        { name: '和歌山県', adjustmentMinutes: 0 },
-        { name: '鳥取県', adjustmentMinutes: 0 },
-        { name: '島根県', adjustmentMinutes: 0 },
-        { name: '岡山県', adjustmentMinutes: 0 },
-        { name: '広島県', adjustmentMinutes: 0 },
-        { name: '山口県', adjustmentMinutes: 0 },
-        { name: '徳島県', adjustmentMinutes: 0 },
-        { name: '香川県', adjustmentMinutes: 0 },
-        { name: '愛媛県', adjustmentMinutes: 0 },
-        { name: '高知県', adjustmentMinutes: 0 },
-        { name: '福岡県', adjustmentMinutes: 0 },
-        { name: '佐賀県', adjustmentMinutes: 0 },
-        { name: '長崎県', adjustmentMinutes: 0 },
-        { name: '熊本県', adjustmentMinutes: 0 },
-        { name: '大分県', adjustmentMinutes: 0 },
-        { name: '宮崎県', adjustmentMinutes: 0 },
-        { name: '鹿児島県', adjustmentMinutes: 0 },
-        { name: '沖縄県', adjustmentMinutes: 0 },
-      ];
-
-      return { prefectures };
+      // prefecture-data.tsから正確なデータを使用
+      return { prefectures: JAPAN_PREFECTURES_DATA };
     } catch (error) {
       logger.error('都道府県リスト取得エラー:', error);
       throw error;
@@ -507,6 +457,43 @@ export class AICharacterService {
         throw new Error('クライアントが見つかりません');
       }
 
+      // クライアント情報を更新（生年月日情報）
+      logger.info('[DEBUG] クライアント情報更新前:', {
+        clientId,
+        existingBirthDate: client.birthDate,
+        newBirthDate: data.birthDate,
+        newBirthTime: data.birthTime,
+        newBirthPlace: data.birthPlace,
+      });
+
+      // 生年月日情報が提供された場合、クライアント情報を更新
+      if (data.birthDate) {
+        const updateData: any = {
+          birthDate: new Date(data.birthDate),
+          birthTime: data.birthTime || '12:00',
+        };
+
+        // 出生地情報も更新
+        if (data.birthPlace) {
+          updateData.birthLocation = {
+            name: data.birthPlace,
+            longitude: 139.6917, // TODO: 実際の座標を取得
+            latitude: 35.6895,
+          };
+        }
+
+        await ClientModel.findByIdAndUpdate(clientId, updateData);
+        logger.info('[DEBUG] クライアント情報更新完了:', updateData);
+
+        // クライアント情報を再取得
+        const updatedClient = await ClientModel.findById(clientId);
+        if (updatedClient) {
+          client.birthDate = updatedClient.birthDate;
+          client.birthTime = updatedClient.birthTime;
+          client.birthLocation = updatedClient.birthLocation;
+        }
+      }
+
       // AIキャラクター作成
       const aiCharacter = await this.createAICharacter({
         name: data.name || `${client.name}さんのAIアシスタント`,
@@ -519,17 +506,28 @@ export class AICharacterService {
         },
       });
 
-      // 四柱推命データを保存/更新（クライアントの生年月日が既にある場合）
-      if (client.birthDate) {
+      // 四柱推命データを保存/更新（生年月日情報がある場合）
+      if (data.birthDate || client.birthDate) {
         try {
+          // 最新の生年月日情報を使用
+          const birthDateToUse = data.birthDate || client.birthDate?.toISOString().split('T')[0];
+          const birthTimeToUse = data.birthTime || client.birthTime || '12:00';
+          const birthPlaceToUse = data.birthPlace || client.birthLocation?.name || 'Tokyo';
+          
+          logger.info('[DEBUG] 四柱推命データ計算パラメータ:', {
+            birthDate: birthDateToUse,
+            birthTime: birthTimeToUse,
+            birthPlace: birthPlaceToUse,
+          });
+
           const fourPillarsData = await this.sajuService.calculateFourPillars({
-            birthDate: client.birthDate?.toISOString().split('T')[0] || data.birthDate,
-            birthTime: data.birthTime || '12:00',
+            birthDate: birthDateToUse!,
+            birthTime: birthTimeToUse,
             timezone: 'Asia/Tokyo',
             location: {
-              name: data.birthPlace || 'Tokyo',
-              longitude: 139.6917,
-              latitude: 35.6895,
+              name: birthPlaceToUse,
+              longitude: client.birthLocation?.longitude || 139.6917,
+              latitude: client.birthLocation?.latitude || 35.6895,
             },
           });
 
@@ -546,6 +544,16 @@ export class AICharacterService {
           logger.error('クライアント四柱推命計算エラー:', error);
         }
       }
+
+      // 最終的なクライアント情報を確認
+      const finalClient = await ClientModel.findById(clientId);
+      logger.info('[DEBUG] 最終的なクライアント情報:', {
+        clientId,
+        birthDate: finalClient?.birthDate,
+        birthTime: finalClient?.birthTime,
+        birthLocation: finalClient?.birthLocation,
+        fourPillarsDataId: finalClient?.fourPillarsDataId,
+      });
 
       return {
         success: true,

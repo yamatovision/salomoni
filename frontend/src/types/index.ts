@@ -773,6 +773,9 @@ export interface PersonalityScore {
 // 日本国内出生地関連
 export interface JapanesePrefecture {
   name: string; // 例: "東京都"
+  code: string; // 都道府県コード（例: "13" for 東京都）
+  latitude: number; // 緯度
+  longitude: number; // 経度
   adjustmentMinutes: number; // 時差調整値（分）
 }
 
@@ -1076,6 +1079,14 @@ export interface DailyFortune {
   luckyDirection: string;
   advice: string;
   warnings?: string[];
+  // 日柱情報（day-pillar-master-implementation.mdに基づく追加）
+  dayPillar?: {
+    heavenlyStem: string;      // 天干
+    earthlyBranch: string;     // 地支
+    element: string;           // 五行
+    yinYang: string;           // 陰陽
+    ganZhi: string;            // 干支（例：癸巳）
+  };
 }
 
 // ==========================================

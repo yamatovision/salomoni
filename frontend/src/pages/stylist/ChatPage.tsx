@@ -134,6 +134,7 @@ const ChatPage: React.FC = () => {
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [aiCharacter, setAiCharacter] = useState<AICharacter | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isComposing, setIsComposing] = useState(false);
 
   useEffect(() => {
     // クライアントリストとチャットデータを読み込み
@@ -142,22 +143,59 @@ const ChatPage: React.FC = () => {
       try {
         // URLパラメータまたはstateからclientIdを取得
         const clientId = urlClientId || location.state?.clientId;
+        console.log('[ChatPage] loadData - clientId取得:', {
+          urlClientId,
+          locationState: location.state,
+          stateClientId: location.state?.clientId,
+          finalClientId: clientId
+        });
         
-        // AIキャラクターを取得
-        console.log('[ChatPage] loadData - AIキャラクター取得開始');
-        const characterResponse = await aiCharacterService.getMyAICharacter();
-        console.log('[ChatPage] loadData - AIキャラクター取得レスポンス:', characterResponse);
-        if (characterResponse.success && characterResponse.data) {
-          console.log('[ChatPage] loadData - AIキャラクター取得成功');
-          setAiCharacter(characterResponse.data);
-        } else if (!characterResponse.success) {
-          // AIキャラクターが未作成の場合、AIキャラクターセットアップページへ
-          console.log('[ChatPage] AIキャラクター未設定 - セットアップページへリダイレクト');
-          setError('AIキャラクターが設定されていません。初期設定を行います...');
-          setTimeout(() => {
-            navigate('/ai-character-setup');
-          }, 1000);
-          return;
+        // クライアント用チャットの場合は、クライアントのAIキャラクター設定をチェック
+        if (clientId) {
+          console.log('[ChatPage] loadData - クライアント用チャット、AIキャラクター設定状況確認');
+          try {
+            const clientSetupStatus = await aiCharacterService.getClientSetupStatus(clientId);
+            console.log('[ChatPage] loadData - クライアントAIキャラクター設定状況:', clientSetupStatus);
+            
+            if (!clientSetupStatus.success || !clientSetupStatus.data?.hasCharacter) {
+              console.log('[ChatPage] クライアントのAIキャラクター未設定 - セットアップページへリダイレクト');
+              navigate(`/ai-character-setup/client/${clientId}`);
+              return;
+            }
+          } catch (error) {
+            console.error('[ChatPage] クライアントAIキャラクター設定状況確認エラー:', error);
+          }
+        }
+        
+        // クライアント用チャットの場合はAIキャラクター取得をスキップ（サーバー側で処理）
+        if (!clientId) {
+          // 自分のAIキャラクターを取得
+          console.log('[ChatPage] loadData - 自分のAIキャラクター取得開始');
+          const characterResponse = await aiCharacterService.getMyAICharacter();
+          console.log('[ChatPage] loadData - AIキャラクター取得レスポンス:', characterResponse);
+          
+          // レスポンスとデータの存在を詳細にチェック
+          const hasValidCharacter = characterResponse.success === true && 
+                                   characterResponse.data !== null && 
+                                   characterResponse.data !== undefined &&
+                                   typeof characterResponse.data === 'object';
+          
+          if (hasValidCharacter) {
+            console.log('[ChatPage] loadData - AIキャラクター取得成功', characterResponse.data);
+            setAiCharacter(characterResponse.data as AICharacter | null);
+          } else {
+            // 自分用のチャットで、AIキャラクターが未作成の場合リダイレクト
+            console.log('[ChatPage] AIキャラクター未設定または無効なレスポンス - セットアップページへリダイレクト', {
+              success: characterResponse.success,
+              data: characterResponse.data,
+              dataType: typeof characterResponse.data
+            });
+            setError('AIキャラクターが設定されていません。初期設定を行います...');
+            setTimeout(() => {
+              navigate('/ai-character-setup');
+            }, 1000);
+            return;
+          }
         }
         
         // ユーザーロールの場合、クライアントリストの取得をスキップ
@@ -185,13 +223,31 @@ const ChatPage: React.FC = () => {
         
         // 会話を開始または取得（初期ロード時にclientIdがある場合は'client_direct'コンテキストを使用）
         const context: ConversationContextType = clientId ? 'client_direct' : 'personal';
+        console.log('[ChatPage] startChat params:', {
+          context,
+          clientId: clientId || undefined,
+          hasClientId: !!clientId
+        });
         const chatResponse = await chatService.startChat({
           context,
           clientId: clientId || undefined,
         });
         
         if (chatResponse.success && chatResponse.data?.conversation) {
+          console.log('[ChatPage] 会話情報:', {
+            conversationId: chatResponse.data.conversation.id,
+            userId: chatResponse.data.conversation.userId,
+            clientId: chatResponse.data.conversation.clientId,
+            context: chatResponse.data.conversation.context,
+            messageCount: chatResponse.data.conversation.messageCount
+          });
           setCurrentConversation(chatResponse.data.conversation);
+          
+          // クライアント用チャットの場合は、レスポンスからAIキャラクター情報を取得
+          if (clientId && chatResponse.data.aiCharacter) {
+            console.log('[ChatPage] クライアントのAIキャラクター設定:', chatResponse.data.aiCharacter);
+            setAiCharacter(chatResponse.data.aiCharacter);
+          }
           
           // 既存の会話がある場合はメッセージ履歴を取得
           // isNewフラグがある場合はそれを優先、ない場合はmessageCountで判定
@@ -199,13 +255,18 @@ const ChatPage: React.FC = () => {
             (chatResponse.data.isNew === undefined && (chatResponse.data.conversation?.messageCount || 0) > 0);
           
           if (isExistingConversation) {
+            console.log('[ChatPage] 既存会話のメッセージ取得:', chatResponse.data.conversation.id);
             const messagesResponse = await chatService.getMessages(
               chatResponse.data.conversation.id,
               { order: 'asc' }
             );
             if (messagesResponse.success && messagesResponse.data) {
+              console.log('[ChatPage] 取得したメッセージ数:', messagesResponse.data.length);
               setMessages(messagesResponse.data);
             }
+          } else {
+            console.log('[ChatPage] 新規会話のため、メッセージ履歴なし');
+            setMessages([]);
           }
         } else {
           console.warn('チャット開始レスポンスが不正です:', chatResponse);
@@ -222,11 +283,13 @@ const ChatPage: React.FC = () => {
     loadData();
   }, [location.state, navigate, urlClientId, user?.role]);
   
-  // クライアント選択時に新しい会話を開始
+  // クライアント選択時に新しい会話を開始（初期ロード完了後のみ）
   useEffect(() => {
-    if (!aiCharacter || loading) return;
+    // 初期ロード中、AIキャラクター未設定、または初期ロードで既にクライアントIDが設定されている場合はスキップ
+    if (loading || !aiCharacter || (urlClientId || location.state?.clientId)) return;
     
     const switchConversation = async () => {
+      console.log('[ChatPage] switchConversation - クライアント選択による会話切り替え');
       try {
         setMessages([]);
         setCurrentConversation(null);
@@ -265,7 +328,7 @@ const ChatPage: React.FC = () => {
     };
     
     switchConversation();
-  }, [selectedClient, aiCharacter, loading]);
+  }, [selectedClient, aiCharacter, loading, urlClientId, location.state?.clientId]);
 
   useEffect(() => {
     // 新しいメッセージが追加されたら自動スクロール
@@ -311,8 +374,18 @@ const ChatPage: React.FC = () => {
         content: inputValue,
       });
       
+      console.log('[ChatPage] sendMessage response:', response);
+      
       if (response.success && response.data) {
-        setMessages((prev: ChatMessage[]) => [...prev, response.data as ChatMessage]);
+        // レスポンス構造: data.aiMessageにAIの応答が含まれている
+        const aiMessage = (response.data as any).aiMessage;
+        if (aiMessage) {
+          console.log('[ChatPage] AI message received:', aiMessage);
+          setMessages((prev: ChatMessage[]) => [...prev, aiMessage as ChatMessage]);
+        } else {
+          console.error('[ChatPage] No AI message in response');
+          throw new Error('AI応答が含まれていません');
+        }
       } else {
         // エラーメッセージを表示
         const errorMessage: ChatMessage = {
@@ -326,6 +399,15 @@ const ChatPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to send message:', error);
+      // エラー時もメッセージを表示
+      const errorMessage: ChatMessage = {
+        id: `msg-error-${Date.now()}`,
+        conversationId: currentConversation.id,
+        type: MessageType.AI,
+        content: 'ごめんね、メッセージの送信に失敗しちゃった。もう一度試してみて？',
+        createdAt: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsTyping(false);
     }
@@ -608,25 +690,6 @@ const ChatPage: React.FC = () => {
           <div ref={messagesEndRef} />
         </MessagesArea>
 
-        {/* クライアント未選択時の案内 */}
-        {!selectedClient && (
-          <Box px={2} pb={1}>
-            <Alert 
-              severity="info" 
-              action={
-                <Button 
-                  size="small" 
-                  onClick={(e) => setClientMenuAnchor(e.currentTarget)}
-                  startIcon={<PersonIcon />}
-                >
-                  選択
-                </Button>
-              }
-            >
-              クライアントを選択すると、より詳しいアドバイスができます
-            </Alert>
-          </Box>
-        )}
         
         {/* 入力エリア */}
         <InputArea>
@@ -639,11 +702,14 @@ const ChatPage: React.FC = () => {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                // 日本語入力中（IME変換中）はEnterキーで送信しない
+                if (e.key === 'Enter' && !e.shiftKey && !isComposing) {
                   e.preventDefault();
                   handleSendMessage();
                 }
               }}
+              onCompositionStart={() => setIsComposing(true)}
+              onCompositionEnd={() => setIsComposing(false)}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: '25px',

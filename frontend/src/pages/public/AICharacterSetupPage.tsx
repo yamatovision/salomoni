@@ -22,18 +22,7 @@ import type { SetupStep } from '../../components/features/ai-character-setup/typ
 const AICharacterSetupPage: React.FC = () => {
   const navigate = useNavigate();
   const { clientId } = useParams<{ clientId?: string }>();
-  const { hasAICharacter, checkingAICharacter } = useAuth();
-  const {
-    currentStep,
-    setupData,
-    messages,
-    isProcessing,
-    startSetup,
-    handleTextInput,
-    handleDateInput,
-    handlePlaceInput,
-    handleTimeInput,
-  } = useAICharacterSetup(clientId);
+  const { hasCharacter, checkingAICharacter } = useAuth();
 
   const [inputValue, setInputValue] = useState('');
   const [showWelcome, setShowWelcome] = useState(true);
@@ -81,16 +70,30 @@ const AICharacterSetupPage: React.FC = () => {
     },
   ];
   
+  const stepQuestions = steps.map(step => step.question);
+  
+  const {
+    currentStep,
+    setupData,
+    messages,
+    isProcessing,
+    startSetup,
+    handleTextInput,
+    handleDateInput,
+    handlePlaceInput,
+    handleTimeInput,
+  } = useAICharacterSetup(clientId, stepQuestions);
+  
   console.log('[AICharacterSetupPage] 現在のステップ:', currentStep, 'ステップID:', steps[currentStep]?.id);
-  console.log('[AICharacterSetupPage] hasAICharacter:', hasAICharacter, 'checkingAICharacter:', checkingAICharacter);
+  console.log('[AICharacterSetupPage] hasCharacter:', hasCharacter, 'checkingAICharacter:', checkingAICharacter);
 
   // AIキャラクターが既に設定されている場合はリダイレクト（クライアント用を除く）
   useEffect(() => {
-    if (!clientId && !checkingAICharacter && hasAICharacter) {
-      console.log('[AICharacterSetupPage] AIキャラクター設定済み - ダッシュボードへリダイレクト');
-      navigate('/dashboard');
+    if (!clientId && !checkingAICharacter && hasCharacter) {
+      console.log('[AICharacterSetupPage] AIキャラクター設定済み - チャット画面へリダイレクト');
+      navigate('/chat');
     }
-  }, [hasAICharacter, checkingAICharacter, navigate, clientId]);
+  }, [hasCharacter, checkingAICharacter, navigate, clientId]);
 
   useEffect(() => {
     // スクロール制御

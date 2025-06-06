@@ -8,7 +8,8 @@ import {
   CompatibilityCalculateRequest,
   JapanesePrefecture,
   JapanesePrefecturesResponse,
-  ID
+  ID,
+  ElementBalance
 } from '../../../types';
 import mongoose from 'mongoose';
 import { UserModel } from '../../users/models/user.model';
@@ -1278,14 +1279,24 @@ export class SajuService {
       if (!fourPillarsData) {
         logger.info('[SajuService] 保存データがないため新規計算します', { clientId });
         
+        // birthDateが存在することは上でチェック済み
+        const birthDateString = client.birthDate!.toISOString().split('T')[0];
+        const birthTimeString = (client.birthTime || '00:00') as string;
+        
         const calculateRequest: FourPillarsCalculateRequest = {
-          birthDate: client.birthDate.toISOString().split('T')[0],
-          birthTime: client.birthTime || '00:00',
+          birthDate: birthDateString as string,
+          birthTime: birthTimeString,
           timezone: 'Asia/Tokyo',
-          location: client.birthLocation || {
-            name: '東京',
-            longitude: 139.6917,
-            latitude: 35.6895,
+          location: client.birthLocation && client.birthLocation.name && client.birthLocation.longitude !== undefined && client.birthLocation.latitude !== undefined
+            ? {
+                name: client.birthLocation.name,
+                longitude: client.birthLocation.longitude,
+                latitude: client.birthLocation.latitude
+              }
+            : {
+                name: '東京',
+                longitude: 139.6917,
+                latitude: 35.6895,
           },
         };
 

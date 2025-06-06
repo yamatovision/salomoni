@@ -18,7 +18,7 @@ const SETUP_STEPS = [
   'style',
 ] as const;
 
-export const useAICharacterSetup = (clientId?: string) => {
+export const useAICharacterSetup = (clientId?: string, stepQuestions?: string[]) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [setupData, setSetupData] = useState<SetupData>({
     name: '',
@@ -55,9 +55,12 @@ export const useAICharacterSetup = (clientId?: string) => {
 
   // Start setup
   const startSetup = useCallback(() => {
-    const firstQuestion = 'まず、AIアシスタントにどんな名前をつけたいですか？\n\n例：「さくら」「アドバイザー田中」「ミミ」など、お好きな名前をどうぞ！';
-    addAIMessage(firstQuestion);
-  }, [addAIMessage]);
+    console.log('[startSetup] セットアップ開始');
+    // 最初の質問を表示
+    if (stepQuestions && stepQuestions.length > 0) {
+      addAIMessage(stepQuestions[0]);
+    }
+  }, [stepQuestions, addAIMessage]);
 
   // Complete setup with provided data
   const completeSetupWithData = useCallback(async (dataToUse: SetupData) => {
@@ -143,50 +146,39 @@ export const useAICharacterSetup = (clientId?: string) => {
       
       setCurrentStep(nextStepIndex);
       
-      // ステップに応じたAIメッセージを表示
-      setTimeout(() => {
-        if (nextStep === 'birthdate') {
-          addAIMessage('より正確なアドバイスのために、あなたの生年月日を教えてください');
-        } else if (nextStep === 'birthplace') {
-          addAIMessage('出生地を教えてください');
-        } else if (nextStep === 'birthtime') {
-          addAIMessage('出生時間がわかる場合は教えてください。より詳細で正確な分析が可能になります。\n\nわからない場合は「わからない」を選択してください');
-        } else if (nextStep === 'personality') {
-          addAIMessage('どんな性格のアドバイザーがお好みですか？\n\n例：「優しくて親しみやすい人」「プロフェッショナルで詳しく教えてくれる人」「励ましながら背中を押してくれる人」');
-        } else if (nextStep === 'style') {
-          addAIMessage('どんなアドバイススタイルをお求めですか？\n\n例：「詳しく丁寧に」「励ましながら」「簡潔に要点だけ」「実用的なアドバイス重視」');
-        }
-      }, 100);
+      // 次のステップの質問を表示
+      if (stepQuestions && stepQuestions[nextStepIndex]) {
+        setTimeout(() => {
+          addAIMessage(stepQuestions[nextStepIndex]);
+        }, 100);
+      }
+      console.log('[proceedToNextStep] ステップ変更完了:', nextStep);
     } else {
       console.log('[proceedToNextStep] 最終ステップに到達、セットアップを完了');
       completeSetup();
     }
-  }, [currentStep, completeSetup, addAIMessage, setupData]);
+  }, [currentStep, completeSetup, addAIMessage, setupData, stepQuestions]);
 
   // Handle text input (name, personality, style)
   const handleTextInput = useCallback((field: string, value: string) => {
     console.log('[handleTextInput] field:', field, 'value:', value, 'currentStep:', currentStep, 'SETUP_STEPS.length:', SETUP_STEPS.length);
     addUserMessage(value);
-    setSetupData((prev) => {
-      const updatedData = { ...prev, [field]: value };
-      console.log('[handleTextInput] updatedData:', updatedData);
-      
-      // 最終ステップ（style）の場合、更新されたデータで即座にセットアップを完了
-      // currentStepは0ベースなので、5が最終ステップ
+    
+    // 状態を更新
+    const updatedData = { ...setupData, [field]: value };
+    setSetupData(updatedData);
+    console.log('[handleTextInput] updatedData:', updatedData);
+    
+    // setStateの外でタイマーを設定
+    setTimeout(() => {
       if (field === 'style') {
         console.log('[handleTextInput] styleフィールド検出 - セットアップを実行');
-        setTimeout(() => {
-          completeSetupWithData(updatedData);
-        }, 500);
+        completeSetupWithData(updatedData);
       } else {
-        setTimeout(() => {
-          proceedToNextStep();
-        }, 500);
+        proceedToNextStep();
       }
-      
-      return updatedData;
-    });
-  }, [addUserMessage, proceedToNextStep, currentStep, completeSetupWithData]);
+    }, 500);
+  }, [addUserMessage, proceedToNextStep, currentStep, completeSetupWithData, setupData]);
 
   // Handle date input
   const handleDateInput = useCallback((data: BirthDateData) => {
@@ -197,75 +189,60 @@ export const useAICharacterSetup = (clientId?: string) => {
     const formattedDate = `${data.year}-${data.month.toString().padStart(2, '0')}-${data.day.toString().padStart(2, '0')}`;
     console.log('[handleDateInput] formattedDate:', formattedDate);
     
-    // 状態更新を行い、更新後の値を使ってログ出力
-    setSetupData((prev) => {
-      const updated = { ...prev, birthDate: formattedDate };
-      console.log('[handleDateInput] updated setupData:', updated);
-      
-      // 状態更新後に次のステップへ進む
-      setTimeout(() => {
-        console.log('[handleDateInput] 状態更新完了後、次のステップへ進む');
-        proceedToNextStep();
-      }, 500);
-      
-      return updated;
-    });
-  }, [addUserMessage, proceedToNextStep]);
+    // 状態を更新
+    const updated = { ...setupData, birthDate: formattedDate };
+    setSetupData(updated);
+    console.log('[handleDateInput] updated setupData:', updated);
+    
+    // setStateの外でタイマーを設定
+    setTimeout(() => {
+      console.log('[handleDateInput] 状態更新完了後、次のステップへ進む');
+      proceedToNextStep();
+    }, 500);
+  }, [addUserMessage, proceedToNextStep, setupData]);
 
   // Handle place input
   const handlePlaceInput = useCallback((data: BirthPlaceData) => {
     console.log('[handlePlaceInput] data:', data);
     addUserMessage(data.location);
     
-    setSetupData((prev) => {
-      const updated = { ...prev, birthPlace: data.location };
-      console.log('[handlePlaceInput] updated setupData:', updated);
-      
-      // 状態更新後に次のステップへ進む
-      setTimeout(() => {
-        console.log('[handlePlaceInput] 状態更新完了後、次のステップへ進む');
-        proceedToNextStep();
-      }, 500);
-      
-      return updated;
-    });
-  }, [addUserMessage, proceedToNextStep]);
+    // 状態を更新
+    const updated = { ...setupData, birthPlace: data.location };
+    setSetupData(updated);
+    console.log('[handlePlaceInput] updated setupData:', updated);
+    
+    // setStateの外でタイマーを設定
+    setTimeout(() => {
+      console.log('[handlePlaceInput] 状態更新完了後、次のステップへ進む');
+      proceedToNextStep();
+    }, 500);
+  }, [addUserMessage, proceedToNextStep, setupData]);
 
   // Handle time input
   const handleTimeInput = useCallback((data: BirthTimeData) => {
     console.log('[handleTimeInput] data:', data);
     
+    let updated;
     if (!data.hasTime) {
       addUserMessage('わからない');
-      setSetupData((prev) => {
-        const updated = { ...prev, birthTime: null };
-        console.log('[handleTimeInput] updated setupData (no time):', updated);
-        
-        // 状態更新後に次のステップへ進む
-        setTimeout(() => {
-          console.log('[handleTimeInput] 状態更新完了後、次のステップへ進む');
-          proceedToNextStep();
-        }, 500);
-        
-        return updated;
-      });
+      updated = { ...setupData, birthTime: null };
+      console.log('[handleTimeInput] updated setupData (no time):', updated);
     } else {
       const timeString = `${data.hour!.toString().padStart(2, '0')}:${data.minute!.toString().padStart(2, '0')}`;
       addUserMessage(timeString);
-      setSetupData((prev) => {
-        const updated = { ...prev, birthTime: timeString };
-        console.log('[handleTimeInput] updated setupData (with time):', updated);
-        
-        // 状態更新後に次のステップへ進む
-        setTimeout(() => {
-          console.log('[handleTimeInput] 状態更新完了後、次のステップへ進む');
-          proceedToNextStep();
-        }, 500);
-        
-        return updated;
-      });
+      updated = { ...setupData, birthTime: timeString };
+      console.log('[handleTimeInput] updated setupData (with time):', updated);
     }
-  }, [addUserMessage, proceedToNextStep]);
+    
+    // 状態を更新
+    setSetupData(updated);
+    
+    // setStateの外でタイマーを設定
+    setTimeout(() => {
+      console.log('[handleTimeInput] 状態更新完了後、次のステップへ進む');
+      proceedToNextStep();
+    }, 500);
+  }, [addUserMessage, proceedToNextStep, setupData]);
 
   return {
     currentStep,
